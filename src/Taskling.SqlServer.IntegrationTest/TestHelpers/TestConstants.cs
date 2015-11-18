@@ -7,7 +7,7 @@ namespace Taskling.SqlServer.IntegrationTest.TestHelpers
 {
     internal class TestConstants
     {
-        internal const string TestConnectionString = "Server=(local);Database=Vueling_ProcessControl;Trusted_Connection=True;";
+        internal const string TestConnectionString = "Server=(local);Database=TasklingDb;Trusted_Connection=True;";
         internal const string ApplicationName = "MyTestApplication";
         internal const string TaskName = "MyTestTask";
         internal const string TestTableSchema = "PC";
