@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using Taskling.Client;
-using Taskling.CriticalSectionContext;
+using Taskling.CriticalSection;
 using Taskling.Exceptions;
 using Taskling.InfrastructureContracts;
 using Taskling.InfrastructureContracts.TaskExecution;
@@ -53,6 +53,11 @@ namespace Taskling.ExecutionContext
                 _taskExecutionInstance.TaskExecutionId = response.TaskExecutionId;
                 _taskExecutionInstance.ExecutionTokenId = response.ExecutionTokenId;
 
+                if (response.GrantStatus == GrantStatus.GrantedWithoutLimit)
+                    _taskExecutionInstance.UnlimitedMode = true;
+                else
+                    _taskExecutionInstance.UnlimitedMode = false;
+
                 if (response.GrantStatus == GrantStatus.Denied)
                 {
                     Complete();
@@ -80,6 +85,8 @@ namespace Taskling.ExecutionContext
                 _taskExecutionInstance.TaskExecutionId,
                 _taskExecutionInstance.ExecutionTokenId);
 
+            completeRequest.UnlimitedMode = _taskExecutionInstance.UnlimitedMode;
+
             var response = _taskExecutionService.Complete(completeRequest);
             _taskExecutionInstance.CompletedAt = response.CompletedAt;
         }
@@ -94,14 +101,18 @@ namespace Taskling.ExecutionContext
             throw new NotImplementedException();
         }
 
-        public ICriticalSectionContext StartCriticalSection()
+        public ICriticalSectionContext CreateCriticalSection()
         {
-            throw new NotImplementedException();
+            var criticalSectionContext = new CriticalSectionContext(_criticalSectionService,
+                _taskExecutionInstance,
+                _taskExecutionOptions);
+
+            return criticalSectionContext;
         }
 
         public void Dispose()
         {
-            if (!_completeCalled)
+            if (_startedCalled && !_completeCalled)
             {
                 Complete();
             }

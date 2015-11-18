@@ -45,8 +45,11 @@
     <Compile Include="CriticalSections\TokensQueryBuilder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TaskExecution\TaskExecutionService.cs" />
+    <Compile Include="TaskExecution\TaskExecutionStatus.cs" />
     <Compile Include="TaskExecution\TaskQueryBuilder.cs" />
     <Compile Include="TaskExecution\TokensQueryBuilder.cs" />
+    <Compile Include="Tasks\ITaskService.cs" />
+    <Compile Include="Tasks\TaskService.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Taskling\Taskling.csproj">

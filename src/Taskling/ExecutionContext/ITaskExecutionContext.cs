@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Taskling.CriticalSectionContext;
+using Taskling.CriticalSection;
 
 namespace Taskling.ExecutionContext
 {
@@ -12,6 +12,6 @@ namespace Taskling.ExecutionContext
         void Complete();
         void Checkpoint(string checkpointMessage);
         void Error(string errorMessage);
-        ICriticalSectionContext StartCriticalSection();
+        ICriticalSectionContext CreateCriticalSection();
     }
 }

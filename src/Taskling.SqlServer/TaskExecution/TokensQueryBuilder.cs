@@ -40,7 +40,7 @@ SELECT TOP 1 [ExecutionTokenId]
 	  ,[Status]
 FROM [PC].[ExecutionTokens]
 WHERE [TaskSecondaryId] = @TaskSecondaryId 
-AND ([Status] = 1
+AND ([Status] = 1 OR [Status] = 3
 	OR
 	(DATEDIFF(SECOND, [DateGranted], GETDATE()) > @SecondsOverride
 	AND [Status] = 0))
@@ -52,16 +52,17 @@ ORDER BY [Status] DESC;
 IF EXISTS(SELECT 1 FROM @AvailableToken)
 BEGIN
 
-	UPDATE [PC].[ExecutionTokens]
+	UPDATE ET
 	SET [DateGranted] = GETDATE()
 		,[DateReturned] = NULL
-		,[Status] = 0
+		,[Status] = CASE AT.[Status] WHEN 3 THEN 3 ELSE 0 END
 		,[TaskExecutionId] = @TaskExecutionId
-	WHERE [ExecutionTokenId] = (SELECT TOP 1 [ExecutionTokenId] FROM @AvailableToken);
+    FROM [PC].[ExecutionTokens] ET
+	JOIN @AvailableToken AS AT ON ET.[ExecutionTokenId] = AT.[ExecutionTokenId];
 
 	SELECT TOP 1 [ExecutionTokenId]
             ,GETDATE() AS [StartedAt]
-			,1 AS [Status]
+			,CASE [Status] WHEN 3 THEN 2 ELSE 1 END AS [GrantStatus]
 	FROM @AvailableToken;
 
 END
@@ -70,7 +71,7 @@ BEGIN
 
 	SELECT '00000000-0000-0000-0000-000000000000' AS [ExecutionTokenId]
             ,GETDATE() AS [StartedAt]
-			,0 AS [Status];
+			,0 AS [GrantStatus];
 
 END
 ";
@@ -105,7 +106,7 @@ SELECT TOP 1 [ExecutionTokenId]
 	  ,[Status]
 FROM [PC].[ExecutionTokens] ET
 WHERE [ET].[TaskSecondaryId] = @TaskSecondaryId 
-AND ([Status] = 1
+AND ([Status] = 1 OR [Status] = 3
 	OR
 	(DATEDIFF(SECOND, [DateGranted], GETDATE()) > @SecondsOverride
 		AND [Status] = 0)
@@ -121,16 +122,17 @@ ORDER BY [Status] DESC;
 IF EXISTS(SELECT 1 FROM @AvailableToken)
 BEGIN
 
-	UPDATE [PC].[ExecutionTokens]
+    UPDATE ET
 	SET [DateGranted] = GETDATE()
 		,[DateReturned] = NULL
-		,[Status] = 0
+		,[Status] = CASE AT.[Status] WHEN 3 THEN 3 ELSE 0 END
 		,[TaskExecutionId] = @TaskExecutionId
-	WHERE [ExecutionTokenId] = (SELECT TOP 1 [ExecutionTokenId] FROM @AvailableToken);
+    FROM [PC].[ExecutionTokens] ET
+	JOIN @AvailableToken AS AT ON ET.[ExecutionTokenId] = AT.[ExecutionTokenId];
 
 	SELECT TOP 1 [ExecutionTokenId]
             ,GETDATE() AS [StartedAt]
-			,1 AS [Status]
+			,CASE [Status] WHEN 3 THEN 2 ELSE 1 END AS [GrantStatus]
 	FROM @AvailableToken;
 
 END
@@ -139,7 +141,7 @@ BEGIN
 
 	SELECT '00000000-0000-0000-0000-000000000000' AS [ExecutionTokenId]
             ,GETDATE() AS [StartedAt]
-			,0 AS [Status];
+			,0 AS [GrantStatus];
 
 END";
 
@@ -152,8 +154,10 @@ END";
 
     SELECT GETDATE() AS CompletedAt;";
 
+        public const string GetCurrentDateQuery = @"SELECT GETDATE() AS CurrentDate;";
+
         #endregion .: Executions :.
 
-        
+
     }
 }

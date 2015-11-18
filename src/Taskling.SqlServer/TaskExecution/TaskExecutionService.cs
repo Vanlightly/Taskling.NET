@@ -11,29 +11,33 @@ using Taskling.InfrastructureContracts;
 using Taskling.InfrastructureContracts.TaskExecution;
 using Taskling.SqlServer.Configuration;
 using Taskling.SqlServer.DataObjects;
+using Taskling.SqlServer.Tasks;
 
 namespace Taskling.SqlServer.TaskExecution
 {
     public class TaskExecutionService : ITaskExecutionService
     {
         private readonly string _connectionString;
-        private readonly int _connectTimeout;
         private readonly int _queryTimeout;
         private readonly string _tableSchema;
 
-        public TaskExecutionService(SqlServerClientConnectionSettings clientConnectionSettings)
+        private readonly ITaskService _taskService;
+
+        public TaskExecutionService(SqlServerClientConnectionSettings clientConnectionSettings,
+            ITaskService taskService)
         {
             _connectionString = clientConnectionSettings.ConnectionString;
-            _connectTimeout = (int)clientConnectionSettings.ConnectTimeout.TotalMilliseconds;
             _queryTimeout = (int)clientConnectionSettings.QueryTimeout.TotalMilliseconds;
             _tableSchema = clientConnectionSettings.TableSchema;
+
+            _taskService = taskService;
         }
 
         public TaskExecutionStartResponse Start(TaskExecutionStartRequest startRequest)
         {
             ValidateStartRequest(startRequest);
 
-            var taskDefinition = GetTaskDefinition(startRequest);
+            var taskDefinition = _taskService.GetTaskDefinition(startRequest.ApplicationName, startRequest.TaskName);
             int secondsOverride = startRequest.SecondsOverride ?? int.MaxValue;
 
             if (startRequest.TaskDeathMode == TaskDeathMode.KeepAlive)
@@ -49,9 +53,17 @@ namespace Taskling.SqlServer.TaskExecution
             throw new ExecutionException("Unsupported TaskDeathMode");
         }
 
-        public TaskExecutionCompleteResponse Complete(TaskExecutionCompleteRequest taskExecutionCompleteRequest)
+        public TaskExecutionCompleteResponse Complete(TaskExecutionCompleteRequest completeRequest)
         {
-            return ReturnExecutionToken(taskExecutionCompleteRequest);
+            if (completeRequest.UnlimitedMode)
+            {
+                return new TaskExecutionCompleteResponse()
+                {
+                    CompletedAt = GetCompletedAtDate()
+                };
+            }
+
+            return ReturnExecutionToken(completeRequest);
         }
 
         public TaskExecutionCheckpointResponse Checkpoint(TaskExecutionCheckpointRequest taskExecutionRequest)
@@ -87,63 +99,10 @@ namespace Taskling.SqlServer.TaskExecution
             }
         }
 
-        private TaskDefinition GetTaskDefinition(TaskExecutionStartRequest taskExecutionStartRequest)
-        {
-            var taskDefinition = GetTask(taskExecutionStartRequest);
-            if (taskDefinition != null)
-            {
-                return taskDefinition;
-            }
-            else
-            {
-                return InsertNewTask(taskExecutionStartRequest);
-            }
-        }
-
-        private TaskDefinition GetTask(TaskExecutionStartRequest taskExecutionStartRequest)
-        {
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                connection.Open();
-                using (var command = new SqlCommand(TaskQueryBuilder.GetTaskQuery(_tableSchema), connection))
-                {
-                    command.Parameters.Add(new SqlParameter("@ApplicationName", SqlDbType.VarChar, 200)).Value = taskExecutionStartRequest.ApplicationName;
-                    command.Parameters.Add(new SqlParameter("@TaskName", SqlDbType.VarChar, 200)).Value = taskExecutionStartRequest.TaskName;
-                    var reader = command.ExecuteReader();
-                    while (reader.Read())
-                    {
-                        var task = new TaskDefinition();
-                        task.TaskSecondaryId = int.Parse(reader["TaskSecondaryId"].ToString());
-
-                        return task;
-                    }
-                }
-            }
-
-            return null;
-        }
-
-        private TaskDefinition InsertNewTask(TaskExecutionStartRequest taskExecutionStartRequest)
-        {
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                connection.Open();
-                using (var command = new SqlCommand(TaskQueryBuilder.InsertTaskQuery(_tableSchema), connection))
-                {
-                    command.Parameters.Add(new SqlParameter("@ApplicationName", SqlDbType.VarChar, 200)).Value = taskExecutionStartRequest.ApplicationName;
-                    command.Parameters.Add(new SqlParameter("@TaskName", SqlDbType.VarChar, 200)).Value = taskExecutionStartRequest.TaskName;
-
-                    var task = new TaskDefinition();
-                    task.TaskSecondaryId = (int)command.ExecuteScalar();
-                    return task;
-                }
-            }
-        }
-
         private TaskExecutionStartResponse GetExecutionTokenUsingOverride(int taskSecondaryId, int secondsOverride)
         {
             var response = new TaskExecutionStartResponse();
-
+            
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
@@ -182,7 +141,7 @@ namespace Taskling.SqlServer.TaskExecution
         private TaskExecutionStartResponse GetExecutionTokenUsingKeepAliveMode(int taskSecondaryId, int secondsElapsedTimeOut, int secondsOverride)
         {
             var response = new TaskExecutionStartResponse();
-
+            
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
@@ -197,7 +156,7 @@ namespace Taskling.SqlServer.TaskExecution
                 {
                     var taskExecutionId = CreateTaskExecution(command, taskSecondaryId);
                     response = TryGetExecutionTokenUsingKeepAliveMode(command, taskSecondaryId, taskExecutionId, secondsElapsedTimeOut, secondsOverride);
-
+                    
                     myTransaction.Commit();
                 }
                 catch (Exception ex)
@@ -236,7 +195,7 @@ namespace Taskling.SqlServer.TaskExecution
                     response.TaskExecutionId = taskExecutionId;
                     response.ExecutionTokenId = new Guid(reader["ExecutionTokenId"].ToString());
                     response.StartedAt = DateTime.Parse(reader["StartedAt"].ToString());
-                    response.GrantStatus = (GrantStatus)int.Parse(reader["Status"].ToString());
+                    response.GrantStatus = (GrantStatus)int.Parse(reader["GrantStatus"].ToString());
                 }
             }
 
@@ -260,7 +219,7 @@ namespace Taskling.SqlServer.TaskExecution
                     response.TaskExecutionId = taskExecutionId;
                     response.ExecutionTokenId = new Guid(reader["ExecutionTokenId"].ToString());
                     response.StartedAt = DateTime.Parse(reader["StartedAt"].ToString());
-                    response.GrantStatus = (GrantStatus)int.Parse(reader["Status"].ToString());
+                    response.GrantStatus = (GrantStatus)int.Parse(reader["GrantStatus"].ToString());
                 }
             }
 
@@ -314,6 +273,18 @@ namespace Taskling.SqlServer.TaskExecution
             }
 
             return response;
+        }
+
+        private DateTime GetCompletedAtDate()
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                var command = connection.CreateCommand();
+                command.CommandText = TokensQueryBuilder.GetCurrentDateQuery;
+                var result = (DateTime)command.ExecuteScalar();
+                return result;
+            }
         }
     }
 }

@@ -9,6 +9,7 @@ using Taskling.InfrastructureContracts.TaskExecution;
 using Taskling.SqlServer.Configuration;
 using Taskling.SqlServer.CriticalSections;
 using Taskling.SqlServer.TaskExecution;
+using Taskling.SqlServer.Tasks;
 
 namespace Taskling.SqlServer
 {
@@ -25,10 +26,10 @@ namespace Taskling.SqlServer
             _clientConnectionSettings = clientConnectionSettings;
 
             if(taskExecutionService == null)
-                _taskExecutionService = new TaskExecutionService(_clientConnectionSettings);
+                _taskExecutionService = new TaskExecutionService(_clientConnectionSettings, new TaskService(_clientConnectionSettings));
 
             if(criticalSectionService == null)
-                _criticalSectionService = new CriticalSectionService(_clientConnectionSettings);
+                _criticalSectionService = new CriticalSectionService(_clientConnectionSettings, new TaskService(_clientConnectionSettings));
         }
 
         public ITaskExecutionContext CreateTaskExecutionContext(string applicationName, string taskName, TaskExecutionOptions taskExecutionOptions)

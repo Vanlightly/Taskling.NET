@@ -8,5 +8,11 @@ namespace Taskling.InfrastructureContracts.CriticalSections
 {
     public class CompleteCriticalSectionRequest : RequestBase
     {
+        public CompleteCriticalSectionRequest(string applicationName, string taskName, int taskExecutionId)
+            : base(applicationName, taskName, taskExecutionId)
+        {
+            
+        }
+
     }
 }

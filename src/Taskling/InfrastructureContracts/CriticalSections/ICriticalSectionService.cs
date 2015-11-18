@@ -9,7 +9,7 @@ namespace Taskling.InfrastructureContracts
 {
     public interface ICriticalSectionService
     {
-        StartCriticalSectionResponse Start(StartCriticalSectionRequest startCriticalSectionRequest);
+        StartCriticalSectionResponse Start(StartCriticalSectionRequest startRequest);
         CompleteCriticalSectionResponse Complete(CompleteCriticalSectionRequest completeCriticalSectionRequest);
     }
 }

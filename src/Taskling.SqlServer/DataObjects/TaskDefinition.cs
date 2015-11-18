@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Taskling.SqlServer.DataObjects
 {
-    internal class TaskDefinition
+    public class TaskDefinition
     {
         internal int TaskSecondaryId { get; set; }
     }

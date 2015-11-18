@@ -11,11 +11,12 @@ using Taskling.InfrastructureContracts.TaskExecution;
 using Taskling.SqlServer.Configuration;
 using Taskling.SqlServer.IntegrationTest.TestHelpers;
 using Taskling.SqlServer.TaskExecution;
+using Taskling.SqlServer.Tasks;
 
 namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
 {
     [TestClass]
-    public class When_Start_AsKeepAliveMode
+    public class When_TryStart_AsKeepAliveMode
     {
         [TestInitialize]
         public void Initialize()
@@ -32,21 +33,23 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
 
         private TaskExecutionService CreateSut()
         {
-            return new TaskExecutionService(new SqlServerClientConnectionSettings()
+            var settings = new SqlServerClientConnectionSettings()
             {
                 TableSchema = "PC",
                 ConnectionString = TestConstants.TestConnectionString,
                 ConnectTimeout = new TimeSpan(0, 1, 1)
-            });
+            };
+            return new TaskExecutionService(settings, new TaskService(settings));
         }
 
         [TestMethod]
-        [TestCategory("IntegrationTest"), TestCategory("ExecutionTokens")]
+        [TestCategory("FastIntegrationTest"), TestCategory("ExecutionTokens")]
         public void If_KeepAliveMode_ThenReturnsValidDataValues()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
-            var taskSecondaryId = executionHelper.CreateTaskAndExecutionToken(TestConstants.ApplicationName, TestConstants.TaskName);
+            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
 
             var startRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
             startRequest.KeepAliveElapsedSeconds = 60;
@@ -61,12 +64,13 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         }
 
         [TestMethod]
-        [TestCategory("IntegrationTest"), TestCategory("ExecutionTokens")]
+        [TestCategory("FastIntegrationTest"), TestCategory("ExecutionTokens")]
         public void If_KeepAliveMode_OneTaskAndOneTokenAndIsAvailable_ThenIsGranted()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
-            var taskSecondaryId = executionHelper.CreateTaskAndExecutionToken(TestConstants.ApplicationName, TestConstants.TaskName);
+            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
 
             var startRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
             startRequest.KeepAliveElapsedSeconds = 60;
@@ -81,12 +85,13 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         }
 
         [TestMethod]
-        [TestCategory("IntegrationTest"), TestCategory("ExecutionTokens")]
+        [TestCategory("FastIntegrationTest"), TestCategory("ExecutionTokens")]
         public void If_KeepAliveMode_TwoConcurrentTasksAndOneTokenAndIsAvailable_ThenIsGrantFirstTaskAndDenyTheOther()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
-            var taskSecondaryId = executionHelper.CreateTaskAndExecutionToken(TestConstants.ApplicationName, TestConstants.TaskName);
+            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
 
             var firstStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
             firstStartRequest.KeepAliveElapsedSeconds = 60;
@@ -106,12 +111,39 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         }
 
         [TestMethod]
-        [TestCategory("IntegrationTest"), TestCategory("ExecutionTokens")]
+        [TestCategory("FastIntegrationTest"), TestCategory("ExecutionTokens")]
+        public void If_KeepAliveMode_TwoConcurrentTasksAndOneTokenAndIsUnlimited_ThenIsGrantBoth()
+        {
+            // ARRANGE
+            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertUnlimitedExecutionToken(taskSecondaryId);
+
+            var firstStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
+            firstStartRequest.KeepAliveElapsedSeconds = 60;
+
+            var secondStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
+            secondStartRequest.KeepAliveElapsedSeconds = 60;
+
+            // ACT
+            var sut = CreateSut();
+            var firstResponse = sut.Start(firstStartRequest);
+            sut.SendKeepAlive(firstResponse.TaskExecutionId);
+            var secondResponse = sut.Start(secondStartRequest);
+
+            // ASSERT
+            Assert.AreEqual(GrantStatus.GrantedWithoutLimit, firstResponse.GrantStatus);
+            Assert.AreEqual(GrantStatus.GrantedWithoutLimit, secondResponse.GrantStatus);
+        }
+
+        [TestMethod]
+        [TestCategory("FastIntegrationTest"), TestCategory("ExecutionTokens")]
         public void If_KeepAliveMode_TwoSequentialTasksAndOneTokenAndIsAvailable_ThenIsGrantFirstTaskAndThenGrantTheOther()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
-            var taskSecondaryId = executionHelper.CreateTaskAndExecutionToken(TestConstants.ApplicationName, TestConstants.TaskName);
+            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
 
             var firstStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
             firstStartRequest.KeepAliveElapsedSeconds = 60;
@@ -129,17 +161,20 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
             
             // ASSERT
             Assert.AreEqual(GrantStatus.Granted, firstStartResponse.GrantStatus);
-            Assert.AreEqual(ResponseCode.Ok, firstCompleteResponse.ResponseCode);
             Assert.AreEqual(GrantStatus.Granted, secondStartResponse.GrantStatus);
         }
 
         [TestMethod]
-        [TestCategory("IntegrationTest"), TestCategory("ExecutionTokens")]
+        [TestCategory("FastIntegrationTest"), TestCategory("ExecutionTokens")]
         public void If_KeepAliveMode_FiveConcurrentTasksAndFourTokensAndAllAreAvailable_ThenIsGrantFirstFourTasksAndDenyTheOther()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
-            var taskSecondaryId = executionHelper.CreateTaskAndExecutionToken(TestConstants.ApplicationName, TestConstants.TaskName, 4);
+            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
 
             var firstStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
             firstStartRequest.KeepAliveElapsedSeconds = 60;
@@ -177,12 +212,13 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         }
 
         [TestMethod]
-        [TestCategory("IntegrationTest"), TestCategory("ExecutionTokens")]
+        [TestCategory("SlowIntegrationTest"), TestCategory("ExecutionTokens")]
         public void If_KeepAliveMode_OneToken_MultipleTaskThreads_ThenNoDeadLocksOccur()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
-            var taskSecondaryId = executionHelper.CreateTaskAndExecutionToken(TestConstants.ApplicationName, TestConstants.TaskName);
+            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
 
             // ACT
             var sut = CreateSut();
@@ -231,12 +267,13 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         }
 
         [TestMethod]
-        [TestCategory("IntegrationTest"), TestCategory("ExecutionTokens")]
+        [TestCategory("FastIntegrationTest"), TestCategory("ExecutionTokens")]
         public void If_KeepAliveMode_OneTaskAndOneTokenAndIsUnavailableAndKeepAliveHasPassedElapsedTime_ThenIsGranted()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
-            var taskSecondaryId = executionHelper.CreateTaskAndExecutionToken(TestConstants.ApplicationName, TestConstants.TaskName);
+            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
 
             var startRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
             startRequest.KeepAliveElapsedSeconds = 5;
@@ -259,12 +296,13 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         }
 
         [TestMethod]
-        [TestCategory("IntegrationTest"), TestCategory("ExecutionTokens")]
+        [TestCategory("FastIntegrationTest"), TestCategory("ExecutionTokens")]
         public void If_KeepAliveMode_OneTaskAndOneTokenAndIsUnavailableAndKeepAliveHasNotPassedElapsedTime_ThenIsDenied()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
-            var taskSecondaryId = executionHelper.CreateTaskAndExecutionToken(TestConstants.ApplicationName, TestConstants.TaskName);
+            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
 
             var startRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
             startRequest.KeepAliveElapsedSeconds = 6000;
@@ -289,3 +327,4 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         }
     }
 }
+

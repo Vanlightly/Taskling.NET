@@ -26,7 +26,6 @@ namespace Taskling.InfrastructureContracts.TaskExecution
 
         public string ApplicationName { get; set; }
         public string TaskName { get; set; }
-        public int TaskSecondaryId { get; set; }
         public int TaskExecutionId { get; set; }
     }
 }

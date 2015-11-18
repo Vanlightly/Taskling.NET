@@ -9,7 +9,7 @@ namespace Taskling.InfrastructureContracts.TaskExecution
     public interface ITaskExecutionService
     {
         TaskExecutionStartResponse Start(TaskExecutionStartRequest startRequest);
-        TaskExecutionCompleteResponse Complete(TaskExecutionCompleteRequest taskExecutionCompleteRequest);
+        TaskExecutionCompleteResponse Complete(TaskExecutionCompleteRequest completeRequest);
         TaskExecutionCheckpointResponse Checkpoint(TaskExecutionCheckpointRequest taskExecutionRequest);
         TaskExecutionErrorResponse Error(TaskExecutionErrorRequest taskExecutionErrorRequest);
         void SendKeepAlive(int taskExecutionId);

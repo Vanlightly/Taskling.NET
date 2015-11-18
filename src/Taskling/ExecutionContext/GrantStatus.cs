@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Taskling.InfrastructureContracts
+namespace Taskling.ExecutionContext
 {
     public enum GrantStatus
     {
-        Denied,
-        Granted
+        Denied=0,
+        Granted=1,
+        GrantedWithoutLimit=2
     }
 }

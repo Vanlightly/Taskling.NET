@@ -7,6 +7,6 @@ namespace Taskling.InfrastructureContracts.TaskExecution
 {
     public class ResponseBase
     {
-        public ResponseCode ResponseCode { get; set; }
+        
     }
 }

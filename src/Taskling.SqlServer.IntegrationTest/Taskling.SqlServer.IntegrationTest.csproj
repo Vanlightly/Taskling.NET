@@ -55,9 +55,13 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="Given_CriticalSectionContext\When_ConcurrentNoDeadlocks.cs" />
+    <Compile Include="Given_CriticalSectionContext\When_Disposed.cs" />
+    <Compile Include="Given_CriticalSectionService\When_TryStart_AsKeepAliveMode.cs" />
+    <Compile Include="Given_CriticalSectionService\When_TryStart_AsOverrideAfterElaspedTimeMode.cs" />
     <Compile Include="Given_TaskExecutionContext\WhenDisposed.cs" />
-    <Compile Include="Given_TaskExecutionService\When_Start_AsKeepAliveMode.cs" />
-    <Compile Include="Given_TaskExecutionService\When_Start_AsOverrideAfterElaspedTimeMode.cs" />
+    <Compile Include="Given_TaskExecutionService\When_TryStart_AsKeepAliveMode.cs" />
+    <Compile Include="Given_TaskExecutionService\When_TryStart_AsOverrideAfterElaspedTimeMode.cs" />
     <Compile Include="TestHelpers\ExecutionsHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestHelpers\TestConstants.cs" />
@@ -72,6 +76,7 @@
       <Name>Taskling</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
       <ItemGroup>

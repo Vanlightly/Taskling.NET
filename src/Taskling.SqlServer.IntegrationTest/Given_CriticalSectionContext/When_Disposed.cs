@@ -8,10 +8,10 @@ using Taskling.SqlServer.Configuration;
 using Taskling.SqlServer.IntegrationTest.TestHelpers;
 using Taskling.SqlServer.TaskExecution;
 
-namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionContext
+namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionContext
 {
     [TestClass]
-    public class WhenDisposed
+    public class When_Disposed
     {
         [TestInitialize]
         public void Initialize()
@@ -42,20 +42,28 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionContext
                 KeepAliveInterval = new TimeSpan(0, 0, 0, 30),
                 KeepAliveElapsed = new TimeSpan(0, 0, 2, 0)
             };
-            
+
             // ACT
             var executionsHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
             bool startedOk;
-            byte tokenStatusAfterStart;
-            byte tokenStatusAfterUsingBlock;
+            byte tokenStatusAfterStart = 0;
+            byte tokenStatusAfterUsingBlock = 0;
 
             var client = new SqlServerTasklingClient(settings);
             using (var executionContext = client.CreateTaskExecutionContext(TestConstants.ApplicationName, TestConstants.TaskName, taskExecutionOptions))
             {
                 startedOk = executionContext.TryStart();
-                tokenStatusAfterStart = executionsHelper.GetExecutionTokenStatus(TestConstants.ApplicationName, TestConstants.TaskName);
+                if (startedOk)
+                {
+                    using (var criticalSection = executionContext.CreateCriticalSection())
+                    {
+                        var csStartedOk = criticalSection.TryStart();
+                        tokenStatusAfterStart = executionsHelper.GetCriticalSectionTokenStatus(TestConstants.ApplicationName, TestConstants.TaskName);
+                    }
+
+                    tokenStatusAfterUsingBlock = executionsHelper.GetCriticalSectionTokenStatus(TestConstants.ApplicationName, TestConstants.TaskName);
+                }
             }
-            tokenStatusAfterUsingBlock = executionsHelper.GetExecutionTokenStatus(TestConstants.ApplicationName, TestConstants.TaskName);
 
             // ASSERT
             Assert.AreEqual(true, startedOk);

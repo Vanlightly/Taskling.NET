@@ -46,9 +46,9 @@
     <Compile Include="Blocks\INumericRangeBlock.cs" />
     <Compile Include="Client\ITasklingClient.cs" />
     <Compile Include="Client\ClientConnectionSettings.cs" />
-    <Compile Include="CriticalSectionContext\CriticalSectionContext.cs" />
-    <Compile Include="CriticalSectionContext\ICriticalSectionContext.cs" />
-    <Compile Include="CriticalSection\ICriticalSection.cs" />
+    <Compile Include="CriticalSection\CriticalSectionContext.cs" />
+    <Compile Include="CriticalSection\ICriticalSectionContext.cs" />
+    <Compile Include="Exceptions\DataConsistencyException.cs" />
     <Compile Include="Exceptions\ExecutionArgumentsException.cs" />
     <Compile Include="Exceptions\ExecutionException.cs" />
     <Compile Include="ExecutionContext\HashService.cs" />
@@ -61,11 +61,10 @@
     <Compile Include="InfrastructureContracts\CriticalSections\ICriticalSectionService.cs" />
     <Compile Include="InfrastructureContracts\CriticalSections\StartCriticalSectionRequest.cs" />
     <Compile Include="InfrastructureContracts\CriticalSections\StartCriticalSectionResponse.cs" />
-    <Compile Include="InfrastructureContracts\GrantStatus.cs" />
+    <Compile Include="ExecutionContext\GrantStatus.cs" />
     <Compile Include="InfrastructureContracts\TaskExecution\ITaskExecutionService.cs" />
     <Compile Include="InfrastructureContracts\TaskExecution\RequestBase.cs" />
     <Compile Include="InfrastructureContracts\TaskExecution\ResponseBase.cs" />
-    <Compile Include="InfrastructureContracts\ResponseCode.cs" />
     <Compile Include="InfrastructureContracts\TaskExecution\TaskExecutionCheckpointRequest.cs" />
     <Compile Include="InfrastructureContracts\TaskExecution\TaskExecutionCheckpointResponse.cs" />
     <Compile Include="InfrastructureContracts\TaskExecution\TaskExecutionCompleteRequest.cs" />

@@ -5,9 +5,10 @@ using System.Text;
 
 namespace Taskling.CriticalSection
 {
-    public interface ICriticalSection
+    public interface ICriticalSectionContext : IDisposable
     {
-        void Start();
+        bool TryStart();
+        bool TryStart(TimeSpan retryInterval, int numberOfAttempts);
         void Complete();
     }
 }
