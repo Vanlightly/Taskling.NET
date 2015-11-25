@@ -38,8 +38,8 @@ AND TaskName = @TaskName";
 
         #region .: TaskExecutions :.
 
-        private const string InsertTaskExecutionBase = @"INSERT INTO {0}.[TaskExecution]([TaskSecondaryId],[StartedAt])
-VALUES (@TaskSecondaryId, GETDATE());
+        private const string InsertTaskExecutionBase = @"INSERT INTO {0}.[TaskExecution]([TaskSecondaryId],[StartedAt],[LastKeepAlive])
+VALUES (@TaskSecondaryId, GETUTCDATE(), GETUTCDATE());
 SELECT CAST(SCOPE_IDENTITY() AS INT)";
 
         internal static string InsertTaskExecution(string schema)
@@ -47,9 +47,13 @@ SELECT CAST(SCOPE_IDENTITY() AS INT)";
             return string.Format(InsertTaskExecutionBase, schema);
         }
 
-        private const string KeepAliveQueryBase = @"UPDATE {0}.[ExecutionTokens]
-SET LastKeepAlive = GETDATE()
-WHERE [TaskExecutionId] = @TaskExecutionId";
+        private const string KeepAliveQueryBase = @"UPDATE {0}.[ExecutionToken]
+SET LastKeepAlive = GETUTCDATE()
+WHERE [TaskExecutionId] = @TaskExecutionId;
+
+UPDATE {0}.[TaskExecution]
+SET LastKeepAlive = GETUTCDATE()
+WHERE [TaskExecutionId] = @TaskExecutionId;";
 
         internal static string KeepAliveQuery(string schema)
         {

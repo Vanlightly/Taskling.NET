@@ -38,6 +38,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Blocks\BlockExecutionStatus.cs" />
+    <Compile Include="Blocks\BlockService.cs" />
+    <Compile Include="Blocks\RangeBlockQueryBuilder.cs" />
+    <Compile Include="Blocks\RangeBlockService.cs" />
     <Compile Include="Configuration\SqlServerClientConnectionSettings.cs" />
     <Compile Include="DataObjects\TaskDefinition.cs" />
     <Compile Include="SqlServerTasklingClient.cs" />
@@ -48,8 +52,10 @@
     <Compile Include="TaskExecution\TaskExecutionStatus.cs" />
     <Compile Include="TaskExecution\TaskQueryBuilder.cs" />
     <Compile Include="TaskExecution\TokensQueryBuilder.cs" />
+    <Compile Include="Tasks\CachedTaskDefinition.cs" />
     <Compile Include="Tasks\ITaskService.cs" />
     <Compile Include="Tasks\TaskService.cs" />
+    <Compile Include="TransientErrorDetector.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Taskling\Taskling.csproj">

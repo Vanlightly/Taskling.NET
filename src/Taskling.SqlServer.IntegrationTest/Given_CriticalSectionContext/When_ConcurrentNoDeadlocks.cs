@@ -18,7 +18,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionContext
         [TestInitialize]
         public void Initialize()
         {
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             executionHelper.DeleteRecordsOfTask(TestConstants.ApplicationName, TestConstants.TaskName);
         }
 
@@ -27,13 +27,12 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionContext
         public void If_MultipleConcurrentRequests_UsingManualRetry_ThenNoDeadlocks()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             executionHelper.InsertUnlimitedExecutionToken(taskSecondaryId);
             
             // ACT
             var filename = string.Empty;
-            File.WriteAllText(filename, "Time,Id,Event,Text" + Environment.NewLine);
             var tasks = new List<Task>();
             for(int i = 0; i<100; i++)
                 tasks.Add(Task.Factory.StartNew(RunJobWithParameterLessTryStart, filename, TaskCreationOptions.LongRunning));
@@ -46,7 +45,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionContext
         public void If_MultipleConcurrentRequests_UsingManualRetry_ThenNoDeadlocks_WithLoggingToFile()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             executionHelper.InsertUnlimitedExecutionToken(taskSecondaryId);
 
@@ -65,13 +64,12 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionContext
         public void If_MultipleConcurrentRequests_UsingBuiltInRetry_ThenNoDeadlocks()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             executionHelper.InsertUnlimitedExecutionToken(taskSecondaryId);
 
             // ACT
             var filename = string.Empty;
-            File.WriteAllText(filename, "Time,Id,Event,Text" + Environment.NewLine);
             var tasks = new List<Task>();
             for (int i = 0; i < 100; i++)
                 tasks.Add(Task.Factory.StartNew(RunJobWithTryStartWithBuiltInRetry, filename, TaskCreationOptions.LongRunning));
@@ -84,7 +82,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionContext
         public void If_MultipleConcurrentRequests_UsingBuiltInRetry_ThenNoDeadlocks_WithLoggingToFile()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             executionHelper.InsertUnlimitedExecutionToken(taskSecondaryId);
 

@@ -16,7 +16,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionContext
         [TestInitialize]
         public void Initialize()
         {
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             executionHelper.DeleteRecordsOfTask(TestConstants.ApplicationName, TestConstants.TaskName);
         }
 
@@ -25,7 +25,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionContext
         public void If_InUsingBlock_ThenExecutionCompletedOnEndOfBlock()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
 
@@ -44,7 +44,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionContext
             };
 
             // ACT
-            var executionsHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionsHelper = new ExecutionsHelper();
             bool startedOk;
             byte tokenStatusAfterStart = 0;
             byte tokenStatusAfterUsingBlock = 0;

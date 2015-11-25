@@ -1,19 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mail;
 using System.Text;
 
 namespace Taskling.SqlServer.TaskExecution
 {
     internal class TokensQueryBuilder
     {
-        #region .: Executions :.
+        #region .: Base Queries :.
 
-        public const string OverrideBasedRequestExecutionTokenQuery = @"
+        private const string OverrideBasedRequestExecutionTokenQuery = @"
     ----------------------------
 -- Get an exclusive lock on the records of this process
 ----------------------------
-UPDATE [PC].[ExecutionTokens]
+UPDATE {0}.[ExecutionToken]
 SET [HoldLockTaskExecutionId] = @TaskExecutionId
 WHERE [TaskSecondaryId] = @TaskSecondaryId;
 
@@ -38,11 +39,11 @@ SELECT TOP 1 [ExecutionTokenId]
 	  ,[DateGranted]
 	  ,[DateReturned]
 	  ,[Status]
-FROM [PC].[ExecutionTokens]
+FROM {0}.[ExecutionToken]
 WHERE [TaskSecondaryId] = @TaskSecondaryId 
 AND ([Status] = 1 OR [Status] = 3
 	OR
-	(DATEDIFF(SECOND, [DateGranted], GETDATE()) > @SecondsOverride
+	(DATEDIFF(SECOND, [DateGranted], GETUTCDATE()) > @SecondsOverride
 	AND [Status] = 0))
 ORDER BY [Status] DESC;
 
@@ -53,15 +54,15 @@ IF EXISTS(SELECT 1 FROM @AvailableToken)
 BEGIN
 
 	UPDATE ET
-	SET [DateGranted] = GETDATE()
+	SET [DateGranted] = GETUTCDATE()
 		,[DateReturned] = NULL
 		,[Status] = CASE AT.[Status] WHEN 3 THEN 3 ELSE 0 END
 		,[TaskExecutionId] = @TaskExecutionId
-    FROM [PC].[ExecutionTokens] ET
+    FROM {0}.[ExecutionToken] ET
 	JOIN @AvailableToken AS AT ON ET.[ExecutionTokenId] = AT.[ExecutionTokenId];
 
 	SELECT TOP 1 [ExecutionTokenId]
-            ,GETDATE() AS [StartedAt]
+            ,GETUTCDATE() AS [StartedAt]
 			,CASE [Status] WHEN 3 THEN 2 ELSE 1 END AS [GrantStatus]
 	FROM @AvailableToken;
 
@@ -70,16 +71,16 @@ ELSE
 BEGIN
 
 	SELECT '00000000-0000-0000-0000-000000000000' AS [ExecutionTokenId]
-            ,GETDATE() AS [StartedAt]
+            ,GETUTCDATE() AS [StartedAt]
 			,0 AS [GrantStatus];
 
 END
 ";
 
-        internal const string KeepAliveBasedRequestExecutionTokenQuery = @"----------------------------
+        private const string KeepAliveBasedRequestExecutionTokenQuery = @"----------------------------
 -- Get an exclusive lock on the records of this process
 ----------------------------
-UPDATE [PC].[ExecutionTokens]
+UPDATE {0}.[ExecutionToken]
 SET [HoldLockTaskExecutionId] = @TaskExecutionId
 WHERE [TaskSecondaryId] = @TaskSecondaryId;
 
@@ -104,14 +105,14 @@ SELECT TOP 1 [ExecutionTokenId]
 	  ,[DateGranted]
 	  ,[DateReturned]
 	  ,[Status]
-FROM [PC].[ExecutionTokens] ET
+FROM {0}.[ExecutionToken] ET
 WHERE [ET].[TaskSecondaryId] = @TaskSecondaryId 
 AND ([Status] = 1 OR [Status] = 3
 	OR
-	(DATEDIFF(SECOND, [DateGranted], GETDATE()) > @SecondsOverride
+	(DATEDIFF(SECOND, [DateGranted], GETUTCDATE()) > @SecondsOverride
 		AND [Status] = 0)
 	OR
-	(DATEDIFF(SECOND, COALESCE([LastKeepAlive], '20150101'), GETDATE()) > @KeepAliveElapsedSeconds
+	(DATEDIFF(SECOND, COALESCE([LastKeepAlive], '20150101'), GETUTCDATE()) > @KeepAliveElapsedSeconds
 		AND [Status] = 0)
 	)
 ORDER BY [Status] DESC;
@@ -123,15 +124,15 @@ IF EXISTS(SELECT 1 FROM @AvailableToken)
 BEGIN
 
     UPDATE ET
-	SET [DateGranted] = GETDATE()
+	SET [DateGranted] = GETUTCDATE()
 		,[DateReturned] = NULL
 		,[Status] = CASE AT.[Status] WHEN 3 THEN 3 ELSE 0 END
 		,[TaskExecutionId] = @TaskExecutionId
-    FROM [PC].[ExecutionTokens] ET
+    FROM {0}.[ExecutionToken] ET
 	JOIN @AvailableToken AS AT ON ET.[ExecutionTokenId] = AT.[ExecutionTokenId];
 
 	SELECT TOP 1 [ExecutionTokenId]
-            ,GETDATE() AS [StartedAt]
+            ,GETUTCDATE() AS [StartedAt]
 			,CASE [Status] WHEN 3 THEN 2 ELSE 1 END AS [GrantStatus]
 	FROM @AvailableToken;
 
@@ -140,24 +141,37 @@ ELSE
 BEGIN
 
 	SELECT '00000000-0000-0000-0000-000000000000' AS [ExecutionTokenId]
-            ,GETDATE() AS [StartedAt]
+            ,GETUTCDATE() AS [StartedAt]
 			,0 AS [GrantStatus];
 
 END";
 
-        public const string ReturnExecutionTokenQuery = @"
-    UPDATE [PC].[ExecutionTokens] 
-	SET [DateReturned] = GETDATE()
+        private const string ReturnExecutionTokenQuery = @"
+    UPDATE {0}.[ExecutionToken] 
+	SET [DateReturned] = GETUTCDATE()
 		,[Status] = 1
 	WHERE [ExecutionTokenId] = @ExecutionTokenId
 	AND [TaskExecutionId] = @TaskExecutionId;
 
-    SELECT GETDATE() AS CompletedAt;";
+    SELECT GETUTCDATE() AS CompletedAt;";
 
-        public const string GetCurrentDateQuery = @"SELECT GETDATE() AS CurrentDate;";
+        public const string GetCurrentDateQuery = @"SELECT GETUTCDATE() AS CurrentDate;";
 
         #endregion .: Executions :.
 
+        public static string GetOverrideBasedRequestExecutionTokenQuery(string tableSchema)
+        {
+            return string.Format(OverrideBasedRequestExecutionTokenQuery, tableSchema);
+        }
 
+        public static string GetKeepAliveBasedRequestExecutionTokenQuery(string tableSchema)
+        {
+            return string.Format(KeepAliveBasedRequestExecutionTokenQuery, tableSchema);
+        }
+
+        public static string GetReturnExecutionTokenQuery(string tableSchema)
+        {
+            return string.Format(ReturnExecutionTokenQuery, tableSchema);
+        }
     }
 }

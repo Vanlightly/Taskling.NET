@@ -20,7 +20,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         [TestInitialize]
         public void Initialize()
         {
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             executionHelper.DeleteRecordsOfTask(TestConstants.ApplicationName, TestConstants.TaskName);
         }
 
@@ -34,7 +34,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         {
             var settings = new SqlServerClientConnectionSettings()
             {
-                TableSchema = "PC",
+                TableSchema = "Taskling",
                 ConnectionString = TestConstants.TestConnectionString,
                 ConnectTimeout = new TimeSpan(0, 1, 1)
             };
@@ -46,7 +46,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         public void If_KeepAliveMode_TokenAvailableAndNothingInQueue_ThenGrant()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             var taskExecutionId = executionHelper.InsertTaskExecution(taskSecondaryId);
             executionHelper.InsertExecutionToken(taskSecondaryId, 0, taskExecutionId);
@@ -70,7 +70,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         public void If_KeepAliveMode_TokenNotAvailableAndNothingInQueue_ThenAddToQueueAndDeny()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
 
             // Create execution 1 and assign critical section to it
@@ -103,7 +103,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         public void If_KeepAliveMode_TokenNotAvailableAndAlreadyInQueue_ThenDoNotAddToQueueAndDeny()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
 
             // Create execution 1 and assign critical section to it
@@ -137,7 +137,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         public void If_KeepAliveMode_TokenAvailableAndIsFirstInQueue_ThenRemoveFromQueueAndGrant()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
 
             // Create execution 1 and create available critical section token
@@ -167,7 +167,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         public void If_KeepAliveMode_TokenAvailableAndIsNotFirstInQueue_ThenDoNotChangeQueueAndDeny()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
 
             // Create execution 1 and add it to the queue
@@ -204,7 +204,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         public void If_KeepAliveMode_TokenAvailableAndIsNotFirstInQueueButFirstHasExpiredTimeout_ThenRemoveBothFromQueueAndGrant()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
 
             // Create execution 1 and add it to the queue

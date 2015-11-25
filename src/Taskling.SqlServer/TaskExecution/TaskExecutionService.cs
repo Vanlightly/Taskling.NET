@@ -182,7 +182,7 @@ namespace Taskling.SqlServer.TaskExecution
             var response = new TaskExecutionStartResponse();
 
             command.Parameters.Clear();
-            command.CommandText = TokensQueryBuilder.KeepAliveBasedRequestExecutionTokenQuery;
+            command.CommandText = TokensQueryBuilder.GetKeepAliveBasedRequestExecutionTokenQuery(_tableSchema);
             command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
             command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
             command.Parameters.Add("@KeepAliveElapsedSeconds", SqlDbType.Int).Value = secondsElapsedTimeOut;
@@ -207,7 +207,7 @@ namespace Taskling.SqlServer.TaskExecution
             var response = new TaskExecutionStartResponse();
 
             command.Parameters.Clear();
-            command.CommandText = TokensQueryBuilder.OverrideBasedRequestExecutionTokenQuery;
+            command.CommandText = TokensQueryBuilder.GetOverrideBasedRequestExecutionTokenQuery(_tableSchema);
             command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
             command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
             command.Parameters.Add("@SecondsOverride", SqlDbType.Int).Value = secondsOverride;
@@ -248,7 +248,7 @@ namespace Taskling.SqlServer.TaskExecution
                 var command = connection.CreateCommand();
                 command.Transaction = myTransaction;
                 command.CommandTimeout = _queryTimeout;
-                command.CommandText = TokensQueryBuilder.ReturnExecutionTokenQuery;
+                command.CommandText = TokensQueryBuilder.GetReturnExecutionTokenQuery(_tableSchema);
                 command.Parameters.Add("@ExecutionTokenId", SqlDbType.UniqueIdentifier).Value = taskExecutionCompleteRequest.ExecutionTokenId;
                 command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionCompleteRequest.TaskExecutionId;
 

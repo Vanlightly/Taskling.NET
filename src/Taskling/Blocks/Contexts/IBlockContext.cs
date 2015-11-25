@@ -5,7 +5,10 @@ using System.Text;
 
 namespace Taskling.Blocks
 {
-    public interface IListBlock : IBlock
+    public interface IBlockContext
     {
+        void Start();
+        void Complete();
+        void Failed();
     }
 }

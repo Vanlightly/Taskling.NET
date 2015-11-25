@@ -5,9 +5,7 @@ using System.Text;
 
 namespace Taskling.Blocks
 {
-    public interface IBlock
+    public interface IListBlockContext : IBlockContext
     {
-        void BlockProcessingStarted();
-        void BlockProcessingComplete();
     }
 }

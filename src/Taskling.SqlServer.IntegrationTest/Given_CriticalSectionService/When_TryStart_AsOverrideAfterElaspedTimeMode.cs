@@ -19,7 +19,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         [TestInitialize]
         public void Initialize()
         {
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             executionHelper.DeleteRecordsOfTask(TestConstants.ApplicationName, TestConstants.TaskName);
         }
 
@@ -33,7 +33,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         {
             var settings = new SqlServerClientConnectionSettings()
             {
-                TableSchema = "PC",
+                TableSchema = "Taskling",
                 ConnectionString = TestConstants.TestConnectionString,
                 ConnectTimeout = new TimeSpan(0, 1, 1)
             };
@@ -45,7 +45,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         public void If_OverrideMode_TokenAvailable_ThenGrant()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             var taskExecutionId = executionHelper.InsertTaskExecution(taskSecondaryId);
             executionHelper.InsertExecutionToken(taskSecondaryId, 0, taskExecutionId);
@@ -69,7 +69,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         public void If_OverrideMode_TwoConcurrentExecutionsAndTokenAvailable_ThenGrantFirstAndDenySecond()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             var taskExecutionId1 = executionHelper.InsertTaskExecution(taskSecondaryId);
             var taskExecutionId2 = executionHelper.InsertTaskExecution(taskSecondaryId);
@@ -103,7 +103,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         public void If_OverrideMode_TwoConcurrentExecutionsAndTokenAvailableAndFirstHasPassedOverrideLimit_ThenGrantFirstAndSecond()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             var taskExecutionId1 = executionHelper.InsertTaskExecution(taskSecondaryId);
             var taskExecutionId2 = executionHelper.InsertTaskExecution(taskSecondaryId);

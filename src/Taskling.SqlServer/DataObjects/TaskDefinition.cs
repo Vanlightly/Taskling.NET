@@ -7,6 +7,6 @@ namespace Taskling.SqlServer.DataObjects
 {
     public class TaskDefinition
     {
-        internal int TaskSecondaryId { get; set; }
+        public int TaskSecondaryId { get; set; }
     }
 }

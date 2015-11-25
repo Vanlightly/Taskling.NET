@@ -17,6 +17,9 @@ namespace Taskling.SqlServer.Tasks
         private readonly int _queryTimeout;
         private readonly string _tableSchema;
 
+        private object _myCacheSyncObj = new object();
+        private Dictionary<string, CachedTaskDefinition> _cachedTaskDefinitions = new Dictionary<string, CachedTaskDefinition>();
+
         public TaskService(SqlServerClientConnectionSettings clientConnectionSettings)
         {
             _connectionString = clientConnectionSettings.ConnectionString;
@@ -39,6 +42,11 @@ namespace Taskling.SqlServer.Tasks
 
         private TaskDefinition GetTask(string applicationName, string taskName)
         {
+            string key = applicationName + "::" + taskName;
+            var cachedTaskDefinition = GetCachedDefinition(key);
+            if (cachedTaskDefinition != null)
+                return cachedTaskDefinition;
+
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
@@ -52,12 +60,51 @@ namespace Taskling.SqlServer.Tasks
                         var task = new TaskDefinition();
                         task.TaskSecondaryId = int.Parse(reader["TaskSecondaryId"].ToString());
 
+                        CacheTaskDefinition(key, task);
                         return task;
                     }
                 }
             }
 
             return null;
+        }
+
+        private TaskDefinition GetCachedDefinition(string taskKey)
+        {
+            lock (_myCacheSyncObj)
+            {
+                if (_cachedTaskDefinitions.ContainsKey(taskKey))
+                {
+                    var definition = _cachedTaskDefinitions[taskKey];
+                    if ((definition.CachedAt - DateTime.UtcNow).TotalSeconds < 300)
+                        return definition.TaskDefinition;
+                }
+            }
+
+            return null;
+        }
+
+        private void CacheTaskDefinition(string taskKey, TaskDefinition taskDefinition)
+        {
+            lock (_myCacheSyncObj)
+            {
+                if (_cachedTaskDefinitions.ContainsKey(taskKey))
+                {
+                    _cachedTaskDefinitions[taskKey] = new CachedTaskDefinition()
+                    {
+                        TaskDefinition = taskDefinition,
+                        CachedAt = DateTime.UtcNow
+                    };
+                }
+                else
+                {
+                    _cachedTaskDefinitions.Add(taskKey, new CachedTaskDefinition()
+                    {
+                        TaskDefinition = taskDefinition,
+                        CachedAt = DateTime.UtcNow
+                    });
+                }
+            }
         }
 
         private TaskDefinition InsertNewTask(string applicationName, string taskName)
@@ -72,6 +119,9 @@ namespace Taskling.SqlServer.Tasks
 
                     var task = new TaskDefinition();
                     task.TaskSecondaryId = (int)command.ExecuteScalar();
+
+                    string key = applicationName + "::" + taskName;
+                    CacheTaskDefinition(key, task);
                     return task;
                 }
             }

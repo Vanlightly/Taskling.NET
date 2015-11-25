@@ -38,12 +38,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Blocks\IBlock.cs" />
+    <Compile Include="Blocks\BlockFactory.cs" />
+    <Compile Include="Blocks\Requests\BlockRequest.cs" />
+    <Compile Include="Blocks\Contexts\RangeBlockContext.cs" />
+    <Compile Include="Blocks\Requests\NumericRangeBlockRequest.cs" />
+    <Compile Include="Blocks\Requests\DateRangeBlockRequest.cs" />
+    <Compile Include="Blocks\Contexts\IBlockContext.cs" />
     <Compile Include="Blocks\IBlockFactory.cs" />
-    <Compile Include="Blocks\IDateRangeBlock.cs" />
-    <Compile Include="Blocks\IListBlock.cs" />
+    <Compile Include="Blocks\Contexts\IRangeBlockContext.cs" />
+    <Compile Include="Blocks\Contexts\IListBlockContext.cs" />
     <Compile Include="Blocks\IListBlockItem.cs" />
-    <Compile Include="Blocks\INumericRangeBlock.cs" />
     <Compile Include="Client\ITasklingClient.cs" />
     <Compile Include="Client\ClientConnectionSettings.cs" />
     <Compile Include="CriticalSection\CriticalSectionContext.cs" />
@@ -51,11 +55,38 @@
     <Compile Include="Exceptions\DataConsistencyException.cs" />
     <Compile Include="Exceptions\ExecutionArgumentsException.cs" />
     <Compile Include="Exceptions\ExecutionException.cs" />
+    <Compile Include="Exceptions\TransientException.cs" />
+    <Compile Include="ExecutionContext\FluentBlocks\FluentBlockDescriptor.cs" />
+    <Compile Include="ExecutionContext\FluentBlocks\FluentBlockSettingsDescriptor.cs" />
+    <Compile Include="ExecutionContext\FluentBlocks\FluentDateRangeBlockDescriptor.cs" />
+    <Compile Include="ExecutionContext\FluentBlocks\FluentNumericRangeBlockDescriptor.cs" />
+    <Compile Include="ExecutionContext\FluentBlocks\IBlockSettings.cs" />
+    <Compile Include="ExecutionContext\FluentBlocks\IFluentBlockSettingsDescriptor.cs" />
     <Compile Include="ExecutionContext\HashService.cs" />
     <Compile Include="ExecutionContext\ITaskExecutionContext.cs" />
     <Compile Include="ExecutionContext\TaskExecutionInstance.cs" />
     <Compile Include="ExecutionContext\TaskExecutionContext.cs" />
     <Compile Include="ExecutionContext\TaskExecutionOptions.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\BlockExecutionStatus.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\BlockRequestBase.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\BlockResponseBase.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\RangeBlocks\FindDeadRangeBlocksRequest.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\RangeBlocks\FindFailedRangeBlocksRequest.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\RangeBlocks\GenerateNewRangeBlocksRequest.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\RangeBlocks\RangeBlockExecutionChangeStatusRequest.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\RangeBlocks\RangeBlockCreateRequest.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\RangeBlocks\RangeBlock.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\DateRangeBlocks\DateRangeBlockCreateRequest.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\DateRangeBlocks\DateRangeBlockCreateResponse.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\DateRangeBlocks\DateRangeBlock.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\DateRangeBlocks\GenerateNewDateRangeBlocksRequest.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\DateRangeBlocks\FindDeadDateRangeBlocksRequest.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\DateRangeBlocks\FindFailedDateRangeBlocksRequest.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\IBlockService.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\IRangeBlockService.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\RangeBlocks\RangeBlockCreateResponse.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\RangeBlocks\RangeBlockExecutionCreateRequest.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\RangeBlocks\RangeBlockType.cs" />
     <Compile Include="InfrastructureContracts\CriticalSections\CompleteCriticalSectionRequest.cs" />
     <Compile Include="InfrastructureContracts\CriticalSections\CompleteCriticalSectionResponse.cs" />
     <Compile Include="InfrastructureContracts\CriticalSections\ICriticalSectionService.cs" />
@@ -74,7 +105,9 @@
     <Compile Include="InfrastructureContracts\TaskExecution\TaskExecutionStartRequest.cs" />
     <Compile Include="InfrastructureContracts\TaskExecution\TaskExecutionStartResponse.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Retries\RetryService.cs" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

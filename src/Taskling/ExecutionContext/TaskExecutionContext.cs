@@ -3,10 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Taskling.Blocks;
+using Taskling.Blocks.Requests;
 using Taskling.Client;
 using Taskling.CriticalSection;
 using Taskling.Exceptions;
+using Taskling.ExecutionContext.FluentBlocks;
 using Taskling.InfrastructureContracts;
+using Taskling.InfrastructureContracts.Blocks.RangeBlocks;
 using Taskling.InfrastructureContracts.TaskExecution;
 
 namespace Taskling.ExecutionContext
@@ -15,6 +19,7 @@ namespace Taskling.ExecutionContext
     {
         private readonly ITaskExecutionService _taskExecutionService;
         private readonly ICriticalSectionService _criticalSectionService;
+        private readonly IBlockFactory _blockFactory;
 
         private delegate void KeepAliveDelegate();
         private TaskExecutionInstance _taskExecutionInstance;
@@ -24,12 +29,14 @@ namespace Taskling.ExecutionContext
 
         public TaskExecutionContext(ITaskExecutionService taskExecutionService,
             ICriticalSectionService criticalSectionService,
+            IBlockFactory blockFactory,
             string applicationName,
             string taskName,
             TaskExecutionOptions taskExecutionOptions)
         {
             _taskExecutionService = taskExecutionService;
             _criticalSectionService = criticalSectionService;
+            _blockFactory = blockFactory;
 
             _taskExecutionInstance = new TaskExecutionInstance();
             _taskExecutionInstance.ApplicationName = applicationName;
@@ -110,6 +117,26 @@ namespace Taskling.ExecutionContext
             return criticalSectionContext;
         }
 
+        public IList<IRangeBlockContext> GetRangeBlocks(Func<FluentBlockDescriptor, IFluentBlockSettingsDescriptor> fluentBlockRequest)
+        {
+            var fluentDescriptor = fluentBlockRequest(new FluentBlockDescriptor());
+            var settings = (IBlockSettings) fluentDescriptor;
+
+            if (settings.RangeType == RangeBlockType.DateRange)
+            {
+                var request = ConvertToDateRangeBlockRequest(settings);
+                return _blockFactory.GenerateDateRangeBlocks(request);
+            }
+            
+            if (settings.RangeType == RangeBlockType.NumericRange)
+            {
+                var request = ConvertToNumericRangeBlockRequest(settings);
+                return _blockFactory.GenerateNumericRangeBlocks(request);
+            }
+            
+            throw new NotSupportedException("RangeType not supported");
+        }
+
         public void Dispose()
         {
             if (_startedCalled && !_completeCalled)
@@ -137,6 +164,8 @@ namespace Taskling.ExecutionContext
 
             return startRequest;
         }
+
+
 
         #region .: Keep Alive :.
 
@@ -178,5 +207,65 @@ namespace Taskling.ExecutionContext
         }
 
         #endregion .: Keep Alive :.
+
+        private DateRangeBlockRequest ConvertToDateRangeBlockRequest(IBlockSettings settings)
+        {
+            var request = new DateRangeBlockRequest();
+            request.ApplicationName = _taskExecutionInstance.ApplicationName;
+            request.TaskName = _taskExecutionInstance.TaskName;
+            request.TaskExecutionId = _taskExecutionInstance.TaskExecutionId;
+            request.CheckForDeadExecutions = settings.MustReprocessDeadTasks;
+            request.CheckForFailedExecutions = settings.MustReprocessFailedTasks;
+            
+            if (settings.MustReprocessDeadTasks)
+                request.GoBackElapsedSecondsForDeadTasks = (int)settings.DeadTaskDetectionRange.TotalSeconds;
+            
+            if(settings.MustReprocessFailedTasks)
+                request.GoBackElapsedSecondsForFailedTasks = (int)settings.DeadTaskDetectionRange.TotalSeconds;
+
+            request.TaskDeathMode = _taskExecutionOptions.TaskDeathMode;
+
+            if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.KeepAlive)
+                request.KeepAliveElapsedSecondsToBeDead = (int)settings.TreatAsDeadAfterRange.TotalSeconds;
+            else
+                request.OverrideElapsedSecondsToBeDead = (int)settings.TreatAsDeadAfterRange.TotalSeconds;
+
+            request.RangeBegin = settings.FromDate;
+            request.RangeEnd = settings.ToDate;
+            request.MaxBlockRange = settings.MaxBlockTimespan;
+            request.MaxBlocks = settings.MaximumNumberOfBlocksLimit;
+            
+            return request;
+        }
+
+        private NumericRangeBlockRequest ConvertToNumericRangeBlockRequest(IBlockSettings settings)
+        {
+            var request = new NumericRangeBlockRequest();
+            request.ApplicationName = _taskExecutionInstance.ApplicationName;
+            request.TaskName = _taskExecutionInstance.TaskName;
+            request.TaskExecutionId = _taskExecutionInstance.TaskExecutionId;
+            request.CheckForDeadExecutions = settings.MustReprocessDeadTasks;
+            request.CheckForFailedExecutions = settings.MustReprocessFailedTasks;
+
+            if (settings.MustReprocessDeadTasks)
+                request.GoBackElapsedSecondsForDeadTasks = (int)settings.DeadTaskDetectionRange.TotalSeconds;
+
+            if (settings.MustReprocessFailedTasks)
+                request.GoBackElapsedSecondsForFailedTasks = (int)settings.DeadTaskDetectionRange.TotalSeconds;
+
+            request.TaskDeathMode = _taskExecutionOptions.TaskDeathMode;
+
+            if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.KeepAlive)
+                request.KeepAliveElapsedSecondsToBeDead = (int)settings.TreatAsDeadAfterRange.TotalSeconds;
+            else
+                request.OverrideElapsedSecondsToBeDead = (int)settings.TreatAsDeadAfterRange.TotalSeconds;
+
+            request.RangeBegin = settings.FromNumber;
+            request.RangeEnd = settings.ToNumber;
+            request.BlockSize = settings.MaxBlockNumberRange;
+            request.MaxBlocks = settings.MaximumNumberOfBlocksLimit;
+
+            return request;
+        }
     }
 }

@@ -11,13 +11,13 @@ namespace Taskling.SqlServer.CriticalSections
     ----------------------------
     -- Get an exclusive lock on the record
     ----------------------------
-    UPDATE {0}.[CriticalSectionTokens]
+    UPDATE {0}.[CriticalSectionToken]
     SET [HoldLockTaskExecutionId] = @TaskExecutionId
     WHERE [TaskSecondaryId] = @TaskSecondaryId;
 
-    IF NOT EXISTS(SELECT 1 FROM {0}.[CriticalSectionTokens] WHERE [TaskSecondaryId] = @TaskSecondaryId)
+    IF NOT EXISTS(SELECT 1 FROM {0}.[CriticalSectionToken] WHERE [TaskSecondaryId] = @TaskSecondaryId)
 	BEGIN
-		INSERT INTO {0}.[CriticalSectionTokens]([TaskSecondaryId],[DateGranted],[DateReturned],[Status],[TaskExecutionId])
+		INSERT INTO {0}.[CriticalSectionToken]([TaskSecondaryId],[DateGranted],[DateReturned],[Status],[TaskExecutionId])
 		VALUES(@TaskSecondaryId, NULL, NULL, 1, 0)
 	END
 
@@ -25,12 +25,12 @@ namespace Taskling.SqlServer.CriticalSections
 	-- If its status is available (1) or if it is unavailable but the override minutes have elapsed
 	-- then update the record and return the token
 	----------------------------
-	IF EXISTS(SELECT 1 FROM {0}.[CriticalSectionTokens] WHERE [TaskSecondaryId] = @TaskSecondaryId AND [Status] = 1)
-		OR EXISTS(SELECT 1 FROM {0}.[CriticalSectionTokens] WHERE [TaskSecondaryId] = @TaskSecondaryId AND DATEDIFF(SECOND, [DateGranted], GETDATE()) > @SecondsOverride
+	IF EXISTS(SELECT 1 FROM {0}.[CriticalSectionToken] WHERE [TaskSecondaryId] = @TaskSecondaryId AND [Status] = 1)
+		OR EXISTS(SELECT 1 FROM {0}.[CriticalSectionToken] WHERE [TaskSecondaryId] = @TaskSecondaryId AND DATEDIFF(SECOND, [DateGranted], GETUTCDATE()) > @SecondsOverride
 														AND [Status] = 0)
 	BEGIN
-		UPDATE {0}.[CriticalSectionTokens]
-		SET [DateGranted] = GETDATE()
+		UPDATE {0}.[CriticalSectionToken]
+		SET [DateGranted] = GETUTCDATE()
 			,[DateReturned] = NULL
 			,[Status] = 0
 			,[TaskExecutionId] = @TaskExecutionId
@@ -52,11 +52,11 @@ namespace Taskling.SqlServer.CriticalSections
 -- PHASE 1. GET EXCLUSIVE LOCKS ON ALL RELEVANT RECORDS
 -- PREVENTS INCONSISTENT CHANGES AND PREVENTS DEADLOCKS
 ----------------------------
-UPDATE {0}.[ExecutionTokens] 
+UPDATE {0}.[ExecutionToken] 
 SET [HoldLockTaskExecutionId] = @TaskExecutionId
 WHERE [TaskSecondaryId] = @TaskSecondaryId;
 
-UPDATE {0}.[CriticalSectionTokens]
+UPDATE {0}.[CriticalSectionToken]
 SET [HoldLockTaskExecutionId] = @TaskExecutionId
 WHERE [TaskSecondaryId] = @TaskSecondaryId;
 
@@ -70,30 +70,30 @@ WHERE [TaskSecondaryId] = @TaskSecondaryId;
 
 -- CREATE AN AVAILABLE CRITICAL SECTION TOKEN IF NONE EXISTS
 -------------------------
-IF NOT EXISTS(SELECT 1 FROM {0}.[CriticalSectionTokens] WHERE [TaskSecondaryId] = @TaskSecondaryId)
+IF NOT EXISTS(SELECT 1 FROM {0}.[CriticalSectionToken] WHERE [TaskSecondaryId] = @TaskSecondaryId)
 BEGIN
-	INSERT INTO {0}.[CriticalSectionTokens]([TaskSecondaryId],[DateGranted],[DateReturned],[Status],[TaskExecutionId])
+	INSERT INTO {0}.[CriticalSectionToken]([TaskSecondaryId],[DateGranted],[DateReturned],[Status],[TaskExecutionId])
 	VALUES(@TaskSecondaryId, NULL, NULL, 1, 0);
 END
 
 -- REMOVE QUEUE ITEMS (TASK EXECUTIONS) THAT HAVE EXPIRED KEEP ALIVES
 -------------------------
 DELETE CSQ FROM {0}.[CriticalSectionQueue] CSQ
-JOIN {0}.[ExecutionTokens] ET ON CSQ.TaskSecondaryId = ET.TaskSecondaryId
+JOIN {0}.[ExecutionToken] ET ON CSQ.TaskSecondaryId = ET.TaskSecondaryId
 WHERE ET.[TaskSecondaryId] = @TaskSecondaryId
-AND DATEDIFF(SECOND, ET.LastKeepAlive, GETDATE()) > @KeepAliveElapsedSeconds;
+AND DATEDIFF(SECOND, ET.LastKeepAlive, GETUTCDATE()) > @KeepAliveElapsedSeconds;
 
 -- MAKE THE CRITICAL SECTION AVAILABLE IF THE ASSIGNED TASK EXECUTION HAS AN EXPIRED KEEP ALIVE
 -------------------------
 UPDATE CSC
-SET [DateReturned] = GETDATE()
+SET [DateReturned] = GETUTCDATE()
 	,[Status] = 1
 	,[TaskExecutionId] = 0
-FROM {0}.[CriticalSectionTokens] CSC
-JOIN {0}.[ExecutionTokens] ET ON CSC.TaskSecondaryId = ET.TaskSecondaryId
+FROM {0}.[CriticalSectionToken] CSC
+JOIN {0}.[ExecutionToken] ET ON CSC.TaskSecondaryId = ET.TaskSecondaryId
 	AND CSC.[TaskExecutionId] = ET.[TaskExecutionId]
 WHERE CSC.[TaskSecondaryId] = @TaskSecondaryId
-AND DATEDIFF(SECOND, ET.LastKeepAlive, GETDATE()) > @KeepAliveElapsedSeconds;
+AND DATEDIFF(SECOND, ET.LastKeepAlive, GETUTCDATE()) > @KeepAliveElapsedSeconds;
 
 
 --------------------------
@@ -106,7 +106,7 @@ AND DATEDIFF(SECOND, ET.LastKeepAlive, GETDATE()) > @KeepAliveElapsedSeconds;
 ---- IF TASK EXECUTION IS NOT IN QUEUE THEN ADD IT
 ---- DENY
 --------------------------
-IF EXISTS(SELECT 1 FROM {0}.[CriticalSectionTokens] 
+IF EXISTS(SELECT 1 FROM {0}.[CriticalSectionToken] 
 			WHERE [TaskSecondaryId] = @TaskSecondaryId 
 			AND [Status] = 1)
 BEGIN
@@ -124,8 +124,8 @@ BEGIN
 	IF @NextQueueItemIndex IS NULL 
 	BEGIN
 		-- Grant the critical section to the task execution. 
-		UPDATE {0}.[CriticalSectionTokens]
-		SET [DateGranted] = GETDATE()
+		UPDATE {0}.[CriticalSectionToken]
+		SET [DateGranted] = GETUTCDATE()
 			,[DateReturned] = NULL
 			,[Status] = 0
 			,[TaskExecutionId] = @TaskExecutionId
@@ -153,8 +153,8 @@ BEGIN
 		WHERE CriticalSectionQueueIndex = @QueueIndexOfTaskExecution;
 		
 		-- Grant the critical section to the task execution. 
-		UPDATE {0}.[CriticalSectionTokens]
-		SET [DateGranted] = GETDATE()
+		UPDATE {0}.[CriticalSectionToken]
+		SET [DateGranted] = GETUTCDATE()
 			,[DateReturned] = NULL
 			,[Status] = 0
 			,[TaskExecutionId] = @TaskExecutionId
@@ -192,8 +192,8 @@ BEGIN
 
 END";
 
-        private const string ReturnCriticalSectionTokenQuery = @"UPDATE {0}.[CriticalSectionTokens] 
-	SET [DateReturned] = GETDATE()
+        private const string ReturnCriticalSectionTokenQuery = @"UPDATE {0}.[CriticalSectionToken] 
+	SET [DateReturned] = GETUTCDATE()
 		,[Status] = 1
 	WHERE [TaskSecondaryId] = @TaskSecondaryId
 	AND [TaskExecutionId] = @TaskExecutionId;";

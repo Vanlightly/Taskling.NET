@@ -21,7 +21,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         [TestInitialize]
         public void Initialize()
         {
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             executionHelper.DeleteRecordsOfTask(TestConstants.ApplicationName, TestConstants.TaskName);
         }
 
@@ -35,7 +35,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         {
             var settings = new SqlServerClientConnectionSettings()
             {
-                TableSchema = "PC",
+                TableSchema = "Taskling",
                 ConnectionString = TestConstants.TestConnectionString,
                 ConnectTimeout = new TimeSpan(0, 1, 1)
             };
@@ -47,7 +47,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         public void If_TimeOverrideMode_ThenReturnsValidDataValues()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
 
@@ -67,7 +67,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         public void If_TimeOverrideMode_OneTaskAndOneTokenAndIsAvailable_ThenIsGranted()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
 
@@ -87,7 +87,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         public void If_TimeOverrideMode_TwoConcurrentTasksAndOneTokenAndIsAvailable_ThenIsGrantFirstTaskAndDenyTheOther()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
 
@@ -109,7 +109,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         public void If_TimeOverrideMode_TwoConcurrentTasksAndOneTokenAndIsUnlimited_ThenIsGrantBoth()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             executionHelper.InsertUnlimitedExecutionToken(taskSecondaryId);
 
@@ -131,7 +131,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         public void If_TimeOverrideMode_TwoSequentialTasksAndOneTokenAndIsAvailable_ThenIsGrantFirstTaskAndThenGrantTheOther()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
 
@@ -156,7 +156,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         public void If_TimeOverrideMode_FiveConcurrentTasksAndFourTokensAndAllAreAvailable_ThenIsGrantFirstFourTasksAndDenyTheOther()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
             executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
@@ -190,7 +190,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         public void If_TimeOverrideMode_OneToken_MultipleTaskThreads_ThenNoDeadLocksOccur()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
 
@@ -241,7 +241,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         public void If_TimeOverrideMode_OneTaskAndOneTokenAndIsUnavailableAndGrantedDateHasPassedElapsedTime_ThenIsGranted()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
 
@@ -268,7 +268,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         public void If_TimeOverrideMode_OneTaskAndOneTokenAndIsUnavailableAndKeepAliveHasNotPassedElapsedTime_ThenIsDenied()
         {
             // ARRANGE
-            var executionHelper = new ExecutionsHelper(TestConstants.TestConnectionString);
+            var executionHelper = new ExecutionsHelper();
             var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
 
