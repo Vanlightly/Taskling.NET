@@ -5,10 +5,10 @@ using System.Text;
 
 namespace Taskling.Blocks
 {
-    public interface IListBlockItem
+    public enum ListUpdateMode
     {
-        void Start();
-        void Complete();
-        void Failed(string failureMessage);
+        SingleItemCommit,
+        PeriodicBatchCommit,
+        BatchCommitAtEnd
     }
 }

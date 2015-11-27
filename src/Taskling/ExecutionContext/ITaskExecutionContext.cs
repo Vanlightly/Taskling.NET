@@ -6,6 +6,7 @@ using Taskling.Blocks;
 using Taskling.Blocks.Requests;
 using Taskling.CriticalSection;
 using Taskling.ExecutionContext.FluentBlocks;
+using Taskling.ExecutionContext.FluentBlocks.List;
 
 namespace Taskling.ExecutionContext
 {
@@ -16,7 +17,8 @@ namespace Taskling.ExecutionContext
         void Checkpoint(string checkpointMessage);
         void Error(string errorMessage);
         ICriticalSectionContext CreateCriticalSection();
-        IList<IRangeBlockContext> GetRangeBlocks(Func<FluentBlockDescriptor, IFluentBlockSettingsDescriptor> fluentBlockRequest);
+        IList<IRangeBlockContext> GetRangeBlocks(Func<FluentRangeBlockDescriptor, IFluentBlockSettingsDescriptor> fluentBlockRequest);
+        IList<IListBlockContext> GetListBlocks(Func<FluentListBlockDescriptorBase, IFluentBlockSettingsDescriptor> fluentBlockRequest);
         
     }
 }

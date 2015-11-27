@@ -12,7 +12,7 @@ using Taskling.SqlServer.TaskExecution;
 namespace Taskling.SqlServer.IntegrationTest.Given_RangeBlockContext
 {
     [TestClass]
-    public class When_GetBlocksFromExecutionContext
+    public class When_GetRangeBlocksFromExecutionContext
     {
         private ExecutionsHelper _executionHelper;
         private BlocksHelper _blocksHelper;

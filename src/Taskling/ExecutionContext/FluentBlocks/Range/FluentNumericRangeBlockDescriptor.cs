@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Taskling.Blocks;
 using Taskling.InfrastructureContracts.Blocks.RangeBlocks;
 
 namespace Taskling.ExecutionContext.FluentBlocks
@@ -13,7 +14,7 @@ namespace Taskling.ExecutionContext.FluentBlocks
             FromNumber = fromNumber;
             ToNumber = toNumber;
             MaxBlockNumberRange = maxBlockRange;
-            RangeType = RangeBlockType.NumericRange;
+            BlockType = BlockType.NumericRange;
         }
     }
 }

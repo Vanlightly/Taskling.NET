@@ -23,13 +23,15 @@ namespace Taskling.SqlServer
         private readonly ICriticalSectionService _criticalSectionService;
         private readonly IBlockService _blockService;
         private readonly IRangeBlockService _rangeBlockService;
+        private readonly IListBlockService _listBlockService;
 
         public SqlServerTasklingClient(SqlServerClientConnectionSettings clientConnectionSettings,
             ITaskExecutionService taskExecutionService = null,
             ICriticalSectionService criticalSectionService = null,
             ITaskService taskService = null,
             IBlockService blockService = null,
-            IRangeBlockService rangeBlockService = null)
+            IRangeBlockService rangeBlockService = null,
+            IListBlockService listBlockService = null)
         {
             _clientConnectionSettings = clientConnectionSettings;
 
@@ -52,9 +54,14 @@ namespace Taskling.SqlServer
                 _blockService = blockService;
 
             if (rangeBlockService == null)
-                _rangeBlockService = new RangeBlockService(_clientConnectionSettings, taskService);
+                _rangeBlockService = new RangeBlockService(_clientConnectionSettings);
             else
                 _rangeBlockService = rangeBlockService;
+
+            if (listBlockService == null)
+                _listBlockService = new ListBlockService(_clientConnectionSettings);
+            else
+                _listBlockService = listBlockService;
 
         }
 
@@ -62,7 +69,7 @@ namespace Taskling.SqlServer
         {
             return new TaskExecutionContext(_taskExecutionService, 
                 _criticalSectionService, 
-                new BlockFactory(_blockService, _rangeBlockService), 
+                new BlockFactory(_blockService, _rangeBlockService, _listBlockService), 
                 applicationName, 
                 taskName, 
                 taskExecutionOptions);

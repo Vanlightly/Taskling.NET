@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Taskling.ExecutionContext;
 using Taskling.InfrastructureContracts.Blocks;
+using Taskling.InfrastructureContracts.Blocks.CommonRequests;
 using Taskling.InfrastructureContracts.Blocks.RangeBlocks;
 using Taskling.Retries;
 
@@ -36,40 +37,40 @@ namespace Taskling.Blocks
         
         public void Start()
         {
-            var request = new RangeBlockExecutionChangeStatusRequest(_applicationName,
+            var request = new BlockExecutionChangeStatusRequest(_applicationName,
                 _taskName,
                 _taskExecutionId,
                 Block.RangeType,
                 BlockExecutionId,
                 BlockExecutionStatus.Started);
 
-            Action<RangeBlockExecutionChangeStatusRequest> actionRequest = _rangeBlockService.ChangeStatus;
+            Action<BlockExecutionChangeStatusRequest> actionRequest = _rangeBlockService.ChangeStatus;
             RetryService.InvokeWithRetry(actionRequest, request);
         }
 
         public void Complete()
         {
-            var request = new RangeBlockExecutionChangeStatusRequest(_applicationName,
+            var request = new BlockExecutionChangeStatusRequest(_applicationName,
                 _taskName,
                 _taskExecutionId,
                 Block.RangeType,
                 BlockExecutionId,
                 BlockExecutionStatus.Completed);
 
-            Action<RangeBlockExecutionChangeStatusRequest> actionRequest = _rangeBlockService.ChangeStatus;
+            Action<BlockExecutionChangeStatusRequest> actionRequest = _rangeBlockService.ChangeStatus;
             RetryService.InvokeWithRetry(actionRequest, request);
         }
 
         public void Failed()
         {
-            var request = new RangeBlockExecutionChangeStatusRequest(_applicationName,
+            var request = new BlockExecutionChangeStatusRequest(_applicationName,
                 _taskName,
                 _taskExecutionId,
                 Block.RangeType,
                 BlockExecutionId,
                 BlockExecutionStatus.Failed);
 
-            Action<RangeBlockExecutionChangeStatusRequest> actionRequest = _rangeBlockService.ChangeStatus;
+            Action<BlockExecutionChangeStatusRequest> actionRequest = _rangeBlockService.ChangeStatus;
             RetryService.InvokeWithRetry(actionRequest, request);
         }
 

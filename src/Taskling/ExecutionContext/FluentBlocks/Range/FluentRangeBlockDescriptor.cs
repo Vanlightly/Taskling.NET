@@ -5,11 +5,11 @@ using System.Text;
 
 namespace Taskling.ExecutionContext.FluentBlocks
 {
-    public class FluentBlockDescriptor
+    public class FluentRangeBlockDescriptor
     {
         private FluentDateRangeBlockDescriptor _dateRangeBlockDescriptor;
         private FluentNumericRangeBlockDescriptor _numericRangeBlockDescriptor;
-
+        
         public IFluentBlockSettingsDescriptor AsDateRange(DateTime fromDate, DateTime toDate, TimeSpan maxBlockRange)
         {
             _dateRangeBlockDescriptor = new FluentDateRangeBlockDescriptor(fromDate, toDate, maxBlockRange);

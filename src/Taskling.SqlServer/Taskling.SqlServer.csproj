@@ -40,8 +40,14 @@
   <ItemGroup>
     <Compile Include="Blocks\BlockExecutionStatus.cs" />
     <Compile Include="Blocks\BlockService.cs" />
-    <Compile Include="Blocks\RangeBlockQueryBuilder.cs" />
+    <Compile Include="Blocks\ListBlockService.cs" />
+    <Compile Include="Blocks\QueryBuilders\BlockExecutionQueryBuilder.cs" />
+    <Compile Include="Blocks\QueryBuilders\DeadBlocksQueryBuilder.cs" />
+    <Compile Include="Blocks\QueryBuilders\FailedBlocksQueryBuilder.cs" />
+    <Compile Include="Blocks\QueryBuilders\ListBlockQueryBuilder.cs" />
+    <Compile Include="Blocks\QueryBuilders\RangeBlockQueryBuilder.cs" />
     <Compile Include="Blocks\RangeBlockService.cs" />
+    <Compile Include="AncilliaryServices\DbOperationsService.cs" />
     <Compile Include="Configuration\SqlServerClientConnectionSettings.cs" />
     <Compile Include="DataObjects\TaskDefinition.cs" />
     <Compile Include="SqlServerTasklingClient.cs" />

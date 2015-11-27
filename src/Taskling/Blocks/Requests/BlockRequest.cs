@@ -24,6 +24,6 @@ namespace Taskling.Blocks
         public int GoBackElapsedSecondsForDeadTasks { get; set; }
         public int KeepAliveElapsedSecondsToBeDead { get; set; }
 
-        public RangeBlockType RangeType { get; protected set; }
+        public BlockType BlockType { get; protected set; }
     }
 }

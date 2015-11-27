@@ -10,7 +10,7 @@ namespace Taskling.Blocks.Requests
     {
         public DateRangeBlockRequest()
         {
-            RangeType = RangeBlockType.DateRange;
+            BlockType = BlockType.DateRange;
         }
 
         public DateTime RangeBegin { get; set; }

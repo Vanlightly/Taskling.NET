@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Taskling.Blocks;
 using Taskling.InfrastructureContracts.Blocks.RangeBlocks;
 
 namespace Taskling.ExecutionContext.FluentBlocks
 {
     public interface IBlockSettings
     {
-        RangeBlockType RangeType { get; set; }
+        BlockType BlockType { get; set; }
 
         bool MustReprocessFailedTasks { get; set; }
         TimeSpan FailedTaskDetectionRange { get; set; }
@@ -28,5 +29,11 @@ namespace Taskling.ExecutionContext.FluentBlocks
         long FromNumber { get; set; }
         long ToNumber { get; set; }
         long MaxBlockNumberRange { get; set; }
+
+        // ListBlocks
+        List<string> Values { get; set; }
+        short MaxBlockSize { get; set; }
+        ListUpdateMode ListUpdateMode { get; set; }
+        int UncommittedItemsThreshold { get; set; }
     }
 }

@@ -4,38 +4,33 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
+using Taskling.Blocks;
 using Taskling.Exceptions;
 using Taskling.InfrastructureContracts.Blocks;
+using Taskling.InfrastructureContracts.Blocks.CommonRequests;
 using Taskling.InfrastructureContracts.Blocks.RangeBlocks;
 using Taskling.Retries;
+using Taskling.SqlServer.AncilliaryServices;
 using Taskling.SqlServer.Configuration;
 using Taskling.SqlServer.Tasks;
 
 namespace Taskling.SqlServer.Blocks
 {
-    public class RangeBlockService : IRangeBlockService
+    public class RangeBlockService : DbOperationsService, IRangeBlockService
     {
-        private readonly string _connectionString;
-        private readonly int _queryTimeout;
-        private readonly string _tableSchema;
-        private readonly ITaskService _taskService;
-
-        public RangeBlockService(SqlServerClientConnectionSettings connectionSettings, ITaskService taskService)
+        public RangeBlockService(SqlServerClientConnectionSettings clientConnectionSettings)
+            : base(clientConnectionSettings.ConnectionString, clientConnectionSettings.QueryTimeout, clientConnectionSettings.TableSchema)
         {
-            _connectionString = connectionSettings.ConnectionString;
-            _queryTimeout = (int)connectionSettings.QueryTimeout.TotalMilliseconds;
-            _tableSchema = connectionSettings.TableSchema;
-            _taskService = taskService;
         }
 
-        public void ChangeStatus(RangeBlockExecutionChangeStatusRequest changeStatusRequest)
+        public void ChangeStatus(BlockExecutionChangeStatusRequest changeStatusRequest)
         {
-            switch (changeStatusRequest.RangeType)
+            switch (changeStatusRequest.BlockType)
             {
-                case RangeBlockType.DateRange:
+                case BlockType.DateRange:
                     ChangeStatusOfDateRangeExecution(changeStatusRequest);
                     break;
-                case RangeBlockType.NumericRange:
+                case BlockType.NumericRange:
                     ChangeStatusOfNumericRangeExecution(changeStatusRequest);
                     break;
                 default:
@@ -43,14 +38,14 @@ namespace Taskling.SqlServer.Blocks
             }
         }
 
-        private void ChangeStatusOfDateRangeExecution(RangeBlockExecutionChangeStatusRequest changeStatusRequest)
+        private void ChangeStatusOfDateRangeExecution(BlockExecutionChangeStatusRequest changeStatusRequest)
         {
             try
             {
-                using (var connection = new SqlConnection(_connectionString))
+                using (var connection = CreateNewConnection())
                 {
-                    connection.Open();
                     var command = connection.CreateCommand();
+                    command.CommandTimeout = QueryTimeout;
                     command.CommandText = GetDateRangeUpdateQuery(changeStatusRequest.BlockExecutionStatus);
                     command.Parameters.Add("@DateRangeBlockExecutionId", SqlDbType.BigInt).Value = long.Parse(changeStatusRequest.BlockExecutionId);
                     command.Parameters.Add("@BlockExecutionStatus", SqlDbType.TinyInt).Value = (byte)changeStatusRequest.BlockExecutionStatus;
@@ -66,14 +61,14 @@ namespace Taskling.SqlServer.Blocks
             }
         }
 
-        private void ChangeStatusOfNumericRangeExecution(RangeBlockExecutionChangeStatusRequest changeStatusRequest)
+        private void ChangeStatusOfNumericRangeExecution(BlockExecutionChangeStatusRequest changeStatusRequest)
         {
             try
             {
-                using (var connection = new SqlConnection(_connectionString))
+                using (var connection = CreateNewConnection())
                 {
-                    connection.Open();
                     var command = connection.CreateCommand();
+                    command.CommandTimeout = QueryTimeout;
                     command.CommandText = GetNumericRangeUpdateQuery(changeStatusRequest.BlockExecutionStatus);
                     command.Parameters.Add("@NumericRangeBlockExecutionId", SqlDbType.BigInt).Value = long.Parse(changeStatusRequest.BlockExecutionId);
                     command.Parameters.Add("@BlockExecutionStatus", SqlDbType.TinyInt).Value = (byte)changeStatusRequest.BlockExecutionStatus;
@@ -92,17 +87,17 @@ namespace Taskling.SqlServer.Blocks
         private string GetDateRangeUpdateQuery(BlockExecutionStatus executionStatus)
         {
             if (executionStatus == BlockExecutionStatus.Completed || executionStatus == BlockExecutionStatus.Failed)
-                return RangeBlockQueryBuilder.GetSetDateRangeBlockExecutionAsCompletedQuery(_tableSchema);
+                return BlockExecutionQueryBuilder.GetSetDateRangeBlockExecutionAsCompletedQuery(_tableSchema);
 
-            return RangeBlockQueryBuilder.GetUpdateDateRangeBlockExecutionStatusQuery(_tableSchema);
+            return BlockExecutionQueryBuilder.GetUpdateDateRangeBlockExecutionStatusQuery(_tableSchema);
         }
 
         private string GetNumericRangeUpdateQuery(BlockExecutionStatus executionStatus)
         {
             if (executionStatus == BlockExecutionStatus.Completed || executionStatus == BlockExecutionStatus.Failed)
-                return RangeBlockQueryBuilder.GetSetNumericRangeBlockExecutionAsCompletedQuery(_tableSchema);
+                return BlockExecutionQueryBuilder.GetSetNumericRangeBlockExecutionAsCompletedQuery(_tableSchema);
 
-            return RangeBlockQueryBuilder.GetUpdateNumericRangeBlockExecutionStatusQuery(_tableSchema);
+            return BlockExecutionQueryBuilder.GetUpdateNumericRangeBlockExecutionStatusQuery(_tableSchema);
         }
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Taskling.Blocks;
 using Taskling.InfrastructureContracts.TaskExecution;
 
 namespace Taskling.InfrastructureContracts.Blocks.RangeBlocks
@@ -13,7 +14,7 @@ namespace Taskling.InfrastructureContracts.Blocks.RangeBlocks
             int taskExecutionId,
             DateTime fromDate,
             DateTime toDate)
-            : base(applicationName, taskName, taskExecutionId, RangeBlockType.DateRange)
+            : base(applicationName, taskName, taskExecutionId, BlockType.DateRange)
         {
             From = fromDate.Ticks;
             To = toDate.Ticks;
@@ -24,7 +25,7 @@ namespace Taskling.InfrastructureContracts.Blocks.RangeBlocks
             int taskExecutionId,
             long from,
             long to)
-            : base(applicationName, taskName, taskExecutionId, RangeBlockType.NumericRange)
+            : base(applicationName, taskName, taskExecutionId, BlockType.NumericRange)
         {
             From = from;
             To = to;

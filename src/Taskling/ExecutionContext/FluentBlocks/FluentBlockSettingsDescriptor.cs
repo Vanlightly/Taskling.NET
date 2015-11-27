@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Taskling.Blocks;
 using Taskling.InfrastructureContracts.Blocks.RangeBlocks;
 
 namespace Taskling.ExecutionContext.FluentBlocks
@@ -18,7 +19,7 @@ namespace Taskling.ExecutionContext.FluentBlocks
         public int MaximumNumberOfBlocksLimit { get; set; }
 
         public TaskDeathMode TaskDeathMode { get; set; }
-        public RangeBlockType RangeType { get; set; }
+        public BlockType BlockType { get; set; }
 
         // Date Range
         public DateTime FromDate { get; set; }
@@ -29,6 +30,12 @@ namespace Taskling.ExecutionContext.FluentBlocks
         public long FromNumber { get; set; }
         public long ToNumber { get; set; }
         public long MaxBlockNumberRange { get; set; }
+
+        // ListBlocks
+        public List<string> Values { get; set; }
+        public short MaxBlockSize { get; set; }
+        public ListUpdateMode ListUpdateMode { get; set; }
+        public int UncommittedItemsThreshold { get; set; }
 
         public IFluentBlockSettingsDescriptor ReprocessFailedTasks(TimeSpan detectionRange)
         {

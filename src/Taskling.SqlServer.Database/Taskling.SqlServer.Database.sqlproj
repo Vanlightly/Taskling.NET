@@ -75,5 +75,14 @@
     <Build Include="Tables\DateRangeBlockExecution.sql" />
     <Build Include="Tables\NumericRangeBlock.sql" />
     <Build Include="Tables\NumericRangeBlockExecution.sql" />
+    <Build Include="Indexes\IX_DateRangeBlock_TaskSecondaryId.sql" />
+    <Build Include="Indexes\IX_NumericRangeBlock_TaskSecondaryId.sql" />
+    <Build Include="Indexes\IX_NumericRangeBlockExecution_TaskExecutionId.sql" />
+    <Build Include="Indexes\IX_NumericRangeBlockExecution_NumericRangeBlockId.sql" />
+    <Build Include="Indexes\IX_DateRangeBlockExecution_TaskExecutionId.sql" />
+    <Build Include="Indexes\IX_DateRangeBlockExecution_DateRangeBlockId.sql" />
+    <Build Include="Tables\ListBlock.sql" />
+    <Build Include="Tables\ListBlockExecution.sql" />
+    <Build Include="Tables\ListBlockItem.sql" />
   </ItemGroup>
 </Project>

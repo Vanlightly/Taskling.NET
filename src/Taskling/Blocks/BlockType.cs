@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Taskling.InfrastructureContracts.Blocks.RangeBlocks
+namespace Taskling.Blocks
 {
-    public enum RangeBlockType
+    public enum BlockType
     {
         NumericRange,
-        DateRange
+        DateRange,
+        List
     }
 }

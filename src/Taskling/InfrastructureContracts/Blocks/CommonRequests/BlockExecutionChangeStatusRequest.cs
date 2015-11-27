@@ -2,18 +2,20 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Taskling.Blocks;
+using Taskling.InfrastructureContracts.Blocks;
 
-namespace Taskling.InfrastructureContracts.Blocks.RangeBlocks
+namespace Taskling.InfrastructureContracts.Blocks.CommonRequests
 {
-    public class RangeBlockExecutionChangeStatusRequest : BlockRequestBase
+    public class BlockExecutionChangeStatusRequest : BlockRequestBase
     {
-        public RangeBlockExecutionChangeStatusRequest(string applicationName,
+        public BlockExecutionChangeStatusRequest(string applicationName,
             string taskName,
             int taskExecutionId,
-            RangeBlockType rangeType,
+            BlockType blockType,
             string blockExecutionId,
             BlockExecutionStatus blockExecutionStatus)
-            : base(applicationName, taskName, taskExecutionId, rangeType, blockExecutionId)
+            : base(applicationName, taskName, taskExecutionId, blockType, blockExecutionId)
         {
             BlockExecutionStatus = blockExecutionStatus;
         }

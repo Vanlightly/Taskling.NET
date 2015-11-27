@@ -4,32 +4,24 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
-using Taskling.Client;
 using Taskling.Exceptions;
 using Taskling.ExecutionContext;
-using Taskling.InfrastructureContracts;
 using Taskling.InfrastructureContracts.TaskExecution;
+using Taskling.SqlServer.AncilliaryServices;
 using Taskling.SqlServer.Configuration;
-using Taskling.SqlServer.DataObjects;
+
 using Taskling.SqlServer.Tasks;
 
 namespace Taskling.SqlServer.TaskExecution
 {
-    public class TaskExecutionService : ITaskExecutionService
+    public class TaskExecutionService : DbOperationsService, ITaskExecutionService
     {
-        private readonly string _connectionString;
-        private readonly int _queryTimeout;
-        private readonly string _tableSchema;
-
         private readonly ITaskService _taskService;
 
         public TaskExecutionService(SqlServerClientConnectionSettings clientConnectionSettings,
             ITaskService taskService)
+            : base(clientConnectionSettings.ConnectionString, clientConnectionSettings.QueryTimeout, clientConnectionSettings.TableSchema)
         {
-            _connectionString = clientConnectionSettings.ConnectionString;
-            _queryTimeout = (int)clientConnectionSettings.QueryTimeout.TotalMilliseconds;
-            _tableSchema = clientConnectionSettings.TableSchema;
-
             _taskService = taskService;
         }
 
@@ -59,7 +51,7 @@ namespace Taskling.SqlServer.TaskExecution
             {
                 return new TaskExecutionCompleteResponse()
                 {
-                    CompletedAt = GetCompletedAtDate()
+                    CompletedAt = DateTime.UtcNow
                 };
             }
 
@@ -78,11 +70,11 @@ namespace Taskling.SqlServer.TaskExecution
 
         public void SendKeepAlive(int taskExecutionId)
         {
-            using (var connection = new SqlConnection(_connectionString))
+            using (var connection = CreateNewConnection())
             {
-                connection.Open();
                 using (var command = new SqlCommand(TaskQueryBuilder.KeepAliveQuery(_tableSchema), connection))
                 {
+                    command.CommandTimeout = QueryTimeout;
                     command.Parameters.Add(new SqlParameter("@TaskExecutionId", SqlDbType.Int)).Value = taskExecutionId;
                     command.ExecuteNonQuery();
                 }
@@ -102,36 +94,28 @@ namespace Taskling.SqlServer.TaskExecution
         private TaskExecutionStartResponse GetExecutionTokenUsingOverride(int taskSecondaryId, int secondsOverride)
         {
             var response = new TaskExecutionStartResponse();
-            
-            using (var connection = new SqlConnection(_connectionString))
+
+            using (var connection = CreateNewConnection())
             {
-                connection.Open();
-
-                SqlTransaction myTransaction = connection.BeginTransaction(IsolationLevel.Serializable);
-
+                SqlTransaction transaction = connection.BeginTransaction(IsolationLevel.Serializable);
                 var command = connection.CreateCommand();
-                command.Transaction = myTransaction;
-                command.CommandTimeout = _queryTimeout;
+                command.Transaction = transaction;
+                command.CommandTimeout = QueryTimeout;
                 
                 try
                 {
                     var taskExecutionId = CreateTaskExecution(command, taskSecondaryId);
                     response = TryGetExecutionTokenUsingTimeOverrideMode(command, taskSecondaryId, taskExecutionId, secondsOverride);
 
-                    myTransaction.Commit();
+                    transaction.Commit();
+                }
+                catch (SqlException sqlEx)
+                {
+                    TryRollBack(transaction, sqlEx);
                 }
                 catch (Exception ex)
                 {
-                    try
-                    {
-                        myTransaction.Rollback();
-                    }
-                    catch (Exception)
-                    {
-                        throw new ExecutionException("Failed to commit token grant request but failed to roll back. Data could be in an inconsistent state.", ex);
-                    }
-
-                    throw new ExecutionException("Failed to commit token grant request but successfully rolled back. Data is in a consistent state.", ex);
+                    TryRollback(transaction, ex);
                 }
             }
 
@@ -141,36 +125,28 @@ namespace Taskling.SqlServer.TaskExecution
         private TaskExecutionStartResponse GetExecutionTokenUsingKeepAliveMode(int taskSecondaryId, int secondsElapsedTimeOut, int secondsOverride)
         {
             var response = new TaskExecutionStartResponse();
-            
-            using (var connection = new SqlConnection(_connectionString))
+
+            using (var connection = CreateNewConnection())
             {
-                connection.Open();
-
-                SqlTransaction myTransaction = connection.BeginTransaction(IsolationLevel.Serializable);
-
+                SqlTransaction transaction = connection.BeginTransaction(IsolationLevel.Serializable);
                 var command = connection.CreateCommand();
-                command.Transaction = myTransaction;
-                command.CommandTimeout = _queryTimeout;
+                command.Transaction = transaction;
+                command.CommandTimeout = QueryTimeout;
                 
                 try
                 {
                     var taskExecutionId = CreateTaskExecution(command, taskSecondaryId);
                     response = TryGetExecutionTokenUsingKeepAliveMode(command, taskSecondaryId, taskExecutionId, secondsElapsedTimeOut, secondsOverride);
                     
-                    myTransaction.Commit();
+                    transaction.Commit();
+                }
+                catch (SqlException sqlEx)
+                {
+                    TryRollBack(transaction, sqlEx);
                 }
                 catch (Exception ex)
                 {
-                    try
-                    {
-                        myTransaction.Rollback();
-                    }
-                    catch (Exception)
-                    {
-                        throw new ExecutionException("Failed to commit token grant request but failed to roll back. Data could be in an inconsistent state.", ex);
-                    }
-
-                    throw new ExecutionException("Failed to commit token grant request but successfully rolled back. Data is in a consistent state.", ex);
+                    TryRollback(transaction, ex);
                 }
             }
 
@@ -239,15 +215,13 @@ namespace Taskling.SqlServer.TaskExecution
         {
             var response = new TaskExecutionCompleteResponse();
 
-            using (var connection = new SqlConnection(_connectionString))
+            using (var connection = CreateNewConnection())
             {
-                connection.Open();
-
-                SqlTransaction myTransaction = connection.BeginTransaction(IsolationLevel.Serializable);
+                SqlTransaction transaction = connection.BeginTransaction(IsolationLevel.Serializable);
 
                 var command = connection.CreateCommand();
-                command.Transaction = myTransaction;
-                command.CommandTimeout = _queryTimeout;
+                command.Transaction = transaction;
+                command.CommandTimeout = QueryTimeout;
                 command.CommandText = TokensQueryBuilder.GetReturnExecutionTokenQuery(_tableSchema);
                 command.Parameters.Add("@ExecutionTokenId", SqlDbType.UniqueIdentifier).Value = taskExecutionCompleteRequest.ExecutionTokenId;
                 command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionCompleteRequest.TaskExecutionId;
@@ -255,36 +229,20 @@ namespace Taskling.SqlServer.TaskExecution
                 try
                 {
                     response.CompletedAt = DateTime.Parse(command.ExecuteScalar().ToString());
-                    myTransaction.Commit();
+                    transaction.Commit();
+                }
+                catch (SqlException sqlEx)
+                {
+                    TryRollBack(transaction, sqlEx);
                 }
                 catch (Exception ex)
                 {
-                    try
-                    {
-                        myTransaction.Rollback();
-                    }
-                    catch (Exception)
-                    {
-                        throw new ExecutionException("Failed to commit token grant request but failed to roll back. Data could be in an inconsistent state.", ex);
-                    }
-
-                    throw new ExecutionException("Failed to commit token grant request but successfully rolled back. Data is in a consistent state.", ex);
+                    TryRollback(transaction, ex);
                 }
             }
 
             return response;
         }
-
-        private DateTime GetCompletedAtDate()
-        {
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                connection.Open();
-                var command = connection.CreateCommand();
-                command.CommandText = TokensQueryBuilder.GetCurrentDateQuery;
-                var result = (DateTime)command.ExecuteScalar();
-                return result;
-            }
-        }
+       
     }
 }

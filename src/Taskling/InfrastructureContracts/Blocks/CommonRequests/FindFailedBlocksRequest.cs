@@ -2,18 +2,20 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Taskling.Blocks;
+using Taskling.InfrastructureContracts.Blocks;
 
-namespace Taskling.InfrastructureContracts.Blocks.RangeBlocks
+namespace Taskling.InfrastructureContracts.Blocks.CommonRequests
 {
-    public class FindFailedRangeBlocksRequest : BlockRequestBase
+    public class FindFailedBlocksRequest : BlockRequestBase
     {
-        public FindFailedRangeBlocksRequest(string applicationName, 
+        public FindFailedBlocksRequest(string applicationName, 
             string taskName, 
             int taskExecutionId, 
-            RangeBlockType rangeType,
+            BlockType blockType,
             DateTime failedTaskDateLimit,
             int blockCountLimit)
-            : base(applicationName, taskName, taskExecutionId, rangeType)
+            : base(applicationName, taskName, taskExecutionId, blockType)
         {
             FailedTaskDateLimit = failedTaskDateLimit;
             BlockCountLimit = blockCountLimit;

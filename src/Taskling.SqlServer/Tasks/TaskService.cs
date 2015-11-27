@@ -5,26 +5,21 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using Taskling.InfrastructureContracts.TaskExecution;
+using Taskling.SqlServer.AncilliaryServices;
 using Taskling.SqlServer.Configuration;
 using Taskling.SqlServer.DataObjects;
 using Taskling.SqlServer.TaskExecution;
 
 namespace Taskling.SqlServer.Tasks
 {
-    public class TaskService : ITaskService
+    public class TaskService : DbOperationsService, ITaskService
     {
-        private readonly string _connectionString;
-        private readonly int _queryTimeout;
-        private readonly string _tableSchema;
-
         private object _myCacheSyncObj = new object();
         private Dictionary<string, CachedTaskDefinition> _cachedTaskDefinitions = new Dictionary<string, CachedTaskDefinition>();
 
         public TaskService(SqlServerClientConnectionSettings clientConnectionSettings)
+            : base(clientConnectionSettings.ConnectionString, clientConnectionSettings.QueryTimeout, clientConnectionSettings.TableSchema)
         {
-            _connectionString = clientConnectionSettings.ConnectionString;
-            _queryTimeout = (int)clientConnectionSettings.QueryTimeout.TotalMilliseconds;
-            _tableSchema = clientConnectionSettings.TableSchema;
         }
 
         public TaskDefinition GetTaskDefinition(string applicationName, string taskName)
@@ -47,9 +42,8 @@ namespace Taskling.SqlServer.Tasks
             if (cachedTaskDefinition != null)
                 return cachedTaskDefinition;
 
-            using (var connection = new SqlConnection(_connectionString))
+            using (var connection = CreateNewConnection())
             {
-                connection.Open();
                 using (var command = new SqlCommand(TaskQueryBuilder.GetTaskQuery(_tableSchema), connection))
                 {
                     command.Parameters.Add(new SqlParameter("@ApplicationName", SqlDbType.VarChar, 200)).Value = applicationName;
@@ -109,9 +103,8 @@ namespace Taskling.SqlServer.Tasks
 
         private TaskDefinition InsertNewTask(string applicationName, string taskName)
         {
-            using (var connection = new SqlConnection(_connectionString))
+            using (var connection = CreateNewConnection())
             {
-                connection.Open();
                 using (var command = new SqlCommand(TaskQueryBuilder.InsertTaskQuery(_tableSchema), connection))
                 {
                     command.Parameters.Add(new SqlParameter("@ApplicationName", SqlDbType.VarChar, 200)).Value = applicationName;

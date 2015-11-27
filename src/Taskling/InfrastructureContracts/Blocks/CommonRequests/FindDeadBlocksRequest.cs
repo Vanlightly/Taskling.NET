@@ -2,22 +2,22 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Taskling.Blocks;
 using Taskling.ExecutionContext;
-using Taskling.InfrastructureContracts.Blocks.RangeBlocks;
-using Taskling.InfrastructureContracts.TaskExecution;
+using Taskling.InfrastructureContracts.Blocks;
 
-namespace Taskling.InfrastructureContracts.Blocks.RangeBlocks
+namespace Taskling.InfrastructureContracts.Blocks.CommonRequests
 {
-    public class FindDeadRangeBlocksRequest : BlockRequestBase
+    public class FindDeadBlocksRequest : BlockRequestBase
     {
-        public FindDeadRangeBlocksRequest(string applicationName, 
+        public FindDeadBlocksRequest(string applicationName, 
             string taskName, 
             int taskExecutionId, 
-            RangeBlockType rangeType,
+            BlockType blockType,
             DateTime searchPeriodBegin,
             DateTime searchPeriodEnd,
             int blockCountLimit)
-            : base(applicationName, taskName, taskExecutionId, rangeType)
+            : base(applicationName, taskName, taskExecutionId, blockType)
         {
             SearchPeriodBegin = searchPeriodBegin;
             SearchPeriodEnd = searchPeriodEnd;
@@ -25,13 +25,13 @@ namespace Taskling.InfrastructureContracts.Blocks.RangeBlocks
             TaskDeathMode = TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate;
         }
 
-        public FindDeadRangeBlocksRequest(string applicationName,
+        public FindDeadBlocksRequest(string applicationName,
             string taskName,
             int taskExecutionId,
-            RangeBlockType rangeType,
+            BlockType blockType,
             DateTime lastKeepAliveLimitDateTime,
             int blockCountLimit)
-            : base(applicationName, taskName, taskExecutionId, rangeType)
+            : base(applicationName, taskName, taskExecutionId, blockType)
         {
             LastKeepAliveLimitDateTime = lastKeepAliveLimitDateTime;
             BlockCountLimit = blockCountLimit;

@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Taskling.Blocks;
 using Taskling.InfrastructureContracts.Blocks;
+using Taskling.InfrastructureContracts.Blocks.CommonRequests;
 using Taskling.InfrastructureContracts.Blocks.RangeBlocks;
 using Taskling.SqlServer.Blocks;
 using Taskling.SqlServer.Configuration;
@@ -54,10 +56,10 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
             var blockExecution1 = _blocksHelper.InsertDateRangeBlockExecution(taskExecution1, block1, DateTime.UtcNow.AddMinutes(-2), DateTime.UtcNow.AddMinutes(-1), BlockExecutionStatus.Failed);
             var blockExecution2 = _blocksHelper.InsertDateRangeBlockExecution(taskExecution1, block2, DateTime.UtcNow.AddMinutes(-12), DateTime.UtcNow.AddMinutes(-11), BlockExecutionStatus.Completed);
 
-            var request = new FindFailedRangeBlocksRequest(TestConstants.ApplicationName,
+            var request = new FindFailedBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
                 1,
-                RangeBlockType.DateRange,
+                BlockType.DateRange,
                 DateTime.UtcNow.AddMinutes(-20),
                 2);
             
@@ -87,10 +89,10 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
 
             int blockCountLimit = 2;
 
-            var request = new FindFailedRangeBlocksRequest(TestConstants.ApplicationName,
+            var request = new FindFailedBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
                 1,
-                RangeBlockType.DateRange,
+                BlockType.DateRange,
                 DateTime.UtcNow.AddMinutes(-200),
                 blockCountLimit);
 
@@ -115,10 +117,10 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
             var blockExecution1 = _blocksHelper.InsertDateRangeBlockExecution(taskExecution1, block1, DateTime.UtcNow.AddMinutes(-200), DateTime.UtcNow.AddMinutes(-201), BlockExecutionStatus.Failed);
             var blockExecution2 = _blocksHelper.InsertDateRangeBlockExecution(taskExecution1, block2, DateTime.UtcNow.AddMinutes(-212), DateTime.UtcNow.AddMinutes(-211), BlockExecutionStatus.Completed);
 
-            var request = new FindFailedRangeBlocksRequest(TestConstants.ApplicationName,
+            var request = new FindFailedBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
                 1,
-                RangeBlockType.DateRange,
+                BlockType.DateRange,
                 DateTime.UtcNow.AddMinutes(-20),
                 2);
 

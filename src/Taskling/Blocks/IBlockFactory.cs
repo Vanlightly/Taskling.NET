@@ -10,5 +10,6 @@ namespace Taskling.Blocks
     {
         IList<IRangeBlockContext> GenerateDateRangeBlocks(DateRangeBlockRequest blockRequest);
         IList<IRangeBlockContext> GenerateNumericRangeBlocks(NumericRangeBlockRequest blockRequest);
+        IList<IListBlockContext> GenerateListBlocks(ListBlockRequest blockRequest);
     }
 }

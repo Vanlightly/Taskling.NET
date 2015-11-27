@@ -9,6 +9,7 @@ using Taskling.Client;
 using Taskling.CriticalSection;
 using Taskling.Exceptions;
 using Taskling.ExecutionContext.FluentBlocks;
+using Taskling.ExecutionContext.FluentBlocks.List;
 using Taskling.InfrastructureContracts;
 using Taskling.InfrastructureContracts.Blocks.RangeBlocks;
 using Taskling.InfrastructureContracts.TaskExecution;
@@ -117,24 +118,38 @@ namespace Taskling.ExecutionContext
             return criticalSectionContext;
         }
 
-        public IList<IRangeBlockContext> GetRangeBlocks(Func<FluentBlockDescriptor, IFluentBlockSettingsDescriptor> fluentBlockRequest)
+        public IList<IRangeBlockContext> GetRangeBlocks(Func<FluentRangeBlockDescriptor, IFluentBlockSettingsDescriptor> fluentBlockRequest)
         {
-            var fluentDescriptor = fluentBlockRequest(new FluentBlockDescriptor());
+            var fluentDescriptor = fluentBlockRequest(new FluentRangeBlockDescriptor());
             var settings = (IBlockSettings) fluentDescriptor;
 
-            if (settings.RangeType == RangeBlockType.DateRange)
+            if (settings.BlockType == BlockType.DateRange)
             {
                 var request = ConvertToDateRangeBlockRequest(settings);
                 return _blockFactory.GenerateDateRangeBlocks(request);
             }
             
-            if (settings.RangeType == RangeBlockType.NumericRange)
+            if (settings.BlockType == BlockType.NumericRange)
             {
                 var request = ConvertToNumericRangeBlockRequest(settings);
                 return _blockFactory.GenerateNumericRangeBlocks(request);
             }
-            
-            throw new NotSupportedException("RangeType not supported");
+
+            throw new NotSupportedException("BlockType not supported");
+        }
+
+        public IList<IListBlockContext> GetListBlocks(Func<FluentListBlockDescriptorBase, IFluentBlockSettingsDescriptor> fluentBlockRequest)
+        {
+            var fluentDescriptor = fluentBlockRequest(new FluentListBlockDescriptorBase());
+            var settings = (IBlockSettings)fluentDescriptor;
+
+            if (settings.BlockType == BlockType.List)
+            {
+                var request = ConvertToListBlockRequest(settings);
+                return _blockFactory.GenerateListBlocks(request);
+            }
+
+            throw new NotSupportedException("BlockType not supported");
         }
 
         public void Dispose()
@@ -264,6 +279,37 @@ namespace Taskling.ExecutionContext
             request.RangeEnd = settings.ToNumber;
             request.BlockSize = settings.MaxBlockNumberRange;
             request.MaxBlocks = settings.MaximumNumberOfBlocksLimit;
+
+            return request;
+        }
+
+        private ListBlockRequest ConvertToListBlockRequest(IBlockSettings settings)
+        {
+            var request = new ListBlockRequest();
+            request.ApplicationName = _taskExecutionInstance.ApplicationName;
+            request.TaskName = _taskExecutionInstance.TaskName;
+            request.TaskExecutionId = _taskExecutionInstance.TaskExecutionId;
+            request.CheckForDeadExecutions = settings.MustReprocessDeadTasks;
+            request.CheckForFailedExecutions = settings.MustReprocessFailedTasks;
+
+            if (settings.MustReprocessDeadTasks)
+                request.GoBackElapsedSecondsForDeadTasks = (int)settings.DeadTaskDetectionRange.TotalSeconds;
+
+            if (settings.MustReprocessFailedTasks)
+                request.GoBackElapsedSecondsForFailedTasks = (int)settings.DeadTaskDetectionRange.TotalSeconds;
+
+            request.TaskDeathMode = _taskExecutionOptions.TaskDeathMode;
+
+            if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.KeepAlive)
+                request.KeepAliveElapsedSecondsToBeDead = (int)settings.TreatAsDeadAfterRange.TotalSeconds;
+            else
+                request.OverrideElapsedSecondsToBeDead = (int)settings.TreatAsDeadAfterRange.TotalSeconds;
+
+            request.Values = settings.Values;
+            request.MaxBlockSize = settings.MaxBlockSize;
+            request.MaxBlocks = settings.MaximumNumberOfBlocksLimit;
+            request.ListUpdateMode = settings.ListUpdateMode;
+            request.UncommittedItemsThreshold = settings.UncommittedItemsThreshold;
 
             return request;
         }

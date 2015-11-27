@@ -10,7 +10,7 @@ namespace Taskling.Blocks.Requests
     {
         public NumericRangeBlockRequest()
         {
-            RangeType = RangeBlockType.NumericRange;
+            BlockType = BlockType.NumericRange;
         }
 
         public long RangeBegin { get; set; }

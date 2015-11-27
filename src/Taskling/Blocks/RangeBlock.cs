@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Taskling.InfrastructureContracts.Blocks.RangeBlocks
+namespace Taskling.Blocks
 {
     public class RangeBlock
     {
@@ -20,7 +20,7 @@ namespace Taskling.InfrastructureContracts.Blocks.RangeBlocks
         private long RangeBegin { get; set; }
         private long RangeEnd { get; set; }
         
-        public RangeBlockType RangeType { get; set; }
+        public BlockType RangeType { get; set; }
 
         public int RangeBeginAsInt()
         {

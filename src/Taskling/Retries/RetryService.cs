@@ -11,7 +11,7 @@ namespace Taskling.Retries
     {
         public static void InvokeWithRetry<RQ>(Action<RQ> requestAction, RQ request)
         {
-            int interval = 1000;
+            int interval = 5000;
             double publishExponentialBackoffExponent = 2;
             int attemptLimit = 3;
             int attemptsMade = 0;
@@ -46,12 +46,10 @@ namespace Taskling.Retries
 
         public static RS InvokeWithRetry<RQ, RS>(Func<RQ, RS> requestFunc, RQ request)
         {
-            int interval = 1000;
+            int interval = 5000;
             double publishExponentialBackoffExponent = 2;
             int attemptLimit = 3;
             int attemptsMade = 0;
-
-            RS response;
 
             bool successFullySent = false;
             Exception lastException = null;

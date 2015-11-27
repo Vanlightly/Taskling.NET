@@ -5,34 +5,24 @@ using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using Taskling.Client;
 using Taskling.Exceptions;
 using Taskling.ExecutionContext;
 using Taskling.InfrastructureContracts;
 using Taskling.InfrastructureContracts.CriticalSections;
-using Taskling.InfrastructureContracts.TaskExecution;
+using Taskling.SqlServer.AncilliaryServices;
 using Taskling.SqlServer.Configuration;
 using Taskling.SqlServer.Tasks;
 
 namespace Taskling.SqlServer.CriticalSections
 {
-    public class CriticalSectionService : ICriticalSectionService
+    public class CriticalSectionService : DbOperationsService, ICriticalSectionService
     {
-        private readonly string _connectionString;
-        private readonly int _connectTimeout;
-        private readonly int _queryTimeout;
-        private readonly string _tableSchema;
-
         private readonly ITaskService _taskService;
         
         public CriticalSectionService(SqlServerClientConnectionSettings clientConnectionSettings,
             ITaskService taskService)
+            : base(clientConnectionSettings.ConnectionString, clientConnectionSettings.QueryTimeout, clientConnectionSettings.TableSchema)
         {
-            _connectionString = clientConnectionSettings.ConnectionString;
-            _connectTimeout = (int)clientConnectionSettings.ConnectTimeout.TotalMilliseconds;
-            _queryTimeout = (int)clientConnectionSettings.QueryTimeout.TotalMilliseconds;
-            _tableSchema = clientConnectionSettings.TableSchema;
-
             _taskService = taskService;
         }
 
@@ -74,15 +64,13 @@ namespace Taskling.SqlServer.CriticalSections
         {
             var response = new StartCriticalSectionResponse();
 
-            using (var connection = new SqlConnection(_connectionString))
+            using (var connection = CreateNewConnection())
             {
-                connection.Open();
-
-                SqlTransaction myTransaction = connection.BeginTransaction(IsolationLevel.Serializable);
+                SqlTransaction transaction = connection.BeginTransaction(IsolationLevel.Serializable);
 
                 var command = connection.CreateCommand();
-                command.Transaction = myTransaction;
-                command.CommandTimeout = _queryTimeout;
+                command.Transaction = transaction;
+                command.CommandTimeout = QueryTimeout;
                 command.CommandText = TokensQueryBuilder.GetKeepAliveBasedCriticalSectionQuery(_tableSchema);
                 command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
                 command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
@@ -97,20 +85,15 @@ namespace Taskling.SqlServer.CriticalSections
                             response.GrantStatus = (GrantStatus)int.Parse(reader["GrantStatus"].ToString());
                         }
                     }
-                    myTransaction.Commit();
+                    transaction.Commit();
+                }
+                catch (SqlException sqlEx)
+                {
+                    TryRollBack(transaction, sqlEx);
                 }
                 catch (Exception ex)
                 {
-                    try
-                    {
-                        myTransaction.Rollback();
-                    }
-                    catch (Exception)
-                    {
-                        throw new ExecutionException("Failed to commit critical section token grant request but failed to roll back. Data could be in an inconsistent state.", ex);
-                    }
-
-                    throw new ExecutionException("Failed to commit critical section token grant request but successfully rolled back. Data is in a consistent state.", ex);
+                    TryRollback(transaction, ex);
                 }
             }
 
@@ -121,15 +104,13 @@ namespace Taskling.SqlServer.CriticalSections
         {
             var response = new StartCriticalSectionResponse();
 
-            using (var connection = new SqlConnection(_connectionString))
+            using (var connection = CreateNewConnection())
             {
-                connection.Open();
-
-                SqlTransaction myTransaction = connection.BeginTransaction(IsolationLevel.Serializable);
+                SqlTransaction transaction = connection.BeginTransaction(IsolationLevel.Serializable);
 
                 var command = connection.CreateCommand();
-                command.Transaction = myTransaction;
-                command.CommandTimeout = _queryTimeout;
+                command.Transaction = transaction;
+                command.CommandTimeout = QueryTimeout;
                 command.CommandText = TokensQueryBuilder.GetOverrideBasedRequestCriticalSectionTokenQuery(_tableSchema);
                 command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
                 command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
@@ -144,20 +125,15 @@ namespace Taskling.SqlServer.CriticalSections
                             response.GrantStatus = (GrantStatus)int.Parse(reader["GrantStatus"].ToString());
                         }
                     }
-                    myTransaction.Commit();
+                    transaction.Commit();
+                }
+                catch (SqlException sqlEx)
+                {
+                    TryRollBack(transaction, sqlEx);
                 }
                 catch (Exception ex)
                 {
-                    try
-                    {
-                        myTransaction.Rollback();
-                    }
-                    catch (Exception)
-                    {
-                        throw new ExecutionException("Failed to commit critical section token grant request but failed to roll back. Data could be in an inconsistent state.", ex);
-                    }
-
-                    throw new ExecutionException("Failed to commit critical section token grant request but successfully rolled back. Data is in a consistent state.", ex);
+                    TryRollback(transaction, ex);
                 }
             }
 
@@ -168,35 +144,29 @@ namespace Taskling.SqlServer.CriticalSections
         {
             var response = new CompleteCriticalSectionResponse();
 
-            using (var connection = new SqlConnection(_connectionString))
+            using (var connection = CreateNewConnection())
             {
-                connection.Open();
-                SqlTransaction myTransaction = connection.BeginTransaction(IsolationLevel.Serializable);
+                SqlTransaction transaction = connection.BeginTransaction(IsolationLevel.Serializable);
 
                 var command = connection.CreateCommand();
-                command.Transaction = myTransaction;
+                command.Transaction = transaction;
                 command.CommandText = TokensQueryBuilder.GetReturnCriticalSectionTokenQuery(_tableSchema);
-                command.CommandTimeout = _queryTimeout;
+                command.CommandTimeout = QueryTimeout;
                 command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
                 command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
 
                 try
                 {
                     command.ExecuteNonQuery();
-                    myTransaction.Commit();
+                    transaction.Commit();
+                }
+                catch (SqlException sqlEx)
+                {
+                    TryRollBack(transaction, sqlEx);
                 }
                 catch (Exception ex)
                 {
-                    try
-                    {
-                        myTransaction.Rollback();
-                    }
-                    catch (Exception)
-                    {
-                        throw new ExecutionException("Failed to commit critical section token return request but failed to roll back. Data could be in an inconsistent state.", ex);
-                    }
-
-                    throw new ExecutionException("Failed to commit critical section token return request but successfully rolled back. Data is in a consistent state.", ex);
+                    TryRollback(transaction, ex);
                 }
             }
 

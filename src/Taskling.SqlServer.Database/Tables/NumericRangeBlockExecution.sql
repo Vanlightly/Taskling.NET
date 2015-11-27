@@ -1,7 +1,7 @@
 ﻿CREATE TABLE [Taskling].[NumericRangeBlockExecution](
 	[NumericRangeBlockExecutionId] [bigint] IDENTITY(1,1) NOT NULL,
 	[TaskExecutionId] [int] NOT NULL,
-	[NumericRangeBlockId] [tinyint] NOT NULL,
+	[NumericRangeBlockId] BIGINT NOT NULL,
 	[StartedAt] [datetime] NOT NULL,
 	[CompletedAt] [datetime] NULL,
 	[BlockExecutionStatus] [tinyint] NOT NULL DEFAULT 0,
