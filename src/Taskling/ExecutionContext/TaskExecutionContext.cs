@@ -22,11 +22,11 @@ namespace Taskling.ExecutionContext
         private readonly ICriticalSectionService _criticalSectionService;
         private readonly IBlockFactory _blockFactory;
 
-        private delegate void KeepAliveDelegate();
         private TaskExecutionInstance _taskExecutionInstance;
         private TaskExecutionOptions _taskExecutionOptions;
         private bool _startedCalled;
         private bool _completeCalled;
+        private KeepAliveDaemon _keepAliveDaemon;
 
         public TaskExecutionContext(ITaskExecutionService taskExecutionService,
             ICriticalSectionService criticalSectionService,
@@ -71,6 +71,9 @@ namespace Taskling.ExecutionContext
                     Complete();
                     return false;
                 }
+
+                if(_taskExecutionOptions.TaskDeathMode == TaskDeathMode.KeepAlive)
+                    StartKeepAlive();
             }
             catch (Exception)
             {
@@ -87,6 +90,9 @@ namespace Taskling.ExecutionContext
                 throw new Exception("This context has not been started yet");
 
             _completeCalled = true;
+            
+            if(_keepAliveDaemon != null)
+                _keepAliveDaemon.Stop();
 
             var completeRequest = new TaskExecutionCompleteRequest(_taskExecutionInstance.ApplicationName,
                 _taskExecutionInstance.TaskName,
@@ -173,56 +179,18 @@ namespace Taskling.ExecutionContext
                 if (!_taskExecutionOptions.KeepAliveElapsed.HasValue)
                     throw new ExecutionArgumentsException("KeepAliveElapsed must be set when using KeepAlive mode");
 
-                StartKeepAlive();
                 startRequest.KeepAliveElapsedSeconds = (int)_taskExecutionOptions.KeepAliveElapsed.Value.TotalSeconds;
             }
 
             return startRequest;
         }
 
-
-
-        #region .: Keep Alive :.
-
         private void StartKeepAlive()
         {
-            var sendDelegate = new KeepAliveDelegate(RunKeepAlive);
-            sendDelegate.BeginInvoke(new AsyncCallback(KeepAliveCallback), sendDelegate);
+            _keepAliveDaemon = new KeepAliveDaemon(_taskExecutionService, new WeakReference(this));
+            _keepAliveDaemon.Run(_taskExecutionInstance.TaskExecutionId, _taskExecutionOptions.KeepAliveInterval.Value);
         }
-
-        private void KeepAliveCallback(IAsyncResult ar)
-        {
-            try
-            {
-                var caller = (KeepAliveDelegate)ar.AsyncState;
-                caller.EndInvoke(ar);
-            }
-            catch (Exception)
-            { }
-        }
-
-        private void RunKeepAlive()
-        {
-            if (_startedCalled)
-            {
-                DateTime lastKeepAlive = DateTime.UtcNow;
-                _taskExecutionService.SendKeepAlive(_taskExecutionInstance.TaskExecutionId);
-
-                while (!_completeCalled)
-                {
-                    var timespanSinceLastKeepAlive = DateTime.UtcNow - lastKeepAlive;
-                    if (timespanSinceLastKeepAlive > _taskExecutionOptions.KeepAliveInterval)
-                    {
-                        lastKeepAlive = DateTime.UtcNow;
-                        _taskExecutionService.SendKeepAlive(_taskExecutionInstance.TaskExecutionId);
-                    }
-                    Thread.Sleep(1000);
-                }
-            }
-        }
-
-        #endregion .: Keep Alive :.
-
+        
         private DateRangeBlockRequest ConvertToDateRangeBlockRequest(IBlockSettings settings)
         {
             var request = new DateRangeBlockRequest();

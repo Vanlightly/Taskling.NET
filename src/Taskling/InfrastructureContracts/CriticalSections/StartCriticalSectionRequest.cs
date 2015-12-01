@@ -11,7 +11,7 @@ namespace Taskling.InfrastructureContracts.CriticalSections
     {
         public StartCriticalSectionRequest(string applicationName, 
             string taskName,
-            int taskExecutionId, 
+            string taskExecutionId, 
             TaskDeathMode taskDeathMode)
             :base(applicationName, taskName, taskExecutionId)
         {

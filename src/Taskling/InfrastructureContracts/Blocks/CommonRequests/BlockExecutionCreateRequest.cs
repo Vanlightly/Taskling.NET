@@ -10,7 +10,7 @@ namespace Taskling.InfrastructureContracts.Blocks.RangeBlocks
     {
         public BlockExecutionCreateRequest(string applicationName, 
             string taskName, 
-            int taskExecutionId, 
+            string taskExecutionId, 
             BlockType blockType,
             string blockId)
             : base(applicationName, taskName, taskExecutionId, blockType)

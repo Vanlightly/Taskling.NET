@@ -60,7 +60,7 @@ namespace Taskling.SqlServer.CriticalSections
             }
         }
 
-        private StartCriticalSectionResponse RequestCriticalSectionTokenWithKeepAliveMode(int taskSecondaryId, int taskExecutionId, int keepAliveElapsedSeconds)
+        private StartCriticalSectionResponse RequestCriticalSectionTokenWithKeepAliveMode(int taskSecondaryId, string taskExecutionId, int keepAliveElapsedSeconds)
         {
             var response = new StartCriticalSectionResponse();
 
@@ -73,7 +73,7 @@ namespace Taskling.SqlServer.CriticalSections
                 command.CommandTimeout = QueryTimeout;
                 command.CommandText = TokensQueryBuilder.GetKeepAliveBasedCriticalSectionQuery(_tableSchema);
                 command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
-                command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
+                command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = int.Parse(taskExecutionId);
                 command.Parameters.Add("@KeepAliveElapsedSeconds", SqlDbType.Int).Value = keepAliveElapsedSeconds;
 
                 try
@@ -100,7 +100,7 @@ namespace Taskling.SqlServer.CriticalSections
             return response;
         }
 
-        private StartCriticalSectionResponse RequestCriticalSectionTokenWithOverrideMode(int taskSecondaryId, int taskExecutionId, int secondsOverride)
+        private StartCriticalSectionResponse RequestCriticalSectionTokenWithOverrideMode(int taskSecondaryId, string taskExecutionId, int secondsOverride)
         {
             var response = new StartCriticalSectionResponse();
 
@@ -113,7 +113,7 @@ namespace Taskling.SqlServer.CriticalSections
                 command.CommandTimeout = QueryTimeout;
                 command.CommandText = TokensQueryBuilder.GetOverrideBasedRequestCriticalSectionTokenQuery(_tableSchema);
                 command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
-                command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
+                command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = int.Parse(taskExecutionId);
                 command.Parameters.Add("@SecondsOverride", SqlDbType.Int).Value = secondsOverride;
 
                 try
@@ -140,7 +140,7 @@ namespace Taskling.SqlServer.CriticalSections
             return response;
         }
 
-        private CompleteCriticalSectionResponse ReturnCriticalSectionToken(int taskSecondaryId, int taskExecutionId)
+        private CompleteCriticalSectionResponse ReturnCriticalSectionToken(int taskSecondaryId, string taskExecutionId)
         {
             var response = new CompleteCriticalSectionResponse();
 
@@ -153,7 +153,7 @@ namespace Taskling.SqlServer.CriticalSections
                 command.CommandText = TokensQueryBuilder.GetReturnCriticalSectionTokenQuery(_tableSchema);
                 command.CommandTimeout = QueryTimeout;
                 command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
-                command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
+                command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = int.Parse(taskExecutionId);
 
                 try
                 {

@@ -34,7 +34,7 @@ namespace Taskling.SqlServer.TaskExecution
 
             if (startRequest.TaskDeathMode == TaskDeathMode.KeepAlive)
             {
-                return GetExecutionTokenUsingKeepAliveMode(taskDefinition.TaskSecondaryId, startRequest.KeepAliveElapsedSeconds.Value, secondsOverride);
+                return GetExecutionTokenUsingKeepAliveMode(taskDefinition.TaskSecondaryId, startRequest.KeepAliveElapsedSeconds.Value);
             }
             
             if (startRequest.TaskDeathMode == TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate)
@@ -68,14 +68,14 @@ namespace Taskling.SqlServer.TaskExecution
  	        throw new NotImplementedException();
         }
 
-        public void SendKeepAlive(int taskExecutionId)
+        public void SendKeepAlive(string taskExecutionId)
         {
             using (var connection = CreateNewConnection())
             {
                 using (var command = new SqlCommand(TaskQueryBuilder.KeepAliveQuery(_tableSchema), connection))
                 {
                     command.CommandTimeout = QueryTimeout;
-                    command.Parameters.Add(new SqlParameter("@TaskExecutionId", SqlDbType.Int)).Value = taskExecutionId;
+                    command.Parameters.Add(new SqlParameter("@TaskExecutionId", SqlDbType.Int)).Value = int.Parse(taskExecutionId);
                     command.ExecuteNonQuery();
                 }
             }
@@ -122,7 +122,7 @@ namespace Taskling.SqlServer.TaskExecution
             return response;
         }
 
-        private TaskExecutionStartResponse GetExecutionTokenUsingKeepAliveMode(int taskSecondaryId, int secondsElapsedTimeOut, int secondsOverride)
+        private TaskExecutionStartResponse GetExecutionTokenUsingKeepAliveMode(int taskSecondaryId, int secondsElapsedTimeOut)
         {
             var response = new TaskExecutionStartResponse();
 
@@ -136,7 +136,7 @@ namespace Taskling.SqlServer.TaskExecution
                 try
                 {
                     var taskExecutionId = CreateTaskExecution(command, taskSecondaryId);
-                    response = TryGetExecutionTokenUsingKeepAliveMode(command, taskSecondaryId, taskExecutionId, secondsElapsedTimeOut, secondsOverride);
+                    response = TryGetExecutionTokenUsingKeepAliveMode(command, taskSecondaryId, taskExecutionId, secondsElapsedTimeOut);
                     
                     transaction.Commit();
                 }
@@ -153,7 +153,7 @@ namespace Taskling.SqlServer.TaskExecution
             return response;
         }
 
-        private TaskExecutionStartResponse TryGetExecutionTokenUsingKeepAliveMode(SqlCommand command, int taskSecondaryId, int taskExecutionId, int secondsElapsedTimeOut, int secondsOverride)
+        private TaskExecutionStartResponse TryGetExecutionTokenUsingKeepAliveMode(SqlCommand command, int taskSecondaryId, int taskExecutionId, int secondsElapsedTimeOut)
         {
             var response = new TaskExecutionStartResponse();
 
@@ -162,14 +162,13 @@ namespace Taskling.SqlServer.TaskExecution
             command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
             command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
             command.Parameters.Add("@KeepAliveElapsedSeconds", SqlDbType.Int).Value = secondsElapsedTimeOut;
-            command.Parameters.Add("@SecondsOverride", SqlDbType.Int).Value = secondsOverride;
-
+            
             using (var reader = command.ExecuteReader())
             {
                 while (reader.Read())
                 {
-                    response.TaskExecutionId = taskExecutionId;
-                    response.ExecutionTokenId = new Guid(reader["ExecutionTokenId"].ToString());
+                    response.TaskExecutionId = taskExecutionId.ToString();
+                    response.ExecutionTokenId = reader["ExecutionTokenId"].ToString();
                     response.StartedAt = DateTime.Parse(reader["StartedAt"].ToString());
                     response.GrantStatus = (GrantStatus)int.Parse(reader["GrantStatus"].ToString());
                 }
@@ -192,8 +191,8 @@ namespace Taskling.SqlServer.TaskExecution
             {
                 while (reader.Read())
                 {
-                    response.TaskExecutionId = taskExecutionId;
-                    response.ExecutionTokenId = new Guid(reader["ExecutionTokenId"].ToString());
+                    response.TaskExecutionId = taskExecutionId.ToString();
+                    response.ExecutionTokenId = reader["ExecutionTokenId"].ToString();
                     response.StartedAt = DateTime.Parse(reader["StartedAt"].ToString());
                     response.GrantStatus = (GrantStatus)int.Parse(reader["GrantStatus"].ToString());
                 }
@@ -223,7 +222,7 @@ namespace Taskling.SqlServer.TaskExecution
                 command.Transaction = transaction;
                 command.CommandTimeout = QueryTimeout;
                 command.CommandText = TokensQueryBuilder.GetReturnExecutionTokenQuery(_tableSchema);
-                command.Parameters.Add("@ExecutionTokenId", SqlDbType.UniqueIdentifier).Value = taskExecutionCompleteRequest.ExecutionTokenId;
+                command.Parameters.Add("@ExecutionTokenId", SqlDbType.Int).Value = int.Parse(taskExecutionCompleteRequest.ExecutionTokenId);
                 command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionCompleteRequest.TaskExecutionId;
 
                 try

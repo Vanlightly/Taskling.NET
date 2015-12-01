@@ -144,7 +144,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
             var taskExecutionId1 = executionHelper.InsertTaskExecution(taskSecondaryId);
             executionHelper.InsertExecutionToken(taskSecondaryId, 0, taskExecutionId1);
             executionHelper.InsertIntoCriticalSectionQueue(taskSecondaryId, taskExecutionId1);
-            executionHelper.InsertAvailableCriticalSectionToken(taskSecondaryId, 0);
+            executionHelper.InsertAvailableCriticalSectionToken(taskSecondaryId, "0");
 
             var request = new StartCriticalSectionRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
@@ -181,7 +181,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
             executionHelper.InsertIntoCriticalSectionQueue(taskSecondaryId, taskExecutionId2);
 
             // Create an available critical section token
-            executionHelper.InsertAvailableCriticalSectionToken(taskSecondaryId, 0);
+            executionHelper.InsertAvailableCriticalSectionToken(taskSecondaryId, "0");
 
             var request = new StartCriticalSectionRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
@@ -220,7 +220,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
             executionHelper.InsertIntoCriticalSectionQueue(taskSecondaryId, taskExecutionId2);
 
             // Create an available critical section token
-            executionHelper.InsertAvailableCriticalSectionToken(taskSecondaryId, 0);
+            executionHelper.InsertAvailableCriticalSectionToken(taskSecondaryId, "0");
 
             var request = new StartCriticalSectionRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,

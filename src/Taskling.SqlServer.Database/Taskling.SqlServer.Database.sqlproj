@@ -8,7 +8,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectVersion>4.1</ProjectVersion>
     <ProjectGuid>{31ae36b5-dd56-4ea7-b42a-86c5b0c07cf2}</ProjectGuid>
-    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql120DatabaseSchemaProvider</DSP>
+    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql100DatabaseSchemaProvider</DSP>
     <OutputType>Database</OutputType>
     <RootPath>
     </RootPath>
@@ -23,6 +23,7 @@
     <SqlServerVerification>False</SqlServerVerification>
     <IncludeCompositeObjects>True</IncludeCompositeObjects>
     <TargetDatabaseSet>True</TargetDatabaseSet>
+    <DefaultSchema>Taskling</DefaultSchema>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <OutputPath>bin\Release\</OutputPath>
@@ -84,5 +85,8 @@
     <Build Include="Tables\ListBlock.sql" />
     <Build Include="Tables\ListBlockExecution.sql" />
     <Build Include="Tables\ListBlockItem.sql" />
+    <Build Include="Indexes\IX_CriticalSectionQueue_TaskSecondaryId.sql" />
+    <Build Include="Indexes\IX_ExecutionToken_ForKeepAliveQuery.sql" />
+    <Build Include="Indexes\IX_TaskExecution_TaskSecondaryId.sql" />
   </ItemGroup>
 </Project>

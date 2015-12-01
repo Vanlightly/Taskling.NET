@@ -10,7 +10,7 @@ namespace Taskling.InfrastructureContracts.Blocks.ListBlocks
     {
         public ListBlockCreateRequest(string applicationName,
             string taskName,
-            int taskExecutionId,
+            string taskExecutionId,
             List<string> values)
             : base(applicationName, taskName, taskExecutionId, BlockType.List)
         {

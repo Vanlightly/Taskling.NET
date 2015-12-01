@@ -1,5 +1,5 @@
 ﻿CREATE TABLE [Taskling].[ExecutionToken](
-	[ExecutionTokenId] [uniqueidentifier] NOT NULL,
+	[ExecutionTokenId] INT IDENTITY NOT NULL,
 	[TaskSecondaryId] [int] NOT NULL,
 	[DateGranted] [datetime] NULL,
 	[DateReturned] [datetime] NULL,

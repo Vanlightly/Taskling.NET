@@ -11,7 +11,7 @@ namespace Taskling.InfrastructureContracts.TaskExecution
         public TaskExecutionStartResponse()
         {}
 
-        public TaskExecutionStartResponse(Guid executionTokenId,
+        public TaskExecutionStartResponse(string executionTokenId,
             DateTime startedAt,
             GrantStatus grantStatus)
         {
@@ -20,8 +20,8 @@ namespace Taskling.InfrastructureContracts.TaskExecution
             GrantStatus = grantStatus;
         }
 
-        public int TaskExecutionId { get; set; }
-        public Guid ExecutionTokenId { get; set; }
+        public string TaskExecutionId { get; set; }
+        public string ExecutionTokenId { get; set; }
         public DateTime StartedAt { get; set; }
         public GrantStatus GrantStatus { get; set; }
     }

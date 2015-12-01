@@ -14,8 +14,9 @@ namespace Taskling.SqlServer.TaskExecution
     ----------------------------
 -- Get an exclusive lock on the records of this process
 ----------------------------
-UPDATE {0}.[ExecutionToken]
+UPDATE ET
 SET [HoldLockTaskExecutionId] = @TaskExecutionId
+FROM  {0}.[ExecutionToken] ET WITH(INDEX(IX_ExecutionToken_TaskSecondaryId))
 WHERE [TaskSecondaryId] = @TaskSecondaryId;
 
 ----------------------------
@@ -25,7 +26,7 @@ WHERE [TaskSecondaryId] = @TaskSecondaryId;
 -- but take available tokens before unavailable
 ----------------------------
 DECLARE @AvailableToken TABLE  (
-	[ExecutionTokenId] UniqueIdentifier NOT NULL
+	[ExecutionTokenId] int NOT NULL
 	,[LastGranteeId] int NULL
 	,[TaskSecondaryId] int NOT NULL
 	,[DateGranted] datetime NULL
@@ -43,8 +44,8 @@ FROM {0}.[ExecutionToken]
 WHERE [TaskSecondaryId] = @TaskSecondaryId 
 AND ([Status] = 1 OR [Status] = 3
 	OR
-	(DATEDIFF(SECOND, [DateGranted], GETUTCDATE()) > @SecondsOverride
-	AND [Status] = 0))
+	([Status] = 0)
+        AND DATEDIFF(SECOND, [DateGranted], GETUTCDATE()) > @SecondsOverride)
 ORDER BY [Status] DESC;
 
 ----------------------------
@@ -70,7 +71,7 @@ END
 ELSE
 BEGIN
 
-	SELECT '00000000-0000-0000-0000-000000000000' AS [ExecutionTokenId]
+	SELECT 0 AS [ExecutionTokenId]
             ,GETUTCDATE() AS [StartedAt]
 			,0 AS [GrantStatus];
 
@@ -80,8 +81,9 @@ END
         private const string KeepAliveBasedRequestExecutionTokenQuery = @"----------------------------
 -- Get an exclusive lock on the records of this process
 ----------------------------
-UPDATE {0}.[ExecutionToken]
+UPDATE ET
 SET [HoldLockTaskExecutionId] = @TaskExecutionId
+FROM Taskling.[ExecutionToken] ET WITH (INDEX(IX_ExecutionToken_TaskSecondaryId))
 WHERE [TaskSecondaryId] = @TaskSecondaryId;
 
 ----------------------------
@@ -91,7 +93,7 @@ WHERE [TaskSecondaryId] = @TaskSecondaryId;
 -- but take available tokens before unavailable
 ----------------------------
 DECLARE @AvailableToken TABLE  (
-	[ExecutionTokenId] UniqueIdentifier NOT NULL
+	[ExecutionTokenId] int NOT NULL
 	,[LastGranteeId] int NULL
 	,[TaskSecondaryId] int NOT NULL
 	,[DateGranted] datetime NULL
@@ -105,15 +107,12 @@ SELECT TOP 1 [ExecutionTokenId]
 	  ,[DateGranted]
 	  ,[DateReturned]
 	  ,[Status]
-FROM {0}.[ExecutionToken] ET
+FROM Taskling.[ExecutionToken] ET WITH (INDEX(IX_ExecutionToken_ForKeepAliveQuery))
 WHERE [ET].[TaskSecondaryId] = @TaskSecondaryId 
 AND ([Status] = 1 OR [Status] = 3
 	OR
-	(DATEDIFF(SECOND, [DateGranted], GETUTCDATE()) > @SecondsOverride
-		AND [Status] = 0)
-	OR
-	(DATEDIFF(SECOND, COALESCE([LastKeepAlive], '20150101'), GETUTCDATE()) > @KeepAliveElapsedSeconds
-		AND [Status] = 0)
+	([Status] = 0 
+		AND DATEDIFF(SECOND, COALESCE([LastKeepAlive], '20150101'), GETUTCDATE()) > @KeepAliveElapsedSeconds)
 	)
 ORDER BY [Status] DESC;
 
@@ -128,7 +127,7 @@ BEGIN
 		,[DateReturned] = NULL
 		,[Status] = CASE AT.[Status] WHEN 3 THEN 3 ELSE 0 END
 		,[TaskExecutionId] = @TaskExecutionId
-    FROM {0}.[ExecutionToken] ET
+    FROM Taskling.[ExecutionToken] ET 
 	JOIN @AvailableToken AS AT ON ET.[ExecutionTokenId] = AT.[ExecutionTokenId];
 
 	SELECT TOP 1 [ExecutionTokenId]
@@ -140,7 +139,7 @@ END
 ELSE
 BEGIN
 
-	SELECT '00000000-0000-0000-0000-000000000000' AS [ExecutionTokenId]
+	SELECT 0 AS [ExecutionTokenId]
             ,GETUTCDATE() AS [StartedAt]
 			,0 AS [GrantStatus];
 

@@ -7,13 +7,13 @@ namespace Taskling.InfrastructureContracts.TaskExecution
 {
     public class TaskExecutionCompleteRequest : RequestBase
     {
-        public TaskExecutionCompleteRequest(string applicationName, string taskName, int taskExecutionId, Guid executionTokenId)
+        public TaskExecutionCompleteRequest(string applicationName, string taskName, string taskExecutionId, string executionTokenId)
             : base(applicationName, taskName, taskExecutionId)
         {
             ExecutionTokenId = executionTokenId;
         }
 
-        public Guid ExecutionTokenId { get; set; }
+        public string ExecutionTokenId { get; set; }
         public bool UnlimitedMode { get; set; }
     }
 }

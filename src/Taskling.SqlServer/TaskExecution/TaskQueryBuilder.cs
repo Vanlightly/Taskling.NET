@@ -47,12 +47,15 @@ SELECT CAST(SCOPE_IDENTITY() AS INT)";
             return string.Format(InsertTaskExecutionBase, schema);
         }
 
-        private const string KeepAliveQueryBase = @"UPDATE {0}.[ExecutionToken]
+        private const string KeepAliveQueryBase = @"
+UPDATE TE
 SET LastKeepAlive = GETUTCDATE()
+FROM {0}.[TaskExecution] TE
 WHERE [TaskExecutionId] = @TaskExecutionId;
 
-UPDATE {0}.[TaskExecution]
+UPDATE ET
 SET LastKeepAlive = GETUTCDATE()
+FROM {0}.[ExecutionToken] ET WITH(INDEX(IX_ExecutionToken_TaskExecutionId))
 WHERE [TaskExecutionId] = @TaskExecutionId;";
 
         internal static string KeepAliveQuery(string schema)

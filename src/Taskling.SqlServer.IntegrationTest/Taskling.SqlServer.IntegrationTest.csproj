@@ -67,6 +67,7 @@
     <Compile Include="Given_TaskExecutionContext\WhenDisposed.cs" />
     <Compile Include="Given_TaskExecutionService\When_TryStart_AsKeepAliveMode.cs" />
     <Compile Include="Given_TaskExecutionService\When_TryStart_AsOverrideAfterElaspedTimeMode.cs" />
+    <Compile Include="LoadTest\TasklingLoadTest.cs" />
     <Compile Include="TestHelpers\BlocksHelper.cs" />
     <Compile Include="TestHelpers\ExecutionsHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

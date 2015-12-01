@@ -15,12 +15,12 @@ namespace Taskling.Blocks
         private readonly IRangeBlockService _rangeBlockService;
         private readonly string _applicationName;
         private readonly string _taskName;
-        private readonly int _taskExecutionId;
+        private readonly string _taskExecutionId;
 
         public RangeBlockContext(IRangeBlockService rangeBlockService,
             string applicationName,
             string taskName,
-            int taskExecutionId,
+            string taskExecutionId,
             RangeBlock rangeBlock, 
             string blockExecutionId)
         {

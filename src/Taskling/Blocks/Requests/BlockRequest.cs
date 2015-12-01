@@ -11,7 +11,7 @@ namespace Taskling.Blocks
     {
         public string ApplicationName { get; set; }
         public string TaskName { get; set; }
-        public int TaskExecutionId { get; set; }
+        public string TaskExecutionId { get; set; }
         
         public int MaxBlocks { get; set; }
         

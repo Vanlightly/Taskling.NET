@@ -12,6 +12,6 @@ namespace Taskling.InfrastructureContracts.TaskExecution
         TaskExecutionCompleteResponse Complete(TaskExecutionCompleteRequest completeRequest);
         TaskExecutionCheckpointResponse Checkpoint(TaskExecutionCheckpointRequest taskExecutionRequest);
         TaskExecutionErrorResponse Error(TaskExecutionErrorRequest taskExecutionErrorRequest);
-        void SendKeepAlive(int taskExecutionId);
+        void SendKeepAlive(string taskExecutionId);
     }
 }

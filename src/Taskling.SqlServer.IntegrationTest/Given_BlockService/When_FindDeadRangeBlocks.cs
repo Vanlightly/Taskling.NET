@@ -19,7 +19,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
     public class When_FindDeadRangeBlocks
     {
         private int _taskSecondaryId;
-        private int _taskExecution1;
+        private string _taskExecution1;
         private string _block1;
         private string _block2;
         private string _block3;
@@ -93,7 +93,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
             int blockCountLimit = 5;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
-                1,
+                "1",
                 BlockType.DateRange,
                 DateTime.UtcNow.AddMinutes(-300),
                 DateTime.UtcNow.AddMinutes(-210),
@@ -118,7 +118,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
             int blockCountLimit = 5;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
-                1,
+                "1",
                 BlockType.DateRange,
                 DateTime.UtcNow.AddMinutes(-500),
                 DateTime.UtcNow.AddMinutes(-600),
@@ -141,7 +141,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
             int blockCountLimit = 1;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
-                1,
+                "1",
                 BlockType.DateRange,
                 DateTime.UtcNow.AddMinutes(-300),
                 DateTime.UtcNow.AddMinutes(-10),
@@ -167,7 +167,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
             int blockCountLimit = 5;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
-                1,
+                "1",
                 BlockType.DateRange,
                 DateTime.UtcNow.AddMinutes(-100),
                 blockCountLimit);
@@ -194,7 +194,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
             int blockCountLimit = 2;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
-                1,
+                "1",
                 BlockType.DateRange,
                 DateTime.UtcNow.AddMinutes(-100),
                 blockCountLimit);
@@ -220,7 +220,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
             int blockCountLimit = 5;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
-                1,
+                "1",
                 BlockType.DateRange,
                 DateTime.UtcNow.AddMinutes(-100),
                 blockCountLimit);
@@ -246,7 +246,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
             int blockCountLimit = 5;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
-                1,
+                "1",
                 BlockType.NumericRange,
                 DateTime.UtcNow.AddMinutes(-300),
                 DateTime.UtcNow.AddMinutes(-210),
@@ -271,7 +271,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
             int blockCountLimit = 5;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
-                1,
+                "1",
                 BlockType.NumericRange,
                 DateTime.UtcNow.AddMinutes(-500),
                 DateTime.UtcNow.AddMinutes(-600),
@@ -294,7 +294,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
             int blockCountLimit = 1;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
-                1,
+                "",
                 BlockType.NumericRange,
                 DateTime.UtcNow.AddMinutes(-300),
                 DateTime.UtcNow.AddMinutes(-10),
@@ -320,7 +320,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
             int blockCountLimit = 5;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
-                1,
+                "1",
                 BlockType.NumericRange,
                 DateTime.UtcNow.AddMinutes(-100),
                 blockCountLimit);
@@ -347,7 +347,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
             int blockCountLimit = 2;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
-                1,
+                "1",
                 BlockType.NumericRange,
                 DateTime.UtcNow.AddMinutes(-100),
                 blockCountLimit);
@@ -373,7 +373,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
             int blockCountLimit = 5;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
-                1,
+                "1",
                 BlockType.NumericRange,
                 DateTime.UtcNow.AddMinutes(-100),
                 blockCountLimit);

@@ -58,7 +58,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
 
             var request = new FindFailedBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
-                1,
+                "1",
                 BlockType.DateRange,
                 DateTime.UtcNow.AddMinutes(-20),
                 2);
@@ -91,7 +91,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
 
             var request = new FindFailedBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
-                1,
+                "1",
                 BlockType.DateRange,
                 DateTime.UtcNow.AddMinutes(-200),
                 blockCountLimit);
@@ -119,7 +119,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
 
             var request = new FindFailedBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
-                1,
+                "1",
                 BlockType.DateRange,
                 DateTime.UtcNow.AddMinutes(-20),
                 2);

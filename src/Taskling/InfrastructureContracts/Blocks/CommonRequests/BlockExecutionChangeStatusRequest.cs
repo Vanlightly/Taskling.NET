@@ -11,7 +11,7 @@ namespace Taskling.InfrastructureContracts.Blocks.CommonRequests
     {
         public BlockExecutionChangeStatusRequest(string applicationName,
             string taskName,
-            int taskExecutionId,
+            string taskExecutionId,
             BlockType blockType,
             string blockExecutionId,
             BlockExecutionStatus blockExecutionStatus)

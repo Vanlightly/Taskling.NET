@@ -59,7 +59,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
             var response = sut.Start(startRequest);
 
             // ASSERT
-            Assert.IsTrue(response.TaskExecutionId > 0);
+            Assert.IsTrue(response.TaskExecutionId != "0");
             Assert.IsTrue(response.StartedAt > DateTime.MinValue);
         }
 
@@ -81,7 +81,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
 
             // ASSERT
             Assert.AreEqual(GrantStatus.Granted, response.GrantStatus);
-            Assert.AreNotEqual(Guid.Empty, response.ExecutionTokenId);
+            Assert.AreNotEqual("0", response.ExecutionTokenId);
         }
 
         [TestMethod]
@@ -292,7 +292,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
             
             // ASSERT
             Assert.AreEqual(GrantStatus.Granted, secondResponse.GrantStatus);
-            Assert.AreNotEqual(Guid.Empty, secondResponse.ExecutionTokenId);
+            Assert.AreNotEqual("0", secondResponse.ExecutionTokenId);
         }
 
         [TestMethod]
@@ -321,9 +321,9 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
 
             // ASSERT
             Assert.AreEqual(GrantStatus.Granted, firstResponse.GrantStatus);
-            Assert.AreNotEqual(Guid.Empty, firstResponse.ExecutionTokenId);
+            Assert.AreNotEqual("0", firstResponse.ExecutionTokenId);
             Assert.AreEqual(GrantStatus.Denied, secondResponse.GrantStatus);
-            Assert.AreEqual(Guid.Empty, secondResponse.ExecutionTokenId);
+            Assert.AreEqual("0", secondResponse.ExecutionTokenId);
         }
     }
 }

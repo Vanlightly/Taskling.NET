@@ -17,7 +17,7 @@ namespace Taskling.InfrastructureContracts.TaskExecution
             TaskName = taskName;
         }
 
-        public RequestBase(string applicationName, string taskName, int taskExecutionId)
+        public RequestBase(string applicationName, string taskName, string taskExecutionId)
         {
             ApplicationName = applicationName;
             TaskName = taskName;
@@ -26,6 +26,6 @@ namespace Taskling.InfrastructureContracts.TaskExecution
 
         public string ApplicationName { get; set; }
         public string TaskName { get; set; }
-        public int TaskExecutionId { get; set; }
+        public string TaskExecutionId { get; set; }
     }
 }

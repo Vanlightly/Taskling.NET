@@ -9,7 +9,7 @@ namespace Taskling.InfrastructureContracts.Blocks
 {
     public class BlockRequestBase
     {
-        public BlockRequestBase(string applicationName, string taskName, int taskExecutionId, BlockType blockType)
+        public BlockRequestBase(string applicationName, string taskName, string taskExecutionId, BlockType blockType)
         {
             ApplicationName = applicationName;
             TaskName = taskName;
@@ -17,7 +17,7 @@ namespace Taskling.InfrastructureContracts.Blocks
             BlockType = blockType;
         }
 
-        public BlockRequestBase(string applicationName, string taskName, int taskExecutionId, BlockType blockType, string blockExecutionId)
+        public BlockRequestBase(string applicationName, string taskName, string taskExecutionId, BlockType blockType, string blockExecutionId)
         {
             ApplicationName = applicationName;
             TaskName = taskName;
@@ -28,7 +28,7 @@ namespace Taskling.InfrastructureContracts.Blocks
 
         public string ApplicationName { get; private set; }
         public string TaskName { get; private set; }
-        public int TaskExecutionId { get; private set; }
+        public string TaskExecutionId { get; private set; }
         public string BlockExecutionId { get; private set; }
         public BlockType BlockType { get; private set; }
     }

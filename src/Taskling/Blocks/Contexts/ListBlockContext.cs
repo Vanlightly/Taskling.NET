@@ -14,14 +14,14 @@ namespace Taskling.Blocks.Contexts
         private readonly IListBlockService _listBlockService;
         private readonly string _applicationName;
         private readonly string _taskName;
-        private readonly int _taskExecutionId;
+        private readonly string _taskExecutionId;
         private object _uncommittedListSyncRoot = new object();
         private readonly List<ListBlockItem> _uncommittedItems;
         
         public ListBlockContext(IListBlockService listBlockService,
             string applicationName,
             string taskName,
-            int taskExecutionId,
+            string taskExecutionId,
             ListUpdateMode listUpdateMode,
             int uncommittedThreshold,
             ListBlock listBlock, 

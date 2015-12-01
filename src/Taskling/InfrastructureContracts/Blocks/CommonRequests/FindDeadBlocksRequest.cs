@@ -12,7 +12,7 @@ namespace Taskling.InfrastructureContracts.Blocks.CommonRequests
     {
         public FindDeadBlocksRequest(string applicationName, 
             string taskName, 
-            int taskExecutionId, 
+            string taskExecutionId, 
             BlockType blockType,
             DateTime searchPeriodBegin,
             DateTime searchPeriodEnd,
@@ -27,7 +27,7 @@ namespace Taskling.InfrastructureContracts.Blocks.CommonRequests
 
         public FindDeadBlocksRequest(string applicationName,
             string taskName,
-            int taskExecutionId,
+            string taskExecutionId,
             BlockType blockType,
             DateTime lastKeepAliveLimitDateTime,
             int blockCountLimit)

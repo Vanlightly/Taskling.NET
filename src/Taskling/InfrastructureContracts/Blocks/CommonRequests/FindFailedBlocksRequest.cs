@@ -11,7 +11,7 @@ namespace Taskling.InfrastructureContracts.Blocks.CommonRequests
     {
         public FindFailedBlocksRequest(string applicationName, 
             string taskName, 
-            int taskExecutionId, 
+            string taskExecutionId, 
             BlockType blockType,
             DateTime failedTaskDateLimit,
             int blockCountLimit)

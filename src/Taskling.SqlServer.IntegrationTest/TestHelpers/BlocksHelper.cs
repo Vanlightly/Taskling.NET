@@ -238,14 +238,14 @@ AND LBI.Status = @Status;";
             }
         }
 
-        public long InsertDateRangeBlockExecution(int taskExecutionId, long dateRangeBlockId, DateTime startedAt, DateTime completedAt, BlockExecutionStatus executionStatus)
+        public long InsertDateRangeBlockExecution(string taskExecutionId, long dateRangeBlockId, DateTime startedAt, DateTime completedAt, BlockExecutionStatus executionStatus)
         {
             using (var connection = new SqlConnection(TestConstants.TestConnectionString))
             {
                 connection.Open();
                 var command = connection.CreateCommand();
                 command.CommandText = InsertDateRangeBlockExecutionQuery;
-                command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
+                command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = int.Parse(taskExecutionId);
                 command.Parameters.Add("@DateRangeBlockId", SqlDbType.BigInt).Value = dateRangeBlockId;
                 command.Parameters.Add("@StartedAt", SqlDbType.DateTime).Value = startedAt;
                 command.Parameters.Add("@CompletedAt", SqlDbType.DateTime).Value = completedAt;
@@ -254,14 +254,14 @@ AND LBI.Status = @Status;";
             }
         }
 
-        public long InsertNumericRangeBlockExecution(int taskExecutionId, long numericRangeBlockId, DateTime startedAt, DateTime completedAt, BlockExecutionStatus executionStatus)
+        public long InsertNumericRangeBlockExecution(string taskExecutionId, long numericRangeBlockId, DateTime startedAt, DateTime completedAt, BlockExecutionStatus executionStatus)
         {
             using (var connection = new SqlConnection(TestConstants.TestConnectionString))
             {
                 connection.Open();
                 var command = connection.CreateCommand();
                 command.CommandText = InsertNumericRangeBlockExecutionQuery;
-                command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
+                command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = int.Parse(taskExecutionId);
                 command.Parameters.Add("@NumericRangeBlockId", SqlDbType.BigInt).Value = numericRangeBlockId;
                 command.Parameters.Add("@StartedAt", SqlDbType.DateTime).Value = startedAt;
                 command.Parameters.Add("@CompletedAt", SqlDbType.DateTime).Value = completedAt;

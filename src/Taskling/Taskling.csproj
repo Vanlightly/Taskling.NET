@@ -72,6 +72,7 @@
     <Compile Include="ExecutionContext\FluentBlocks\IFluentBlockSettingsDescriptor.cs" />
     <Compile Include="ExecutionContext\HashService.cs" />
     <Compile Include="ExecutionContext\ITaskExecutionContext.cs" />
+    <Compile Include="ExecutionContext\KeepAliveDaemon.cs" />
     <Compile Include="ExecutionContext\TaskExecutionInstance.cs" />
     <Compile Include="ExecutionContext\TaskExecutionContext.cs" />
     <Compile Include="ExecutionContext\TaskExecutionOptions.cs" />
