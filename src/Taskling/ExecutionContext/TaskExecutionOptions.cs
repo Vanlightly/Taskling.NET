@@ -8,14 +8,14 @@ namespace Taskling.ExecutionContext
     public enum TaskDeathMode
     {
         KeepAlive,
-        OverrideAfterElapsedTimePeriodFromGrantDate
+        Override
     }
 
     public class TaskExecutionOptions
     {
         public TaskDeathMode TaskDeathMode { get; set; }
-        public int? SecondsOverride { get; set; }
+        public TimeSpan? OverrideThreshold { get; set; }
         public TimeSpan? KeepAliveInterval { get; set; }
-        public TimeSpan? KeepAliveElapsed { get; set; }
+        public TimeSpan? KeepAliveDeathThreshold { get; set; }
     }
 }

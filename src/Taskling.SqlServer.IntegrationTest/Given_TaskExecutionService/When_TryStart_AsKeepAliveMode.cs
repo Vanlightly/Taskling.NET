@@ -35,11 +35,30 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         {
             var settings = new SqlServerClientConnectionSettings()
             {
-                TableSchema = "Taskling",
                 ConnectionString = TestConstants.TestConnectionString,
                 ConnectTimeout = new TimeSpan(0, 1, 1)
             };
             return new TaskExecutionService(settings, new TaskService(settings));
+        }
+
+        private TaskExecutionStartRequest CreateKeepAliveStartRequest()
+        {
+            return new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive)
+            {
+                KeepAliveDeathThreshold = new TimeSpan(0, 1, 0),
+                KeepAliveInterval = new TimeSpan(0, 0, 20)
+            };
+        }
+
+        private SendKeepAliveRequest CreateKeepAliveRequest(string applicationName, string taskName, string taskExecutionId, string executionTokenId)
+        {
+            return new SendKeepAliveRequest()
+            {
+                ApplicationName = applicationName,
+                TaskName = taskName,
+                TaskExecutionId = taskExecutionId,
+                ExecutionTokenId = executionTokenId
+            };
         }
 
         [TestMethod]
@@ -48,12 +67,11 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
-            var startRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
-            startRequest.KeepAliveElapsedSeconds = 60;
-
+            var startRequest = CreateKeepAliveStartRequest();
+            
             // ACT
             var sut = CreateSut();
             var response = sut.Start(startRequest);
@@ -69,11 +87,10 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
-            var startRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
-            startRequest.KeepAliveElapsedSeconds = 60;
+            var startRequest = CreateKeepAliveStartRequest();
             
             // ACT
             var sut = CreateSut();
@@ -90,19 +107,16 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
-            var firstStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
-            firstStartRequest.KeepAliveElapsedSeconds = 60;
-
-            var secondStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
-            secondStartRequest.KeepAliveElapsedSeconds = 60;
+            var firstStartRequest = CreateKeepAliveStartRequest();
+            var secondStartRequest = CreateKeepAliveStartRequest();
 
             // ACT
             var sut = CreateSut();
             var firstResponse = sut.Start(firstStartRequest);
-            sut.SendKeepAlive(firstResponse.TaskExecutionId);
+            sut.SendKeepAlive(CreateKeepAliveRequest(TestConstants.ApplicationName, TestConstants.TaskName, firstResponse.TaskExecutionId, firstResponse.ExecutionTokenId));
             var secondResponse = sut.Start(secondStartRequest);
 
             // ASSERT
@@ -112,44 +126,15 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
 
         [TestMethod]
         [TestCategory("FastIntegrationTest"), TestCategory("ExecutionTokens")]
-        public void If_KeepAliveMode_TwoConcurrentTasksAndOneTokenAndIsUnlimited_ThenIsGrantBoth()
-        {
-            // ARRANGE
-            var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertUnlimitedExecutionToken(taskSecondaryId);
-
-            var firstStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
-            firstStartRequest.KeepAliveElapsedSeconds = 60;
-
-            var secondStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
-            secondStartRequest.KeepAliveElapsedSeconds = 60;
-
-            // ACT
-            var sut = CreateSut();
-            var firstResponse = sut.Start(firstStartRequest);
-            sut.SendKeepAlive(firstResponse.TaskExecutionId);
-            var secondResponse = sut.Start(secondStartRequest);
-
-            // ASSERT
-            Assert.AreEqual(GrantStatus.GrantedWithoutLimit, firstResponse.GrantStatus);
-            Assert.AreEqual(GrantStatus.GrantedWithoutLimit, secondResponse.GrantStatus);
-        }
-
-        [TestMethod]
-        [TestCategory("FastIntegrationTest"), TestCategory("ExecutionTokens")]
         public void If_KeepAliveMode_TwoSequentialTasksAndOneTokenAndIsAvailable_ThenIsGrantFirstTaskAndThenGrantTheOther()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
-            var firstStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
-            firstStartRequest.KeepAliveElapsedSeconds = 60;
-
-            var secondStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
-            secondStartRequest.KeepAliveElapsedSeconds = 60;
+            var firstStartRequest = CreateKeepAliveStartRequest();
+            var secondStartRequest = CreateKeepAliveStartRequest();
 
             // ACT
             var sut = CreateSut();
@@ -170,37 +155,28 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
-            var firstStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
-            firstStartRequest.KeepAliveElapsedSeconds = 60;
-
-            var secondStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
-            secondStartRequest.KeepAliveElapsedSeconds = 60;
-
-            var thirdStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
-            thirdStartRequest.KeepAliveElapsedSeconds = 60;
-
-            var fourthStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
-            fourthStartRequest.KeepAliveElapsedSeconds = 60;
-
-            var fifthStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
-            fifthStartRequest.KeepAliveElapsedSeconds = 60;
+            var firstStartRequest = CreateKeepAliveStartRequest();
+            var secondStartRequest = CreateKeepAliveStartRequest();
+            var thirdStartRequest = CreateKeepAliveStartRequest();
+            var fourthStartRequest = CreateKeepAliveStartRequest();
+            var fifthStartRequest = CreateKeepAliveStartRequest();
 
             // ACT
             var sut = CreateSut();
             var firstResponse = sut.Start(firstStartRequest);
-            executionHelper.SetKeepAlive(firstResponse.TaskExecutionId);
+            executionHelper.SetKeepAlive(taskDefinitionId, firstResponse.TaskExecutionId, firstResponse.ExecutionTokenId);
             var secondResponse = sut.Start(secondStartRequest);
-            executionHelper.SetKeepAlive(secondResponse.TaskExecutionId);
+            executionHelper.SetKeepAlive(taskDefinitionId, secondResponse.TaskExecutionId, secondResponse.ExecutionTokenId);
             var thirdResponse = sut.Start(thirdStartRequest);
-            executionHelper.SetKeepAlive(thirdResponse.TaskExecutionId);
+            executionHelper.SetKeepAlive(taskDefinitionId, thirdResponse.TaskExecutionId, thirdResponse.ExecutionTokenId);
             var fourthResponse = sut.Start(fourthStartRequest);
-            executionHelper.SetKeepAlive(fourthResponse.TaskExecutionId);
+            executionHelper.SetKeepAlive(taskDefinitionId, fourthResponse.TaskExecutionId, fourthResponse.ExecutionTokenId);
             var fifthResponse = sut.Start(fifthStartRequest);
 
             // ASSERT
@@ -217,27 +193,29 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
             // ACT
             var sut = CreateSut();
+            var tuple = new Tuple<int, TaskExecutionService>(taskDefinitionId, sut);
+
             var tasks = new List<Task>();
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, sut, TaskCreationOptions.LongRunning));
+            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
+            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
+            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
+            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
+            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
+            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
+            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
+            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
+            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
+            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
+            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
+            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
+            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
+            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
+            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
 
             Task.WaitAll(tasks.ToArray());
             
@@ -245,18 +223,18 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
 
         }
 
-        private void RequestAndReturnTokenWithKeepAliveMode(object sutObj)
+        private void RequestAndReturnTokenWithKeepAliveMode(object state)
         {
-            var sut = (TaskExecutionService) sutObj;
+            var tuple = (Tuple<int, TaskExecutionService>) state;
+            var sut = tuple.Item2;
             for (int i = 0; i < 100; i++)
             {
-                var firstStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
-                firstStartRequest.KeepAliveElapsedSeconds = 60;
+                var firstStartRequest = CreateKeepAliveStartRequest();
 
                 var firstStartResponse = sut.Start(firstStartRequest);
 
                 var executionHelper = new ExecutionsHelper();
-                executionHelper.SetKeepAlive(firstStartResponse.TaskExecutionId);
+                executionHelper.SetKeepAlive(tuple.Item1, firstStartResponse.TaskExecutionId, firstStartResponse.ExecutionTokenId);
 
                 if (firstStartResponse.GrantStatus == GrantStatus.Granted)
                 {
@@ -272,19 +250,19 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
-            var startRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
-            startRequest.KeepAliveElapsedSeconds = 5;
+            var startRequest = CreateKeepAliveStartRequest();
+            startRequest.KeepAliveDeathThreshold = new TimeSpan(0, 0, 4);
 
-            var secondRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
-            secondRequest.KeepAliveElapsedSeconds = 5;
+            var secondRequest = CreateKeepAliveStartRequest();
+            secondRequest.KeepAliveDeathThreshold = new TimeSpan(0, 0, 4);
 
             // ACT
             var sut = CreateSut();
             var firstResponse = sut.Start(startRequest);
-            executionHelper.SetKeepAlive(firstResponse.TaskExecutionId);
+            executionHelper.SetKeepAlive(taskDefinitionId, firstResponse.TaskExecutionId, firstResponse.ExecutionTokenId);
 
             Thread.Sleep(6000);
 
@@ -301,19 +279,19 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
-            var startRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
-            startRequest.KeepAliveElapsedSeconds = 6000;
+            var startRequest = CreateKeepAliveStartRequest();
+            startRequest.KeepAliveDeathThreshold = new TimeSpan(1, 0, 0);
 
-            var secondRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.KeepAlive, null);
-            secondRequest.KeepAliveElapsedSeconds = 6000;
+            var secondRequest = CreateKeepAliveStartRequest();
+            secondRequest.KeepAliveDeathThreshold = new TimeSpan(1, 0, 0);
 
             // ACT
             var sut = CreateSut();
             var firstResponse = sut.Start(startRequest);
-            executionHelper.SetKeepAlive(firstResponse.TaskExecutionId);
+            executionHelper.SetKeepAlive(taskDefinitionId, firstResponse.TaskExecutionId, firstResponse.ExecutionTokenId);
 
             Thread.Sleep(5000);
 

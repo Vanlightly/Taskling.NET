@@ -8,7 +8,6 @@ namespace Taskling.ExecutionContext
     public enum GrantStatus
     {
         Denied=0,
-        Granted=1,
-        GrantedWithoutLimit=2
+        Granted=1
     }
 }

@@ -10,17 +10,16 @@ namespace Taskling.InfrastructureContracts.TaskExecution
     {
         public TaskExecutionStartRequest(string applicationName, 
             string taskName,
-            TaskDeathMode taskDeathMode,
-            int? secondsOverride)
+            TaskDeathMode taskDeathMode)
             : base(applicationName, taskName)
         {
             TaskDeathMode = taskDeathMode;
-            SecondsOverride = secondsOverride;
         }
 
 
         public TaskDeathMode TaskDeathMode { get; set; }
-        public int? SecondsOverride { get; set; }
-        public int? KeepAliveElapsedSeconds { get; set; }
+        public TimeSpan? OverrideThreshold { get; set; }
+        public TimeSpan? KeepAliveInterval { get; set; }
+        public TimeSpan? KeepAliveDeathThreshold { get; set; }
     }
 }

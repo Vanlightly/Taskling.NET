@@ -33,7 +33,6 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         {
             var settings = new SqlServerClientConnectionSettings()
             {
-                TableSchema = "Taskling",
                 ConnectionString = TestConstants.TestConnectionString,
                 ConnectTimeout = new TimeSpan(0, 1, 1)
             };
@@ -46,15 +45,15 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            var taskExecutionId = executionHelper.InsertTaskExecution(taskSecondaryId);
-            executionHelper.InsertExecutionToken(taskSecondaryId, 0, taskExecutionId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            var taskExecutionId = executionHelper.InsertOverrideTaskExecution(taskDefinitionId);
+            executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId);
 
             var request = new StartCriticalSectionRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
                 taskExecutionId,
-                TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate);
-            request.SecondsOverride = 60;
+                TaskDeathMode.Override);
+            request.OverrideThreshold = new TimeSpan(0, 1, 0);
             
             // ACT
             var sut = CreateSut();
@@ -70,23 +69,23 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            var taskExecutionId1 = executionHelper.InsertTaskExecution(taskSecondaryId);
-            var taskExecutionId2 = executionHelper.InsertTaskExecution(taskSecondaryId);
-            executionHelper.InsertExecutionToken(taskSecondaryId, 0, taskExecutionId1);
-            executionHelper.InsertExecutionToken(taskSecondaryId, 0, taskExecutionId2);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            var taskExecutionId1 = executionHelper.InsertOverrideTaskExecution(taskDefinitionId);
+            var taskExecutionId2 = executionHelper.InsertOverrideTaskExecution(taskDefinitionId);
+            executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId1);
+            executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId2);
 
             var request1 = new StartCriticalSectionRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
                 taskExecutionId1,
-                TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate);
-            request1.SecondsOverride = 60;
+                TaskDeathMode.Override);
+            request1.OverrideThreshold = new TimeSpan(0, 1, 0);
 
             var request2 = new StartCriticalSectionRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
                 taskExecutionId2,
-                TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate);
-            request2.SecondsOverride = 60;
+                TaskDeathMode.Override);
+            request2.OverrideThreshold = new TimeSpan(0, 1, 0);
 
             // ACT
             var sut = CreateSut();
@@ -104,23 +103,23 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            var taskExecutionId1 = executionHelper.InsertTaskExecution(taskSecondaryId);
-            var taskExecutionId2 = executionHelper.InsertTaskExecution(taskSecondaryId);
-            executionHelper.InsertExecutionToken(taskSecondaryId, 0, taskExecutionId1);
-            executionHelper.InsertExecutionToken(taskSecondaryId, 0, taskExecutionId2);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            var taskExecutionId1 = executionHelper.InsertOverrideTaskExecution(taskDefinitionId);
+            var taskExecutionId2 = executionHelper.InsertOverrideTaskExecution(taskDefinitionId);
+            executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId1);
+            executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId2);
 
             var request1 = new StartCriticalSectionRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
                 taskExecutionId1,
-                TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate);
-            request1.SecondsOverride = 5;
+                TaskDeathMode.Override);
+            request1.OverrideThreshold = new TimeSpan(0, 0, 5);
 
             var request2 = new StartCriticalSectionRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
                 taskExecutionId2,
-                TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate);
-            request2.SecondsOverride = 5;
+                TaskDeathMode.Override);
+            request2.OverrideThreshold = new TimeSpan(0, 0, 5);
 
             // ACT
             var sut = CreateSut();

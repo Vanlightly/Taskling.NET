@@ -7,72 +7,49 @@ namespace Taskling.SqlServer.Blocks
 {
     internal class RangeBlockQueryBuilder
     {
-        private const string InsertDateRangeBlock = @"INSERT INTO {0}.[DateRangeBlock]
-           ([TaskSecondaryId]
+        public const string InsertDateRangeBlock = @"INSERT INTO [Taskling].[Block]
+           ([TaskDefinitionId]
            ,[FromDate]
-           ,[ToDate])
+           ,[ToDate]
+           ,[BlockType]
+           ,[CreatedDate])
      VALUES
-           (@TaskSecondaryId
+           (@TaskDefinitionId
            ,@FromDate
-           ,@ToDate);
+           ,@ToDate
+           ,@BlockType
+           ,GETUTCDATE());
 
 SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
 
-        private const string InsertNumericRangeBlock = @"INSERT INTO {0}.[NumericRangeBlock]
-           ([TaskSecondaryId]
+        public const string InsertNumericRangeBlock = @"INSERT INTO [Taskling].[Block]
+           ([TaskDefinitionId]
            ,[FromNumber]
-           ,[ToNumber])
+           ,[ToNumber]
+           ,[BlockType]
+           ,[CreatedDate])
      VALUES
-           (@TaskSecondaryId
+           (@TaskDefinitionId
            ,@FromNumber
-           ,@ToNumber);
+           ,@ToNumber
+           ,@BlockType
+           ,GETUTCDATE());
 
 SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
 
-        private const string InsertDateRangeBlockExecution = @"INSERT INTO {0}.[DateRangeBlockExecution]
+        public const string InsertBlockExecution = @"INSERT INTO [Taskling].[BlockExecution]
            ([TaskExecutionId]
-           ,[DateRangeBlockId]
+           ,[BlockId]
            ,[StartedAt]
            ,[BlockExecutionStatus])
      VALUES
            (@TaskExecutionId
-           ,@DateRangeBlockId
+           ,@BlockId
            ,GETUTCDATE()
            ,0);
 
 SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
 
-        private const string InsertNumericRangeBlockExecution = @"INSERT INTO {0}.[NumericRangeBlockExecution]
-           ([TaskExecutionId]
-           ,[NumericRangeBlockId]
-           ,[StartedAt]
-           ,[BlockExecutionStatus])
-     VALUES
-           (@TaskExecutionId
-           ,@NumericRangeBlockId
-           ,GETUTCDATE()
-           ,0);
-
-SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
-
-        public static string GetInsertDateRangeBlockQuery(string tableSchema)
-        {
-            return String.Format(InsertDateRangeBlock, tableSchema);
-        }
-
-        public static string GetInsertDateRangeBlockExecutionQuery(string tableSchema)
-        {
-            return String.Format(InsertDateRangeBlockExecution, tableSchema);
-        }
-
-        public static string GetInsertNumericRangeBlockQuery(string tableSchema)
-        {
-            return String.Format(InsertNumericRangeBlock, tableSchema);
-        }
-
-        public static string GetInsertNumericRangeBlockExecutionQuery(string tableSchema)
-        {
-            return String.Format(InsertNumericRangeBlockExecution, tableSchema);
-        }
+        
     }
 }

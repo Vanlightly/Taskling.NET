@@ -19,15 +19,14 @@ namespace Taskling.SqlServer.IntegrationTest.TestHelpers
             var settings = new SqlServerClientConnectionSettings()
             {
                 ConnectionString = TestConstants.TestConnectionString,
-                ConnectTimeout = new TimeSpan(0, 0, 1, 0),
-                TableSchema = TestConstants.TestTableSchema
+                ConnectTimeout = new TimeSpan(0, 0, 1, 0)
             };
 
             var taskExecutionOptions = new TaskExecutionOptions()
             {
                 TaskDeathMode = TaskDeathMode.KeepAlive,
                 KeepAliveInterval = keepAliveInterval,
-                KeepAliveElapsed = new TimeSpan(0, 0, 2, 0)
+                KeepAliveDeathThreshold = new TimeSpan(0, 0, 2, 0)
             };
 
             var client = new SqlServerTasklingClient(settings);
@@ -39,15 +38,14 @@ namespace Taskling.SqlServer.IntegrationTest.TestHelpers
             var settings = new SqlServerClientConnectionSettings()
             {
                 ConnectionString = TestConstants.TestConnectionString,
-                ConnectTimeout = new TimeSpan(0, 0, 1, 0),
-                TableSchema = TestConstants.TestTableSchema
+                ConnectTimeout = new TimeSpan(0, 0, 1, 0)
             };
 
             var taskExecutionOptions = new TaskExecutionOptions()
             {
                 TaskDeathMode = TaskDeathMode.KeepAlive,
                 KeepAliveInterval = keepAliveInterval,
-                KeepAliveElapsed = new TimeSpan(0, 0, 2, 0)
+                KeepAliveDeathThreshold = new TimeSpan(0, 0, 2, 0)
             };
 
             var client = new SqlServerTasklingClient(settings);
@@ -59,14 +57,13 @@ namespace Taskling.SqlServer.IntegrationTest.TestHelpers
             var settings = new SqlServerClientConnectionSettings()
             {
                 ConnectionString = TestConstants.TestConnectionString,
-                ConnectTimeout = new TimeSpan(0, 0, 1, 0),
-                TableSchema = TestConstants.TestTableSchema
+                ConnectTimeout = new TimeSpan(0, 0, 1, 0)
             };
 
             var taskExecutionOptions = new TaskExecutionOptions()
             {
-                TaskDeathMode = TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate,
-                SecondsOverride = (int)overrideTimespan.TotalSeconds
+                TaskDeathMode = TaskDeathMode.Override,
+                OverrideThreshold = overrideTimespan
             };
 
             var client = new SqlServerTasklingClient(settings);

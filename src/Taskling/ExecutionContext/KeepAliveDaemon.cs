@@ -10,7 +10,7 @@ namespace Taskling.ExecutionContext
 {
     internal class KeepAliveDaemon
     {
-        private delegate void KeepAliveDelegate(string taskExecutionId, TimeSpan keepAliveInterval);
+        private delegate void KeepAliveDelegate(SendKeepAliveRequest sendKeepAliveRequest, TimeSpan keepAliveInterval);
         private WeakReference _owner;
         private readonly ITaskExecutionService _taskExecutionService;
         private bool _completeCalled;
@@ -26,16 +26,16 @@ namespace Taskling.ExecutionContext
             _completeCalled = true;
         }
 
-        public void Run(string taskExecutionId, TimeSpan keepAliveInterval)
+        public void Run(SendKeepAliveRequest sendKeepAliveRequest, TimeSpan keepAliveInterval)
         {
             var sendDelegate = new KeepAliveDelegate(StartKeepAlive);
-            sendDelegate.BeginInvoke(taskExecutionId, keepAliveInterval, new AsyncCallback(KeepAliveCallback), sendDelegate);
+            sendDelegate.BeginInvoke(sendKeepAliveRequest, keepAliveInterval, new AsyncCallback(KeepAliveCallback), sendDelegate);
         }
 
-        private void StartKeepAlive(string taskExecutionId, TimeSpan keepAliveInterval)
+        private void StartKeepAlive(SendKeepAliveRequest sendKeepAliveRequest, TimeSpan keepAliveInterval)
         {
             DateTime lastKeepAlive = DateTime.UtcNow;
-            _taskExecutionService.SendKeepAlive(taskExecutionId);
+            _taskExecutionService.SendKeepAlive(sendKeepAliveRequest);
 
             while (!_completeCalled && _owner.IsAlive)
             {
@@ -43,7 +43,7 @@ namespace Taskling.ExecutionContext
                 if (timespanSinceLastKeepAlive > keepAliveInterval)
                 {
                     lastKeepAlive = DateTime.UtcNow;
-                    _taskExecutionService.SendKeepAlive(taskExecutionId);
+                    _taskExecutionService.SendKeepAlive(sendKeepAliveRequest);
                 }
                 Thread.Sleep(1000);
             }

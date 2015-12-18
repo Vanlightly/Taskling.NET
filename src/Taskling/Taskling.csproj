@@ -103,6 +103,7 @@
     <Compile Include="InfrastructureContracts\TaskExecution\ITaskExecutionService.cs" />
     <Compile Include="InfrastructureContracts\TaskExecution\RequestBase.cs" />
     <Compile Include="InfrastructureContracts\TaskExecution\ResponseBase.cs" />
+    <Compile Include="InfrastructureContracts\TaskExecution\SendKeepAliveRequest.cs" />
     <Compile Include="InfrastructureContracts\TaskExecution\TaskExecutionCheckpointRequest.cs" />
     <Compile Include="InfrastructureContracts\TaskExecution\TaskExecutionCheckpointResponse.cs" />
     <Compile Include="InfrastructureContracts\TaskExecution\TaskExecutionCompleteRequest.cs" />

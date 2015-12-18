@@ -10,14 +10,23 @@ namespace Taskling.SqlServer.TaskExecution
     {
         #region .: Base Queries :.
 
-        private const string OverrideBasedRequestExecutionTokenQuery = @"
+        public const string OverrideBasedRequestExecutionTokenQuery = @"
     ----------------------------
 -- Get an exclusive lock on the records of this process
 ----------------------------
 UPDATE ET
 SET [HoldLockTaskExecutionId] = @TaskExecutionId
-FROM  {0}.[ExecutionToken] ET WITH(INDEX(IX_ExecutionToken_TaskSecondaryId))
-WHERE [TaskSecondaryId] = @TaskSecondaryId;
+FROM  [Taskling].[ExecutionToken] ET 
+WHERE [TaskDefinitionId] = @TaskDefinitionId;
+
+SELECT [ExecutionTokenId]
+	  ,[TaskDefinitionId]
+	  ,[DateGranted]
+	  ,[DateReturned]
+	  ,[Status]
+INTO #ExecutionToken
+FROM Taskling.[ExecutionToken] ET
+WHERE [TaskDefinitionId] = @TaskDefinitionId;
 
 ----------------------------
 -- Get 
@@ -28,23 +37,23 @@ WHERE [TaskSecondaryId] = @TaskSecondaryId;
 DECLARE @AvailableToken TABLE  (
 	[ExecutionTokenId] int NOT NULL
 	,[LastGranteeId] int NULL
-	,[TaskSecondaryId] int NOT NULL
+	,[TaskDefinitionId] int NOT NULL
 	,[DateGranted] datetime NULL
 	,[DateReturned] datetime NULL
 	,[Status] tinyint NOT NULL
 )
 
-INSERT INTO @AvailableToken([ExecutionTokenId],[TaskSecondaryId],[DateGranted],[DateReturned],[Status])
+INSERT INTO @AvailableToken([ExecutionTokenId],[TaskDefinitionId],[DateGranted],[DateReturned],[Status])
 SELECT TOP 1 [ExecutionTokenId]
-	  ,[TaskSecondaryId]
+	  ,[TaskDefinitionId]
 	  ,[DateGranted]
 	  ,[DateReturned]
 	  ,[Status]
-FROM {0}.[ExecutionToken]
-WHERE [TaskSecondaryId] = @TaskSecondaryId 
-AND ([Status] = 1 OR [Status] = 3
+FROM #ExecutionToken
+WHERE [TaskDefinitionId] = @TaskDefinitionId 
+AND [Status] = 1
 	OR
-	([Status] = 0)
+	([Status] = 0
         AND DATEDIFF(SECOND, [DateGranted], GETUTCDATE()) > @SecondsOverride)
 ORDER BY [Status] DESC;
 
@@ -57,14 +66,15 @@ BEGIN
 	UPDATE ET
 	SET [DateGranted] = GETUTCDATE()
 		,[DateReturned] = NULL
-		,[Status] = CASE AT.[Status] WHEN 3 THEN 3 ELSE 0 END
+		,[Status] = 0
 		,[TaskExecutionId] = @TaskExecutionId
-    FROM {0}.[ExecutionToken] ET
-	JOIN @AvailableToken AS AT ON ET.[ExecutionTokenId] = AT.[ExecutionTokenId];
+    FROM [Taskling].[ExecutionToken] ET
+	WHERE ET.TaskDefinitionId = @TaskDefinitionId
+    AND ET.ExecutionTokenId = (SELECT TOP 1 ExecutionTokenId FROM @AvailableToken)
 
 	SELECT TOP 1 [ExecutionTokenId]
             ,GETUTCDATE() AS [StartedAt]
-			,CASE [Status] WHEN 3 THEN 2 ELSE 1 END AS [GrantStatus]
+			,1 AS [GrantStatus]
 	FROM @AvailableToken;
 
 END
@@ -78,13 +88,23 @@ BEGIN
 END
 ";
 
-        private const string KeepAliveBasedRequestExecutionTokenQuery = @"----------------------------
+        public const string KeepAliveBasedRequestExecutionTokenQuery = @"----------------------------
 -- Get an exclusive lock on the records of this process
 ----------------------------
 UPDATE ET
 SET [HoldLockTaskExecutionId] = @TaskExecutionId
-FROM Taskling.[ExecutionToken] ET WITH (INDEX(IX_ExecutionToken_TaskSecondaryId))
-WHERE [TaskSecondaryId] = @TaskSecondaryId;
+FROM Taskling.[ExecutionToken] ET
+WHERE [TaskDefinitionId] = @TaskDefinitionId;
+
+SELECT [ExecutionTokenId]
+	  ,[TaskDefinitionId]
+	  ,[DateGranted]
+	  ,[DateReturned]
+	  ,[Status]
+      ,[LastKeepAlive]
+INTO #ExecutionToken
+FROM Taskling.[ExecutionToken] ET
+WHERE [TaskDefinitionId] = @TaskDefinitionId;
 
 ----------------------------
 -- Get 
@@ -95,25 +115,22 @@ WHERE [TaskSecondaryId] = @TaskSecondaryId;
 DECLARE @AvailableToken TABLE  (
 	[ExecutionTokenId] int NOT NULL
 	,[LastGranteeId] int NULL
-	,[TaskSecondaryId] int NOT NULL
+	,[TaskDefinitionId] int NOT NULL
 	,[DateGranted] datetime NULL
 	,[DateReturned] datetime NULL
 	,[Status] tinyint NOT NULL
 )
 
-INSERT INTO @AvailableToken([ExecutionTokenId],[TaskSecondaryId],[DateGranted],[DateReturned],[Status])
+INSERT INTO @AvailableToken([ExecutionTokenId],[TaskDefinitionId],[DateGranted],[DateReturned],[Status])
 SELECT TOP 1 [ExecutionTokenId]
-	  ,ET.[TaskSecondaryId]
+	  ,[TaskDefinitionId]
 	  ,[DateGranted]
 	  ,[DateReturned]
 	  ,[Status]
-FROM Taskling.[ExecutionToken] ET WITH (INDEX(IX_ExecutionToken_ForKeepAliveQuery))
-WHERE [ET].[TaskSecondaryId] = @TaskSecondaryId 
-AND ([Status] = 1 OR [Status] = 3
-	OR
-	([Status] = 0 
+FROM #ExecutionToken
+WHERE [Status] = 1
+	OR ([Status] = 0 
 		AND DATEDIFF(SECOND, COALESCE([LastKeepAlive], '20150101'), GETUTCDATE()) > @KeepAliveElapsedSeconds)
-	)
 ORDER BY [Status] DESC;
 
 ----------------------------
@@ -125,14 +142,15 @@ BEGIN
     UPDATE ET
 	SET [DateGranted] = GETUTCDATE()
 		,[DateReturned] = NULL
-		,[Status] = CASE AT.[Status] WHEN 3 THEN 3 ELSE 0 END
+		,[Status] = 0
 		,[TaskExecutionId] = @TaskExecutionId
     FROM Taskling.[ExecutionToken] ET 
-	JOIN @AvailableToken AS AT ON ET.[ExecutionTokenId] = AT.[ExecutionTokenId];
+	WHERE ET.TaskDefinitionId = @TaskDefinitionId
+    AND ET.ExecutionTokenId = (SELECT TOP 1 ExecutionTokenId FROM @AvailableToken)
 
 	SELECT TOP 1 [ExecutionTokenId]
             ,GETUTCDATE() AS [StartedAt]
-			,CASE [Status] WHEN 3 THEN 2 ELSE 1 END AS [GrantStatus]
+			,1 AS [GrantStatus]
 	FROM @AvailableToken;
 
 END
@@ -145,11 +163,12 @@ BEGIN
 
 END";
 
-        private const string ReturnExecutionTokenQuery = @"
-    UPDATE {0}.[ExecutionToken] 
+        public const string ReturnExecutionTokenQuery = @"
+    UPDATE [Taskling].[ExecutionToken] 
 	SET [DateReturned] = GETUTCDATE()
 		,[Status] = 1
-	WHERE [ExecutionTokenId] = @ExecutionTokenId
+	WHERE [TaskDefinitionId] = @TaskDefinitionId
+    AND [ExecutionTokenId] = @ExecutionTokenId
 	AND [TaskExecutionId] = @TaskExecutionId;
 
     SELECT GETUTCDATE() AS CompletedAt;";
@@ -158,19 +177,6 @@ END";
 
         #endregion .: Executions :.
 
-        public static string GetOverrideBasedRequestExecutionTokenQuery(string tableSchema)
-        {
-            return string.Format(OverrideBasedRequestExecutionTokenQuery, tableSchema);
-        }
-
-        public static string GetKeepAliveBasedRequestExecutionTokenQuery(string tableSchema)
-        {
-            return string.Format(KeepAliveBasedRequestExecutionTokenQuery, tableSchema);
-        }
-
-        public static string GetReturnExecutionTokenQuery(string tableSchema)
-        {
-            return string.Format(ReturnExecutionTokenQuery, tableSchema);
-        }
+        
     }
 }

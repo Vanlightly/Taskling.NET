@@ -27,21 +27,20 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionContext
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
             var settings = new SqlServerClientConnectionSettings()
             {
                 ConnectionString = TestConstants.TestConnectionString,
-                ConnectTimeout = new TimeSpan(0, 0, 1, 0),
-                TableSchema = TestConstants.TestTableSchema
+                ConnectTimeout = new TimeSpan(0, 0, 1, 0)
             };
 
             var taskExecutionOptions = new TaskExecutionOptions()
             {
                 TaskDeathMode = TaskDeathMode.KeepAlive,
                 KeepAliveInterval = new TimeSpan(0, 0, 0, 30),
-                KeepAliveElapsed = new TimeSpan(0, 0, 2, 0)
+                KeepAliveDeathThreshold = new TimeSpan(0, 0, 2, 0)
             };
 
             // ACT
@@ -51,16 +50,12 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionContext
             byte tokenStatusAfterUsingBlock;
 
             var client = new SqlServerTasklingClient(settings);
-            using (
-                var executionContext = client.CreateTaskExecutionContext(TestConstants.ApplicationName,
-                    TestConstants.TaskName, taskExecutionOptions))
+            using (var executionContext = client.CreateTaskExecutionContext(TestConstants.ApplicationName, TestConstants.TaskName, taskExecutionOptions))
             {
                 startedOk = executionContext.TryStart();
-                tokenStatusAfterStart = executionsHelper.GetExecutionTokenStatus(TestConstants.ApplicationName,
-                    TestConstants.TaskName);
+                tokenStatusAfterStart = executionsHelper.GetExecutionTokenStatus(TestConstants.ApplicationName, TestConstants.TaskName);
             }
-            tokenStatusAfterUsingBlock = executionsHelper.GetExecutionTokenStatus(TestConstants.ApplicationName,
-                TestConstants.TaskName);
+            tokenStatusAfterUsingBlock = executionsHelper.GetExecutionTokenStatus(TestConstants.ApplicationName, TestConstants.TaskName);
 
             // ASSERT
             Assert.AreEqual(true, startedOk);
@@ -74,9 +69,9 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionContext
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
-
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
+            
             // ACT
             StartContextWithoutUsingOrComplete();
             GC.Collect(0, GCCollectionMode.Forced); // referenceless context is collected
@@ -84,7 +79,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionContext
 
             // ASSERT
             var expectedLastKeepAliveMax = DateTime.UtcNow.AddSeconds(-5);
-            var lastKeepAlive = executionHelper.GetLastKeepAlive(taskSecondaryId);
+            var lastKeepAlive = executionHelper.GetLastKeepAlive(taskDefinitionId);
             Assert.IsTrue(lastKeepAlive < expectedLastKeepAliveMax);
         }
 

@@ -10,6 +10,7 @@ using Taskling.InfrastructureContracts.CriticalSections;
 using Taskling.SqlServer.Configuration;
 using Taskling.SqlServer.CriticalSections;
 using Taskling.SqlServer.IntegrationTest.TestHelpers;
+using Taskling.SqlServer.TaskExecution;
 using Taskling.SqlServer.Tasks;
 
 namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
@@ -34,7 +35,6 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         {
             var settings = new SqlServerClientConnectionSettings()
             {
-                TableSchema = "Taskling",
                 ConnectionString = TestConstants.TestConnectionString,
                 ConnectTimeout = new TimeSpan(0, 1, 1)
             };
@@ -47,15 +47,15 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            var taskExecutionId = executionHelper.InsertTaskExecution(taskSecondaryId);
-            executionHelper.InsertExecutionToken(taskSecondaryId, 0, taskExecutionId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            var taskExecutionId = executionHelper.InsertKeepAliveTaskExecution(taskDefinitionId);
+            executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId);
             
             var request = new StartCriticalSectionRequest(TestConstants.ApplicationName, 
                 TestConstants.TaskName, 
                 taskExecutionId, 
                 TaskDeathMode.KeepAlive);
-            request.KeepAliveElapsedSeconds = 60;
+            request.KeepAliveDeathThreshold = new TimeSpan(0, 1, 0);
             
             // ACT
             var sut = CreateSut();
@@ -71,22 +71,22 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
 
             // Create execution 1 and assign critical section to it
-            var taskExecutionId1 = executionHelper.InsertTaskExecution(taskSecondaryId);
-            executionHelper.InsertExecutionToken(taskSecondaryId, 0, taskExecutionId1);
-            executionHelper.InsertUnavailableCriticalSectionToken(taskSecondaryId, taskExecutionId1);
+            var taskExecutionId1 = executionHelper.InsertKeepAliveTaskExecution(taskDefinitionId);
+            executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId1);
+            executionHelper.InsertUnavailableCriticalSectionToken(taskDefinitionId, taskExecutionId1);
             
             // Create second execution
-            var taskExecutionId2 = executionHelper.InsertTaskExecution(taskSecondaryId);
-            executionHelper.InsertExecutionToken(taskSecondaryId, 0, taskExecutionId2);
+            var taskExecutionId2 = executionHelper.InsertKeepAliveTaskExecution(taskDefinitionId);
+            executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId2);
 
             var request = new StartCriticalSectionRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
                 taskExecutionId2,
                 TaskDeathMode.KeepAlive);
-            request.KeepAliveElapsedSeconds = 60;
+            request.KeepAliveDeathThreshold = new TimeSpan(0, 1, 0);
 
             // ACT
             var sut = CreateSut();
@@ -104,23 +104,23 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
 
             // Create execution 1 and assign critical section to it
-            var taskExecutionId1 = executionHelper.InsertTaskExecution(taskSecondaryId);
-            executionHelper.InsertExecutionToken(taskSecondaryId, 0, taskExecutionId1);
-            executionHelper.InsertUnavailableCriticalSectionToken(taskSecondaryId, taskExecutionId1);
+            var taskExecutionId1 = executionHelper.InsertKeepAliveTaskExecution(taskDefinitionId);
+            executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId1);
+            executionHelper.InsertUnavailableCriticalSectionToken(taskDefinitionId, taskExecutionId1);
             
             // Create second execution and insert into queue
-            var taskExecutionId2 = executionHelper.InsertTaskExecution(taskSecondaryId);
-            executionHelper.InsertExecutionToken(taskSecondaryId, 0, taskExecutionId2);
-            executionHelper.InsertIntoCriticalSectionQueue(taskSecondaryId, taskExecutionId2);
+            var taskExecutionId2 = executionHelper.InsertKeepAliveTaskExecution(taskDefinitionId);
+            executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId2);
+            executionHelper.InsertIntoCriticalSectionQueue(taskDefinitionId, taskExecutionId2);
             
             var request = new StartCriticalSectionRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
                 taskExecutionId2,
                 TaskDeathMode.KeepAlive);
-            request.KeepAliveElapsedSeconds = 600;
+            request.KeepAliveDeathThreshold = new TimeSpan(0, 10, 0);
 
             // ACT
             var sut = CreateSut();
@@ -138,19 +138,19 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
 
             // Create execution 1 and create available critical section token
-            var taskExecutionId1 = executionHelper.InsertTaskExecution(taskSecondaryId);
-            executionHelper.InsertExecutionToken(taskSecondaryId, 0, taskExecutionId1);
-            executionHelper.InsertIntoCriticalSectionQueue(taskSecondaryId, taskExecutionId1);
-            executionHelper.InsertAvailableCriticalSectionToken(taskSecondaryId, "0");
+            var taskExecutionId1 = executionHelper.InsertKeepAliveTaskExecution(taskDefinitionId);
+            executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId1);
+            executionHelper.InsertIntoCriticalSectionQueue(taskDefinitionId, taskExecutionId1);
+            executionHelper.InsertAvailableCriticalSectionToken(taskDefinitionId, "0");
 
             var request = new StartCriticalSectionRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
                 taskExecutionId1,
                 TaskDeathMode.KeepAlive);
-            request.KeepAliveElapsedSeconds = 60;
+            request.KeepAliveDeathThreshold = new TimeSpan(0, 1, 0);
 
             // ACT
             var sut = CreateSut();
@@ -168,26 +168,26 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
 
             // Create execution 1 and add it to the queue
-            var taskExecutionId1 = executionHelper.InsertTaskExecution(taskSecondaryId);
-            executionHelper.InsertExecutionToken(taskSecondaryId, 0, taskExecutionId1);
-            executionHelper.InsertIntoCriticalSectionQueue(taskSecondaryId, taskExecutionId1);
+            var taskExecutionId1 = executionHelper.InsertKeepAliveTaskExecution(taskDefinitionId);
+            executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId1);
+            executionHelper.InsertIntoCriticalSectionQueue(taskDefinitionId, taskExecutionId1);
             
             // Create execution 2 and add it to the queue
-            var taskExecutionId2 = executionHelper.InsertTaskExecution(taskSecondaryId);
-            executionHelper.InsertExecutionToken(taskSecondaryId, 0, taskExecutionId2);
-            executionHelper.InsertIntoCriticalSectionQueue(taskSecondaryId, taskExecutionId2);
+            var taskExecutionId2 = executionHelper.InsertKeepAliveTaskExecution(taskDefinitionId);
+            executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId2);
+            executionHelper.InsertIntoCriticalSectionQueue(taskDefinitionId, taskExecutionId2);
 
             // Create an available critical section token
-            executionHelper.InsertAvailableCriticalSectionToken(taskSecondaryId, "0");
+            executionHelper.InsertAvailableCriticalSectionToken(taskDefinitionId, "0");
 
             var request = new StartCriticalSectionRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
                 taskExecutionId2,
                 TaskDeathMode.KeepAlive);
-            request.KeepAliveElapsedSeconds = 60;
+            request.KeepAliveDeathThreshold = new TimeSpan(0, 1, 0);
 
             // ACT
             var sut = CreateSut();
@@ -205,28 +205,30 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
 
             // Create execution 1 and add it to the queue
-            var taskExecutionId1 = executionHelper.InsertTaskExecution(taskSecondaryId);
-            executionHelper.InsertExecutionToken(taskSecondaryId, 0, taskExecutionId1);
-            executionHelper.InsertIntoCriticalSectionQueue(taskSecondaryId, taskExecutionId1);
+            var taskExecutionId1 = executionHelper.InsertKeepAliveTaskExecution(taskDefinitionId);
+            var executionTokenId1 = executionHelper.InsertExecutionToken(taskDefinitionId, TaskExecutionStatus.Unavailable, taskExecutionId1);
+            executionHelper.SetKeepAlive(taskDefinitionId, taskExecutionId1, executionTokenId1);
+            executionHelper.InsertIntoCriticalSectionQueue(taskDefinitionId, taskExecutionId1);
             
             Thread.Sleep(6000);
 
             // Create execution 2 and add it to the queue
-            var taskExecutionId2 = executionHelper.InsertTaskExecution(taskSecondaryId);
-            executionHelper.InsertExecutionToken(taskSecondaryId, 0, taskExecutionId2);
-            executionHelper.InsertIntoCriticalSectionQueue(taskSecondaryId, taskExecutionId2);
+            var taskExecutionId2 = executionHelper.InsertKeepAliveTaskExecution(taskDefinitionId);
+            var executionTokenId2 = executionHelper.InsertExecutionToken(taskDefinitionId, TaskExecutionStatus.Unavailable, taskExecutionId2);
+            executionHelper.SetKeepAlive(taskDefinitionId, taskExecutionId2, executionTokenId2);
+            executionHelper.InsertIntoCriticalSectionQueue(taskDefinitionId, taskExecutionId2);
 
             // Create an available critical section token
-            executionHelper.InsertAvailableCriticalSectionToken(taskSecondaryId, "0");
+            executionHelper.InsertAvailableCriticalSectionToken(taskDefinitionId, "0");
 
             var request = new StartCriticalSectionRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
                 taskExecutionId2,
                 TaskDeathMode.KeepAlive);
-            request.KeepAliveElapsedSeconds = 5;
+            request.KeepAliveDeathThreshold = new TimeSpan(0, 0, 5);
 
             // ACT
             var sut = CreateSut();
@@ -239,6 +241,8 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
             Assert.AreEqual(0, numberOfQueueRecordsForExecution2);
             Assert.AreEqual(GrantStatus.Granted, response.GrantStatus);
         }
+
+        
 
         
     }

@@ -19,7 +19,7 @@ namespace Taskling.SqlServer.Blocks
     public class RangeBlockService : DbOperationsService, IRangeBlockService
     {
         public RangeBlockService(SqlServerClientConnectionSettings clientConnectionSettings)
-            : base(clientConnectionSettings.ConnectionString, clientConnectionSettings.QueryTimeout, clientConnectionSettings.TableSchema)
+            : base(clientConnectionSettings.ConnectionString, clientConnectionSettings.QueryTimeout)
         {
         }
 
@@ -47,7 +47,7 @@ namespace Taskling.SqlServer.Blocks
                     var command = connection.CreateCommand();
                     command.CommandTimeout = QueryTimeout;
                     command.CommandText = GetDateRangeUpdateQuery(changeStatusRequest.BlockExecutionStatus);
-                    command.Parameters.Add("@DateRangeBlockExecutionId", SqlDbType.BigInt).Value = long.Parse(changeStatusRequest.BlockExecutionId);
+                    command.Parameters.Add("@BlockExecutionId", SqlDbType.BigInt).Value = long.Parse(changeStatusRequest.BlockExecutionId);
                     command.Parameters.Add("@BlockExecutionStatus", SqlDbType.TinyInt).Value = (byte)changeStatusRequest.BlockExecutionStatus;
                     command.ExecuteNonQuery();
                 }
@@ -70,7 +70,7 @@ namespace Taskling.SqlServer.Blocks
                     var command = connection.CreateCommand();
                     command.CommandTimeout = QueryTimeout;
                     command.CommandText = GetNumericRangeUpdateQuery(changeStatusRequest.BlockExecutionStatus);
-                    command.Parameters.Add("@NumericRangeBlockExecutionId", SqlDbType.BigInt).Value = long.Parse(changeStatusRequest.BlockExecutionId);
+                    command.Parameters.Add("@BlockExecutionId", SqlDbType.BigInt).Value = long.Parse(changeStatusRequest.BlockExecutionId);
                     command.Parameters.Add("@BlockExecutionStatus", SqlDbType.TinyInt).Value = (byte)changeStatusRequest.BlockExecutionStatus;
                     command.ExecuteNonQuery();
                 }
@@ -87,17 +87,17 @@ namespace Taskling.SqlServer.Blocks
         private string GetDateRangeUpdateQuery(BlockExecutionStatus executionStatus)
         {
             if (executionStatus == BlockExecutionStatus.Completed || executionStatus == BlockExecutionStatus.Failed)
-                return BlockExecutionQueryBuilder.GetSetDateRangeBlockExecutionAsCompletedQuery(_tableSchema);
+                return BlockExecutionQueryBuilder.SetBlockExecutionAsCompleted;
 
-            return BlockExecutionQueryBuilder.GetUpdateDateRangeBlockExecutionStatusQuery(_tableSchema);
+            return BlockExecutionQueryBuilder.UpdateBlockExecutionStatus;
         }
 
         private string GetNumericRangeUpdateQuery(BlockExecutionStatus executionStatus)
         {
             if (executionStatus == BlockExecutionStatus.Completed || executionStatus == BlockExecutionStatus.Failed)
-                return BlockExecutionQueryBuilder.GetSetNumericRangeBlockExecutionAsCompletedQuery(_tableSchema);
+                return BlockExecutionQueryBuilder.SetBlockExecutionAsCompleted;
 
-            return BlockExecutionQueryBuilder.GetUpdateNumericRangeBlockExecutionStatusQuery(_tableSchema);
+            return BlockExecutionQueryBuilder.UpdateBlockExecutionStatus;
         }
     }
 }

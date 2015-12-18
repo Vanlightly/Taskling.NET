@@ -91,7 +91,7 @@ namespace Taskling.Blocks
                 blockRequest.TaskName,
                 blockRequest.TaskExecutionId,
                 blockRequest.BlockType,
-                DateTime.UtcNow.AddSeconds(-blockRequest.GoBackElapsedSecondsForFailedTasks),
+                DateTime.UtcNow - blockRequest.GoBackTimePeriodForFailedTasks,
                 blockCountLimit
             );
 
@@ -235,7 +235,7 @@ namespace Taskling.Blocks
                 blockRequest.TaskName,
                 blockRequest.TaskExecutionId,
                 blockRequest.BlockType,
-                DateTime.UtcNow.AddSeconds(-blockRequest.GoBackElapsedSecondsForFailedTasks),
+                DateTime.UtcNow-blockRequest.GoBackTimePeriodForFailedTasks,
                 blockCountLimit
             );
 
@@ -321,14 +321,14 @@ namespace Taskling.Blocks
         {
             var utcNow = DateTime.UtcNow;
 
-            if (blockRequest.TaskDeathMode == TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate)
+            if (blockRequest.TaskDeathMode == TaskDeathMode.Override)
             {
                 return new FindDeadBlocksRequest(blockRequest.ApplicationName,
                     blockRequest.TaskName,
                     blockRequest.TaskExecutionId,
                     blockRequest.BlockType,
-                    utcNow.AddSeconds(-blockRequest.GoBackElapsedSecondsForDeadTasks),
-                    utcNow.AddSeconds(-blockRequest.OverrideElapsedSecondsToBeDead),
+                    utcNow-blockRequest.GoBackTimePeriodForDeadTasks,
+                    utcNow-blockRequest.GoBackTimePeriodForFailedTasks,
                     blockCountLimit
                     );
             }
@@ -339,7 +339,7 @@ namespace Taskling.Blocks
                     blockRequest.TaskName,
                     blockRequest.TaskExecutionId,
                     blockRequest.BlockType,
-                    utcNow.AddSeconds(-blockRequest.KeepAliveElapsedSecondsToBeDead),
+                    utcNow-blockRequest.KeepAliveDeathThreshold,
                     blockCountLimit
                     );
             }

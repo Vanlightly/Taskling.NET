@@ -18,7 +18,7 @@ namespace Taskling.SqlServer.Tasks
         private Dictionary<string, CachedTaskDefinition> _cachedTaskDefinitions = new Dictionary<string, CachedTaskDefinition>();
 
         public TaskService(SqlServerClientConnectionSettings clientConnectionSettings)
-            : base(clientConnectionSettings.ConnectionString, clientConnectionSettings.QueryTimeout, clientConnectionSettings.TableSchema)
+            : base(clientConnectionSettings.ConnectionString, clientConnectionSettings.QueryTimeout)
         {
         }
 
@@ -44,7 +44,7 @@ namespace Taskling.SqlServer.Tasks
 
             using (var connection = CreateNewConnection())
             {
-                using (var command = new SqlCommand(TaskQueryBuilder.GetTaskQuery(_tableSchema), connection))
+                using (var command = new SqlCommand(TaskQueryBuilder.GetTaskQuery, connection))
                 {
                     command.Parameters.Add(new SqlParameter("@ApplicationName", SqlDbType.VarChar, 200)).Value = applicationName;
                     command.Parameters.Add(new SqlParameter("@TaskName", SqlDbType.VarChar, 200)).Value = taskName;
@@ -52,7 +52,7 @@ namespace Taskling.SqlServer.Tasks
                     while (reader.Read())
                     {
                         var task = new TaskDefinition();
-                        task.TaskSecondaryId = int.Parse(reader["TaskSecondaryId"].ToString());
+                        task.TaskDefinitionId = int.Parse(reader["TaskDefinitionId"].ToString());
 
                         CacheTaskDefinition(key, task);
                         return task;
@@ -105,13 +105,13 @@ namespace Taskling.SqlServer.Tasks
         {
             using (var connection = CreateNewConnection())
             {
-                using (var command = new SqlCommand(TaskQueryBuilder.InsertTaskQuery(_tableSchema), connection))
+                using (var command = new SqlCommand(TaskQueryBuilder.InsertTaskQuery, connection))
                 {
                     command.Parameters.Add(new SqlParameter("@ApplicationName", SqlDbType.VarChar, 200)).Value = applicationName;
                     command.Parameters.Add(new SqlParameter("@TaskName", SqlDbType.VarChar, 200)).Value = taskName;
 
                     var task = new TaskDefinition();
-                    task.TaskSecondaryId = (int)command.ExecuteScalar();
+                    task.TaskDefinitionId = (int)command.ExecuteScalar();
 
                     string key = applicationName + "::" + taskName;
                     CacheTaskDefinition(key, task);

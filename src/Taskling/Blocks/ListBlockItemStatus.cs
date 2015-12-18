@@ -9,6 +9,7 @@ namespace Taskling.Blocks
     {
         Pending,
         Completed,
-        Failed
+        Failed,
+        Discarded
     }
 }

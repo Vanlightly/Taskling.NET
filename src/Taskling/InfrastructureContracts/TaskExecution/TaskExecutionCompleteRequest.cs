@@ -14,6 +14,5 @@ namespace Taskling.InfrastructureContracts.TaskExecution
         }
 
         public string ExecutionTokenId { get; set; }
-        public bool UnlimitedMode { get; set; }
     }
 }

@@ -53,12 +53,26 @@ namespace Taskling.Blocks.Contexts
             }
         }
 
-        public IEnumerable<ListBlockItem> GetItems()
+        public IEnumerable<ListBlockItem> GetAllItems()
         {
             if (Block.Items == null || !Block.Items.Any())
                 Block.Items = _listBlockService.GetListBlockItems(Block.ListBlockId).ToList();
 
             return Block.Items;
+        }
+
+        public IEnumerable<ListBlockItem> GetFailedAndPendingItems()
+        {
+            if (Block.Items == null || !Block.Items.Any())
+            {
+                Block.Items = _listBlockService.GetListBlockItems(Block.ListBlockId)
+                    .Where(x => x.Status == ListBlockItemStatus.Failed || x.Status == ListBlockItemStatus.Pending)
+                    .ToList();
+
+                return Block.Items;
+            }
+
+            return Block.Items.Where(x => x.Status == ListBlockItemStatus.Failed || x.Status == ListBlockItemStatus.Pending).ToList();
         }
 
         public void ItemComplete(ListBlockItem item)

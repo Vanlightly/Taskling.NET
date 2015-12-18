@@ -5,6 +5,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
+using Taskling.ExecutionContext;
 using Taskling.SqlServer.TaskExecution;
 
 namespace Taskling.SqlServer.IntegrationTest.TestHelpers
@@ -17,26 +18,26 @@ namespace Taskling.SqlServer.IntegrationTest.TestHelpers
 
         private const string InsertExecutionTokenQuery = @"
         INSERT INTO [Taskling].[ExecutionToken]
-           ([TaskSecondaryId]
+           ([TaskDefinitionId]
            ,[DateGranted]
            ,[DateReturned]
            ,[Status]
            ,[TaskExecutionId]
-           ,[HoldLockTaskExecutionId]
-           ,[LastKeepAlive])
+           ,[HoldLockTaskExecutionId])
      VALUES
-           (@TaskSecondaryId
+           (@TaskDefinitionId
            ,GETUTCDATE()
            ,NULL
            ,@Status
            ,@TaskExecutionId
-           ,@TaskExecutionId
-           ,GETUTCDATE());";
+           ,@TaskExecutionId);
+
+SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
         private const string GetExecutionTokenStatusByTaskExecutionQuery = @"SELECT ET.[Status]
 FROM [Taskling].[TaskExecution] TE
 JOIN [Taskling].[ExecutionToken] ET ON TE.TaskExecutionId = ET.TaskExecutionId
-JOIN [Taskling].[Task] T ON ET.TaskSecondaryId = T.TaskSecondaryId
+JOIN [Taskling].[TaskDefinition] T ON ET.TaskDefinitionId = T.TaskDefinitionId
 WHERE T.ApplicationName = @ApplicationName
 AND T.TaskName = @TaskName";
 
@@ -46,40 +47,35 @@ AND T.TaskName = @TaskName";
 
         private const string DeleteExecutionTokenQuery = @"
 DELETE CSQ FROM [Taskling].[CriticalSectionQueue] CSQ
-JOIN [Taskling].[Task] T ON CSQ.TaskSecondaryId = T.TaskSecondaryId
-WHERE T.ApplicationName = @ApplicationName
-AND T.TaskName = @TaskName;
+JOIN [Taskling].[TaskDefinition] T ON CSQ.TaskDefinitionId = T.TaskDefinitionId
+WHERE T.ApplicationName = @ApplicationName;
 
 DELETE CST FROM [Taskling].[CriticalSectionToken] CST
-JOIN [Taskling].[Task] T ON CST.TaskSecondaryId = T.TaskSecondaryId
-WHERE T.ApplicationName = @ApplicationName
-AND T.TaskName = @TaskName;
+JOIN [Taskling].[TaskDefinition] T ON CST.TaskDefinitionId = T.TaskDefinitionId
+WHERE T.ApplicationName = @ApplicationName;
 
 DELETE ET FROM [Taskling].[ExecutionToken] ET
-JOIN [Taskling].[Task] T ON ET.TaskSecondaryId = T.TaskSecondaryId
-WHERE T.ApplicationName = @ApplicationName
-AND T.TaskName = @TaskName;
+JOIN [Taskling].[TaskDefinition] T ON ET.TaskDefinitionId = T.TaskDefinitionId
+WHERE T.ApplicationName = @ApplicationName;
 
 DELETE TE FROM [Taskling].[TaskExecution] TE
-JOIN [Taskling].[Task] T ON TE.TaskSecondaryId = T.TaskSecondaryId
-WHERE T.ApplicationName = @ApplicationName
-AND T.TaskName = @TaskName;
+JOIN [Taskling].[TaskDefinition] T ON TE.TaskDefinitionId = T.TaskDefinitionId
+WHERE T.ApplicationName = @ApplicationName;
 
-DELETE FROM [Taskling].[Task] 
-WHERE ApplicationName = @ApplicationName
-AND TaskName = @TaskName";
+DELETE FROM [Taskling].[TaskDefinition] 
+WHERE ApplicationName = @ApplicationName";
 
         #endregion .: Delete All :.
 
         #region .: Tasks :.
 
-        private const string InsertTaskQuery = @"INSERT INTO [Taskling].[Task]([ApplicationName],[TaskName])
+        private const string InsertTaskQuery = @"INSERT INTO [Taskling].[TaskDefinition]([ApplicationName],[TaskName])
 VALUES(@ApplicationName,@TaskName);
 
 SELECT [ApplicationName]
       ,[TaskName]
-      ,[TaskSecondaryId]
-  FROM [Taskling].[Task]
+      ,[TaskDefinitionId]
+  FROM [Taskling].[TaskDefinition]
 WHERE ApplicationName = @ApplicationName
 AND TaskName = @TaskName";
 
@@ -88,32 +84,60 @@ AND TaskName = @TaskName";
         #region .: Keep Alive :.
 
         private const string SetKeepAliveQuery = @"
+UPDATE ET
+SET [LastKeepAlive] = GETUTCDATE()
+FROM [Taskling].[ExecutionToken] ET
+WHERE [TaskDefinitionId] = @TaskDefinitionId
+AND [ExecutionTokenId] = @ExecutionTokenId;
+
 UPDATE TE
 SET [LastKeepAlive] = @KeepAliveDateTime
 FROM [Taskling].[TaskExecution] TE
-WHERE [TaskExecutionId] = @TaskExecutionId
-
-UPDATE ET
-SET [LastKeepAlive] = @KeepAliveDateTime
-FROM [Taskling].[ExecutionToken] ET WITH(INDEX(IX_ExecutionToken_TaskExecutionId))
-WHERE [TaskExecutionId] = @TaskExecutionId;";
+WHERE [TaskExecutionId] = @TaskExecutionId;
+";
 
         private const string GetLastKeepAliveQuery = @"SELECT MAX(LastKeepAlive)
-FROM [Taskling].[TaskExecution] 
-WHERE [TaskSecondaryId] = @TaskSecondaryId";
+FROM [Taskling].[ExecutionToken] 
+WHERE [TaskDefinitionId] = @TaskDefinitionId";
 
         #endregion .: Keep Alive :.
         
         #region .: Task Executions :.
 
-        private const string InsertTaskExecutionQuery = @"INSERT INTO [Taskling].[TaskExecution]
-           ([TaskSecondaryId]
+        private const string InsertKeepAliveTaskExecutionQuery = @"INSERT INTO [Taskling].[TaskExecution]
+           ([TaskDefinitionId]
            ,[StartedAt]
-           ,[LastKeepAlive])
+           ,[LastKeepAlive]
+           ,[ServerName]
+           ,[TaskDeathMode]
+           ,[KeepAliveInterval]
+           ,[KeepAliveDeathThreshold])
      VALUES
-           (@TaskSecondaryId
+           (@TaskDefinitionId
            ,GETUTCDATE()
-           ,GETUTCDATE());
+           ,GETUTCDATE()
+           ,@ServerName
+           ,@TaskDeathMode
+           ,@KeepAliveInterval
+           ,@KeepAliveDeathThreshold);
+
+SELECT CAST(SCOPE_IDENTITY() AS INT);
+";
+
+        private const string InsertOverrideTaskExecutionQuery = @"INSERT INTO [Taskling].[TaskExecution]
+           ([TaskDefinitionId]
+           ,[StartedAt]
+           ,[LastKeepAlive]
+           ,[ServerName]
+           ,[TaskDeathMode]
+           ,[OverrideThreshold])
+     VALUES
+           (@TaskDefinitionId
+           ,GETUTCDATE()
+           ,GETUTCDATE()
+           ,@ServerName
+           ,@TaskDeathMode
+           ,@OverrideThreshold);
 
 SELECT CAST(SCOPE_IDENTITY() AS INT);
 ";
@@ -123,14 +147,14 @@ SELECT CAST(SCOPE_IDENTITY() AS INT);
         #region .: Critical Sections :.
 
         private const string InsertCriticalSectionTokenQuery = @"INSERT INTO [Taskling].[CriticalSectionToken]
-           ([TaskSecondaryId]
+           ([TaskDefinitionId]
            ,[DateGranted]
            ,[DateReturned]
            ,[Status]
            ,[TaskExecutionId]
            ,[HoldLockTaskExecutionId])
      VALUES
-           (@TaskSecondaryId
+           (@TaskDefinitionId
            ,GETUTCDATE()
            ,NULL
            ,@Status
@@ -142,18 +166,18 @@ FROM [Taskling].[CriticalSectionQueue]
 WHERE [TaskExecutionId] = @TaskExecutionId";
 
         private const string InsertIntoCriticalSectionQueueQuery = @"INSERT INTO [Taskling].[CriticalSectionQueue]
-           ([TaskSecondaryId]
+           ([TaskDefinitionId]
            ,[TaskExecutionId]
            ,[HoldLockTaskExecutionId])
      VALUES
-           (@TaskSecondaryId
+           (@TaskDefinitionId
            ,@TaskExecutionId
            ,@TaskExecutionId)";
 
         private const string GetCriticalSectionTokenStatusByTaskExecutionQuery = @"SELECT CST.[Status]
 FROM [Taskling].[TaskExecution] TE
 JOIN [Taskling].[CriticalSectionToken] CST ON TE.TaskExecutionId = CST.TaskExecutionId
-JOIN [Taskling].[Task] T ON CST.TaskSecondaryId = T.TaskSecondaryId
+JOIN [Taskling].[TaskDefinition] T ON CST.TaskDefinitionId = T.TaskDefinitionId
 WHERE T.ApplicationName = @ApplicationName
 AND T.TaskName = @TaskName";
 
@@ -170,22 +194,16 @@ AND T.TaskName = @TaskName";
                 var command = connection.CreateCommand();
                 command.CommandText = DeleteExecutionTokenQuery;
                 command.Parameters.Add("@ApplicationName", SqlDbType.VarChar, 200).Value = applicationName;
-                command.Parameters.Add("@TaskName", SqlDbType.VarChar, 200).Value = taskName;
                 command.ExecuteNonQuery();
             }
         }
 
-        public void SetKeepAlive(int taskExecutionId)
+        public void SetKeepAlive(int taskDefinitionId, string taskExecutionId, string executionTokenId)
         {
-            SetKeepAlive(taskExecutionId.ToString(), DateTime.UtcNow);
+            SetKeepAlive(taskDefinitionId, taskExecutionId, executionTokenId, DateTime.UtcNow);
         }
 
-        public void SetKeepAlive(string taskExecutionId)
-        {
-            SetKeepAlive(taskExecutionId, DateTime.UtcNow);
-        }
-
-        public void SetKeepAlive(string taskExecutionId, DateTime keepAliveDateTime)
+        public void SetKeepAlive(int taskDefinitionId, string taskExecutionId, string executionTokenId, DateTime keepAliveDateTime)
         {
             using (var connection = new SqlConnection(TestConstants.TestConnectionString))
             {
@@ -193,20 +211,22 @@ AND T.TaskName = @TaskName";
                 var command = connection.CreateCommand();
                 command.CommandText = SetKeepAliveQuery;
                 command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
+                command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
+                command.Parameters.Add("@ExecutionTokenId", SqlDbType.Int).Value = executionTokenId;
                 command.Parameters.Add("@KeepAliveDateTime", SqlDbType.DateTime).Value = keepAliveDateTime;
                 
                 command.ExecuteNonQuery();
             }
         }
 
-        public DateTime GetLastKeepAlive(int taskSecondaryId)
+        public DateTime GetLastKeepAlive(int taskDefinitionId)
         {
             using (var connection = new SqlConnection(TestConstants.TestConnectionString))
             {
                 connection.Open();
                 var command = connection.CreateCommand();
                 command.CommandText = GetLastKeepAliveQuery;
-                command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
+                command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
                 return (DateTime)command.ExecuteScalar();
             }
         }
@@ -215,10 +235,10 @@ AND T.TaskName = @TaskName";
 
         //public int CreateTaskAndExecutionToken(string applicationName, string taskName, int tokenCount = 1)
         //{
-        //    var taskSecondaryId = InsertTask(applicationName, taskName);
-        //    InsertUnavailableExecutionToken(taskSecondaryId, 0);
+        //    var taskDefinitionId = InsertTask(applicationName, taskName);
+        //    InsertUnavailableExecutionToken(taskDefinitionId, 0);
 
-        //    return taskSecondaryId;
+        //    return taskDefinitionId;
         //}
 
         public int InsertTask(string applicationName, string taskName)
@@ -233,7 +253,7 @@ AND T.TaskName = @TaskName";
                 var reader = command.ExecuteReader();
                 while (reader.Read())
                 {
-                    return int.Parse(reader["TaskSecondaryId"].ToString());
+                    return int.Parse(reader["TaskDefinitionId"].ToString());
                 }
             }
 
@@ -245,32 +265,28 @@ AND T.TaskName = @TaskName";
 
         #region .: Execution Tokens :.
 
-        public void InsertUnavailableExecutionToken(int taskSecondaryId)
+        public string InsertUnavailableExecutionToken(int taskDefinitionId)
         {
-            InsertExecutionToken(taskSecondaryId, TaskExecutionStatus.Unavailable, "0");
+            return InsertExecutionToken(taskDefinitionId, TaskExecutionStatus.Unavailable, "0");
         }
 
-        public void InsertAvailableExecutionToken(int taskSecondaryId)
+        public string InsertAvailableExecutionToken(int taskDefinitionId)
         {
-            InsertExecutionToken(taskSecondaryId, TaskExecutionStatus.Available, "0");
+            return InsertExecutionToken(taskDefinitionId, TaskExecutionStatus.Available, "0");
         }
 
-        public void InsertUnlimitedExecutionToken(int taskSecondaryId)
-        {
-            InsertExecutionToken(taskSecondaryId, TaskExecutionStatus.Unlimited, "0");
-        }
-
-        public void InsertExecutionToken(int taskSecondaryId, TaskExecutionStatus status, string taskExecutionId)
+        public string InsertExecutionToken(int taskDefinitionId, TaskExecutionStatus status, string taskExecutionId)
         {
             using (var connection = new SqlConnection(TestConstants.TestConnectionString))
             {
                 connection.Open();
                 var command = connection.CreateCommand();
                 command.CommandText = InsertExecutionTokenQuery;
-                command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
+                command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
                 command.Parameters.Add("@Status", SqlDbType.Int).Value = (int)status;
                 command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
-                command.ExecuteNonQuery();
+                var executionTokenId = (int) command.ExecuteScalar();
+                return executionTokenId.ToString();
             }
         }
 
@@ -296,41 +312,74 @@ AND T.TaskName = @TaskName";
 
         #region .: Task Executions :.
 
-        public string InsertTaskExecution(int taskSecondaryId)
+        public string InsertKeepAliveTaskExecution(int taskDefinitionId)
+        {
+            return InsertKeepAliveTaskExecution(taskDefinitionId, new TimeSpan(0, 1, 0), new TimeSpan(0, 0, 20));
+        }
+
+        public string InsertOverrideTaskExecution(int taskDefinitionId)
+        {
+            return InsertOverrideTaskExecution(taskDefinitionId, new TimeSpan(0, 1, 0));
+        }
+
+        private string InsertKeepAliveTaskExecution(int taskDefinitionId, TimeSpan keepAliveInterval, TimeSpan keepAliveDeathThreshold)
         {
             using (var connection = new SqlConnection(TestConstants.TestConnectionString))
             {
                 connection.Open();
                 var command = connection.CreateCommand();
-                command.CommandText = InsertTaskExecutionQuery;
-                command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
+                command.CommandText = InsertKeepAliveTaskExecutionQuery;
+                command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
+                command.Parameters.Add(new SqlParameter("@ServerName", SqlDbType.VarChar, 200)).Value = Environment.MachineName;
+                command.Parameters.Add(new SqlParameter("@TaskDeathMode", SqlDbType.TinyInt)).Value = (byte)TaskDeathMode.KeepAlive;
+                command.Parameters.Add(new SqlParameter("@KeepAliveInterval", SqlDbType.Time)).Value = keepAliveInterval;
+                command.Parameters.Add(new SqlParameter("@KeepAliveDeathThreshold", SqlDbType.Time)).Value = keepAliveDeathThreshold;
+
                 return command.ExecuteScalar().ToString();
             }
         }
 
+        private string InsertOverrideTaskExecution(int taskDefinitionId, TimeSpan overrideThreshold)
+        {
+            using (var connection = new SqlConnection(TestConstants.TestConnectionString))
+            {
+                connection.Open();
+                var command = connection.CreateCommand();
+                command.CommandText = InsertOverrideTaskExecutionQuery;
+                command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
+                command.Parameters.Add(new SqlParameter("@ServerName", SqlDbType.VarChar, 200)).Value = Environment.MachineName;
+                command.Parameters.Add(new SqlParameter("@TaskDeathMode", SqlDbType.TinyInt)).Value = (byte)TaskDeathMode.Override;
+                command.Parameters.Add(new SqlParameter("@OverrideThreshold", SqlDbType.Time)).Value = overrideThreshold;
+
+                return command.ExecuteScalar().ToString();
+            }
+        }
+
+
+        
         #endregion .: Task Executions :.
 
 
         #region .: Critical Sections :.
 
-        public void InsertUnavailableCriticalSectionToken(int taskSecondaryId, string taskExecutionId)
+        public void InsertUnavailableCriticalSectionToken(int taskDefinitionId, string taskExecutionId)
         {
-            InsertCriticalSectionToken(taskSecondaryId, taskExecutionId, 0);
+            InsertCriticalSectionToken(taskDefinitionId, taskExecutionId, 0);
         }
 
-        public void InsertAvailableCriticalSectionToken(int taskSecondaryId, string taskExecutionId)
+        public void InsertAvailableCriticalSectionToken(int taskDefinitionId, string taskExecutionId)
         {
-            InsertCriticalSectionToken(taskSecondaryId, taskExecutionId, 1);
+            InsertCriticalSectionToken(taskDefinitionId, taskExecutionId, 1);
         }
 
-        private void InsertCriticalSectionToken(int taskSecondaryId, string taskExecutionId, byte status)
+        private void InsertCriticalSectionToken(int taskDefinitionId, string taskExecutionId, byte status)
         {
             using (var connection = new SqlConnection(TestConstants.TestConnectionString))
             {
                 connection.Open();
                 var command = connection.CreateCommand();
                 command.CommandText = InsertCriticalSectionTokenQuery;
-                command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
+                command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
                 command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
                 command.Parameters.Add("@Status", SqlDbType.TinyInt).Value = status;
                 command.ExecuteNonQuery();
@@ -349,14 +398,14 @@ AND T.TaskName = @TaskName";
             }
         }
 
-        public void InsertIntoCriticalSectionQueue(int taskSecondaryId, string taskExecutionId)
+        public void InsertIntoCriticalSectionQueue(int taskDefinitionId, string taskExecutionId)
         {
             using (var connection = new SqlConnection(TestConstants.TestConnectionString))
             {
                 connection.Open();
                 var command = connection.CreateCommand();
                 command.CommandText = InsertIntoCriticalSectionQueueQuery;
-                command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
+                command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
                 command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
                 command.ExecuteNonQuery();
             }

@@ -19,7 +19,7 @@ namespace Taskling.SqlServer.Blocks
     public class ListBlockService : DbOperationsService, IListBlockService
     {
         public ListBlockService(SqlServerClientConnectionSettings clientConnectionSettings)
-            : base(clientConnectionSettings.ConnectionString, clientConnectionSettings.QueryTimeout, clientConnectionSettings.TableSchema)
+            : base(clientConnectionSettings.ConnectionString, clientConnectionSettings.QueryTimeout)
         {
         }
 
@@ -32,7 +32,7 @@ namespace Taskling.SqlServer.Blocks
                     var command = connection.CreateCommand();
                     command.CommandTimeout = QueryTimeout;
                     command.CommandText = GetListUpdateQuery(changeStatusRequest.BlockExecutionStatus);
-                    command.Parameters.Add("@ListBlockExecutionId", SqlDbType.BigInt).Value = long.Parse(changeStatusRequest.BlockExecutionId);
+                    command.Parameters.Add("@BlockExecutionId", SqlDbType.BigInt).Value = long.Parse(changeStatusRequest.BlockExecutionId);
                     command.Parameters.Add("@BlockExecutionStatus", SqlDbType.TinyInt).Value = (byte)changeStatusRequest.BlockExecutionStatus;
                     command.ExecuteNonQuery();
                 }
@@ -55,8 +55,8 @@ namespace Taskling.SqlServer.Blocks
                 using (var connection = CreateNewConnection())
                 {
                     var command = connection.CreateCommand();
-                    command.CommandText = ListBlockQueryBuilder.GetListBlockItemsQuery(_tableSchema);
-                    command.Parameters.Add("@ListBlockId", SqlDbType.BigInt).Value = long.Parse(listBlockId);
+                    command.CommandText = ListBlockQueryBuilder.GetListBlockItems;
+                    command.Parameters.Add("@BlockId", SqlDbType.BigInt).Value = long.Parse(listBlockId);
 
                     var reader = command.ExecuteReader();
                     while (reader.Read())
@@ -89,8 +89,8 @@ namespace Taskling.SqlServer.Blocks
                 {
                     var command = connection.CreateCommand();
                     command.CommandTimeout = QueryTimeout;
-                    command.CommandText = ListBlockQueryBuilder.GetUpdateSingleBlockListItemStatus(_tableSchema);
-                    command.Parameters.Add("@ListBlockId", SqlDbType.BigInt).Value = long.Parse(singeUpdateRequest.ListBlockId);
+                    command.CommandText = ListBlockQueryBuilder.UpdateSingleBlockListItemStatus;
+                    command.Parameters.Add("@BlockId", SqlDbType.BigInt).Value = long.Parse(singeUpdateRequest.ListBlockId);
                     command.Parameters.Add("@ListBlockItemId", SqlDbType.BigInt).Value = long.Parse(singeUpdateRequest.ListBlockItem.ListBlockItemId);
                     command.Parameters.Add("@Status", SqlDbType.TinyInt).Value = (byte)singeUpdateRequest.ListBlockItem.Status;
                     command.ExecuteNonQuery();
@@ -138,9 +138,9 @@ namespace Taskling.SqlServer.Blocks
         private string GetListUpdateQuery(BlockExecutionStatus executionStatus)
         {
             if (executionStatus == BlockExecutionStatus.Completed || executionStatus == BlockExecutionStatus.Failed)
-                return BlockExecutionQueryBuilder.GetSetListBlockExecutionAsCompletedQuery(_tableSchema);
+                return BlockExecutionQueryBuilder.SetBlockExecutionAsCompleted;
 
-            return BlockExecutionQueryBuilder.GetUpdateListBlockExecutionStatusQuery(_tableSchema);
+            return BlockExecutionQueryBuilder.UpdateBlockExecutionStatus;
         }
 
         private string CreateTemporaryTable(SqlCommand command)
@@ -156,14 +156,14 @@ namespace Taskling.SqlServer.Blocks
         private DataTable GenerateDataTable(string listBlockId, List<ListBlockItem> items)
         {
             var dt = new DataTable();
-            dt.Columns.Add("ListBlockId", typeof(long));
+            dt.Columns.Add("BlockId", typeof(long));
             dt.Columns.Add("ListBlockItemId", typeof(long));
             dt.Columns.Add("Status", typeof(byte));
 
             foreach (var item in items)
             {
                 var dr = dt.NewRow();
-                dr["ListBlockId"] = long.Parse(listBlockId);
+                dr["BlockId"] = long.Parse(listBlockId);
                 dr["ListBlockItemId"] = long.Parse(item.ListBlockItemId);
                 dr["Status"] = (byte)item.Status;
                 dt.Rows.Add(dr);
@@ -175,7 +175,7 @@ namespace Taskling.SqlServer.Blocks
         private void PerformBulkUpdate(SqlCommand command, string tableName)
         {
             command.Parameters.Clear();
-            command.CommandText = ListBlockQueryBuilder.GetBulkUpdateBlockListItemStatus(_tableSchema, tableName);
+            command.CommandText = ListBlockQueryBuilder.GetBulkUpdateBlockListItemStatus(tableName);
             command.ExecuteNonQuery();
         }
     }

@@ -20,7 +20,7 @@ namespace Taskling.SqlServer.TaskExecution
 
         public TaskExecutionService(SqlServerClientConnectionSettings clientConnectionSettings,
             ITaskService taskService)
-            : base(clientConnectionSettings.ConnectionString, clientConnectionSettings.QueryTimeout, clientConnectionSettings.TableSchema)
+            : base(clientConnectionSettings.ConnectionString, clientConnectionSettings.QueryTimeout)
         {
             _taskService = taskService;
         }
@@ -30,16 +30,16 @@ namespace Taskling.SqlServer.TaskExecution
             ValidateStartRequest(startRequest);
 
             var taskDefinition = _taskService.GetTaskDefinition(startRequest.ApplicationName, startRequest.TaskName);
-            int secondsOverride = startRequest.SecondsOverride ?? int.MaxValue;
-
+            
             if (startRequest.TaskDeathMode == TaskDeathMode.KeepAlive)
             {
-                return GetExecutionTokenUsingKeepAliveMode(taskDefinition.TaskSecondaryId, startRequest.KeepAliveElapsedSeconds.Value);
+                var taskExecutionId = CreateKeepAliveTaskExecution(taskDefinition.TaskDefinitionId, startRequest.KeepAliveInterval.Value, startRequest.KeepAliveDeathThreshold.Value);
+                return GetExecutionTokenUsingKeepAliveMode(taskDefinition.TaskDefinitionId, taskExecutionId, startRequest.KeepAliveDeathThreshold.Value);
             }
             
-            if (startRequest.TaskDeathMode == TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate)
+            if (startRequest.TaskDeathMode == TaskDeathMode.Override)
             {
-                return GetExecutionTokenUsingOverride(taskDefinition.TaskSecondaryId, secondsOverride);
+                return GetExecutionTokenUsingOverride(taskDefinition.TaskDefinitionId, startRequest.OverrideThreshold.Value);
             }
 
             throw new ExecutionException("Unsupported TaskDeathMode");
@@ -47,14 +47,6 @@ namespace Taskling.SqlServer.TaskExecution
 
         public TaskExecutionCompleteResponse Complete(TaskExecutionCompleteRequest completeRequest)
         {
-            if (completeRequest.UnlimitedMode)
-            {
-                return new TaskExecutionCompleteResponse()
-                {
-                    CompletedAt = DateTime.UtcNow
-                };
-            }
-
             return ReturnExecutionToken(completeRequest);
         }
 
@@ -68,14 +60,18 @@ namespace Taskling.SqlServer.TaskExecution
  	        throw new NotImplementedException();
         }
 
-        public void SendKeepAlive(string taskExecutionId)
+        public void SendKeepAlive(SendKeepAliveRequest sendKeepAliveRequest)
         {
+            var taskDefinition = _taskService.GetTaskDefinition(sendKeepAliveRequest.ApplicationName, sendKeepAliveRequest.TaskName);
+            
             using (var connection = CreateNewConnection())
             {
-                using (var command = new SqlCommand(TaskQueryBuilder.KeepAliveQuery(_tableSchema), connection))
+                using (var command = new SqlCommand(TaskQueryBuilder.KeepAliveQuery, connection))
                 {
                     command.CommandTimeout = QueryTimeout;
-                    command.Parameters.Add(new SqlParameter("@TaskExecutionId", SqlDbType.Int)).Value = int.Parse(taskExecutionId);
+                    command.Parameters.Add(new SqlParameter("@TaskDefinitionId", SqlDbType.Int)).Value = taskDefinition.TaskDefinitionId;
+                    command.Parameters.Add(new SqlParameter("@TaskExecutionId", SqlDbType.Int)).Value = int.Parse(sendKeepAliveRequest.TaskExecutionId);
+                    command.Parameters.Add(new SqlParameter("@ExecutionTokenId", SqlDbType.Int)).Value = int.Parse(sendKeepAliveRequest.ExecutionTokenId);
                     command.ExecuteNonQuery();
                 }
             }
@@ -86,12 +82,20 @@ namespace Taskling.SqlServer.TaskExecution
         {
             if (startRequest.TaskDeathMode == TaskDeathMode.KeepAlive)
             {
-                if (!startRequest.KeepAliveElapsedSeconds.HasValue)
-                    throw new ExecutionArgumentsException("KeepAliveElapsedSeconds must be set when using KeepAlive mode");
+                if (!startRequest.KeepAliveInterval.HasValue)
+                    throw new ExecutionArgumentsException("KeepAliveInterval must be set when using KeepAlive mode");
+
+                if (!startRequest.KeepAliveDeathThreshold.HasValue)
+                    throw new ExecutionArgumentsException("KeepAliveDeathThreshold must be set when using KeepAlive mode");
+            }
+            else if (startRequest.TaskDeathMode == TaskDeathMode.Override)
+            {
+                if (!startRequest.OverrideThreshold.HasValue)
+                    throw new ExecutionArgumentsException("OverrideThreshold must be set when using Override mode");
             }
         }
 
-        private TaskExecutionStartResponse GetExecutionTokenUsingOverride(int taskSecondaryId, int secondsOverride)
+        private TaskExecutionStartResponse GetExecutionTokenUsingOverride(int taskDefinitionId, TimeSpan overrideThreshold)
         {
             var response = new TaskExecutionStartResponse();
 
@@ -104,8 +108,8 @@ namespace Taskling.SqlServer.TaskExecution
                 
                 try
                 {
-                    var taskExecutionId = CreateTaskExecution(command, taskSecondaryId);
-                    response = TryGetExecutionTokenUsingTimeOverrideMode(command, taskSecondaryId, taskExecutionId, secondsOverride);
+                    var taskExecutionId = CreateOverrideTaskExecution(command, taskDefinitionId, overrideThreshold);
+                    response = TryGetExecutionTokenUsingTimeOverrideMode(command, taskDefinitionId, taskExecutionId, (int)overrideThreshold.TotalSeconds);
 
                     transaction.Commit();
                 }
@@ -122,7 +126,7 @@ namespace Taskling.SqlServer.TaskExecution
             return response;
         }
 
-        private TaskExecutionStartResponse GetExecutionTokenUsingKeepAliveMode(int taskSecondaryId, int secondsElapsedTimeOut)
+        private TaskExecutionStartResponse GetExecutionTokenUsingKeepAliveMode(int taskDefinitionId, int taskExecutionId, TimeSpan keepAliveDeathThreshold)
         {
             var response = new TaskExecutionStartResponse();
 
@@ -135,8 +139,7 @@ namespace Taskling.SqlServer.TaskExecution
                 
                 try
                 {
-                    var taskExecutionId = CreateTaskExecution(command, taskSecondaryId);
-                    response = TryGetExecutionTokenUsingKeepAliveMode(command, taskSecondaryId, taskExecutionId, secondsElapsedTimeOut);
+                    response = TryGetExecutionTokenUsingKeepAliveMode(command, taskDefinitionId, taskExecutionId, (int)keepAliveDeathThreshold.TotalSeconds);
                     
                     transaction.Commit();
                 }
@@ -153,13 +156,13 @@ namespace Taskling.SqlServer.TaskExecution
             return response;
         }
 
-        private TaskExecutionStartResponse TryGetExecutionTokenUsingKeepAliveMode(SqlCommand command, int taskSecondaryId, int taskExecutionId, int secondsElapsedTimeOut)
+        private TaskExecutionStartResponse TryGetExecutionTokenUsingKeepAliveMode(SqlCommand command, int taskDefinitionId, int taskExecutionId, int secondsElapsedTimeOut)
         {
             var response = new TaskExecutionStartResponse();
 
             command.Parameters.Clear();
-            command.CommandText = TokensQueryBuilder.GetKeepAliveBasedRequestExecutionTokenQuery(_tableSchema);
-            command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
+            command.CommandText = TokensQueryBuilder.KeepAliveBasedRequestExecutionTokenQuery;
+            command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
             command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
             command.Parameters.Add("@KeepAliveElapsedSeconds", SqlDbType.Int).Value = secondsElapsedTimeOut;
             
@@ -177,13 +180,13 @@ namespace Taskling.SqlServer.TaskExecution
             return response;
         }
 
-        private TaskExecutionStartResponse TryGetExecutionTokenUsingTimeOverrideMode(SqlCommand command, int taskSecondaryId, int taskExecutionId, int secondsOverride)
+        private TaskExecutionStartResponse TryGetExecutionTokenUsingTimeOverrideMode(SqlCommand command, int taskDefinitionId, int taskExecutionId, int secondsOverride)
         {
             var response = new TaskExecutionStartResponse();
 
             command.Parameters.Clear();
-            command.CommandText = TokensQueryBuilder.GetOverrideBasedRequestExecutionTokenQuery(_tableSchema);
-            command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
+            command.CommandText = TokensQueryBuilder.OverrideBasedRequestExecutionTokenQuery;
+            command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
             command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
             command.Parameters.Add("@SecondsOverride", SqlDbType.Int).Value = secondsOverride;
 
@@ -200,18 +203,40 @@ namespace Taskling.SqlServer.TaskExecution
 
             return response;
         }
-        
-        private int CreateTaskExecution(SqlCommand command, int taskSecondaryId)
+
+        private int CreateKeepAliveTaskExecution(int taskDefinitionId, TimeSpan keepAliveInterval, TimeSpan keepAliveDeathThreshold)
         {
-            command.CommandText = TaskQueryBuilder.InsertTaskExecution(_tableSchema);
+            using (var connection = CreateNewConnection())
+            {
+                using (var command = new SqlCommand(TaskQueryBuilder.InsertKeepAliveTaskExecution, connection))
+                {
+                    command.Parameters.Add(new SqlParameter("@TaskDefinitionId", SqlDbType.Int)).Value = taskDefinitionId;
+                    command.Parameters.Add(new SqlParameter("@ServerName", SqlDbType.VarChar, 200)).Value = Environment.MachineName;
+                    command.Parameters.Add(new SqlParameter("@TaskDeathMode", SqlDbType.TinyInt)).Value = (byte) TaskDeathMode.KeepAlive;
+                    command.Parameters.Add(new SqlParameter("@KeepAliveInterval", SqlDbType.Time)).Value = keepAliveInterval;
+                    command.Parameters.Add(new SqlParameter("@KeepAliveDeathThreshold", SqlDbType.Time)).Value = keepAliveDeathThreshold;
+                    var taskExecutionId = (int) command.ExecuteScalar();
+                    return taskExecutionId;
+                }
+            }
+        }
+
+        private int CreateOverrideTaskExecution(SqlCommand command, int taskDefinitionId, TimeSpan overrideThreshold)
+        {
+            command.CommandText = TaskQueryBuilder.InsertOverrideTaskExecution;
             command.Parameters.Clear();
-            command.Parameters.Add(new SqlParameter("@TaskSecondaryId", SqlDbType.Int)).Value = taskSecondaryId;
+            command.Parameters.Add(new SqlParameter("@TaskDefinitionId", SqlDbType.Int)).Value = taskDefinitionId;
+            command.Parameters.Add(new SqlParameter("@ServerName", SqlDbType.VarChar, 200)).Value = Environment.MachineName;
+            command.Parameters.Add(new SqlParameter("@TaskDeathMode", SqlDbType.TinyInt)).Value = (byte)TaskDeathMode.Override;
+            command.Parameters.Add(new SqlParameter("@OverrideThreshold", SqlDbType.Time)).Value = overrideThreshold;
             var taskExecutionId = (int)command.ExecuteScalar();
             return taskExecutionId;
         }
 
         private TaskExecutionCompleteResponse ReturnExecutionToken(TaskExecutionCompleteRequest taskExecutionCompleteRequest)
         {
+            var taskDefinition = _taskService.GetTaskDefinition(taskExecutionCompleteRequest.ApplicationName, taskExecutionCompleteRequest.TaskName);
+
             var response = new TaskExecutionCompleteResponse();
 
             using (var connection = CreateNewConnection())
@@ -221,7 +246,8 @@ namespace Taskling.SqlServer.TaskExecution
                 var command = connection.CreateCommand();
                 command.Transaction = transaction;
                 command.CommandTimeout = QueryTimeout;
-                command.CommandText = TokensQueryBuilder.GetReturnExecutionTokenQuery(_tableSchema);
+                command.CommandText = TokensQueryBuilder.ReturnExecutionTokenQuery;
+                command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinition.TaskDefinitionId;
                 command.Parameters.Add("@ExecutionTokenId", SqlDbType.Int).Value = int.Parse(taskExecutionCompleteRequest.ExecutionTokenId);
                 command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionCompleteRequest.TaskExecutionId;
 

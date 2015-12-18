@@ -10,6 +10,7 @@ using Taskling.ExecutionContext.FluentBlocks.List;
 using Taskling.InfrastructureContracts.Blocks;
 using Taskling.SqlServer.Configuration;
 using Taskling.SqlServer.IntegrationTest.TestHelpers;
+using Taskling.SqlServer.TaskExecution;
 
 namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
 {
@@ -27,8 +28,8 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
             _executionHelper = new ExecutionsHelper();
             _executionHelper.DeleteRecordsOfTask(TestConstants.ApplicationName, TestConstants.TaskName);
 
-            var taskSecondaryId = _executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            _executionHelper.InsertUnlimitedExecutionToken(taskSecondaryId);
+            var taskDefinitionId = _executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            _executionHelper.InsertExecutionToken(taskDefinitionId, TaskExecutionStatus.Available, "0");
         }
 
         [TestMethod]
@@ -51,7 +52,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
                     foreach (var listBlock in listBlocks)
                     {
                         listBlock.Start();
-                        Parallel.ForEach(listBlock.GetItems(), (currentItem) =>
+                        Parallel.ForEach(listBlock.GetAllItems(), (currentItem) =>
                         {
                             listBlock.ItemComplete(currentItem);
                         });
@@ -59,7 +60,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
                         listBlock.Complete();
 
                         // All items should be completed now
-                        Assert.AreEqual(listBlock.GetItems().Count(), _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ListBlockItemStatus.Completed));
+                        Assert.AreEqual(listBlock.GetAllItems().Count(), _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ListBlockItemStatus.Completed));
                     }
                 }
             }
@@ -85,7 +86,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
                     foreach (var listBlock in listBlocks)
                     {
                         listBlock.Start();
-                        Parallel.ForEach(listBlock.GetItems(), (currentItem) =>
+                        Parallel.ForEach(listBlock.GetAllItems(), (currentItem) =>
                         {
                             listBlock.ItemComplete(currentItem);
                         });
@@ -93,7 +94,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
                         listBlock.Complete();
 
                         // All items should be completed now
-                        Assert.AreEqual(listBlock.GetItems().Count(), _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ListBlockItemStatus.Completed));
+                        Assert.AreEqual(listBlock.GetAllItems().Count(), _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ListBlockItemStatus.Completed));
                     }
                 }
             }
@@ -119,7 +120,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
                     foreach (var listBlock in listBlocks)
                     {
                         listBlock.Start();
-                        Parallel.ForEach(listBlock.GetItems(), (currentItem) =>
+                        Parallel.ForEach(listBlock.GetAllItems(), (currentItem) =>
                         {
                             listBlock.ItemComplete(currentItem);
                         });
@@ -127,7 +128,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
                         listBlock.Complete();
 
                         // All items should be completed now
-                        Assert.AreEqual(listBlock.GetItems().Count(), _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ListBlockItemStatus.Completed));
+                        Assert.AreEqual(listBlock.GetAllItems().Count(), _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ListBlockItemStatus.Completed));
                     }
                 }
             }
@@ -155,20 +156,20 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
                     {
                         currentBlock.Start();
 
-                        foreach (var currentItem in currentBlock.GetItems())
+                        foreach (var currentItem in currentBlock.GetAllItems())
                         {
                             currentBlock.ItemComplete(currentItem);
                         };
 
                         currentBlock.Complete();
                         // All items should be completed now
-                        Assert.AreEqual(currentBlock.GetItems().Count(), _blocksHelper.GetListBlockItemCountByStatus(currentBlock.ListBlockId, ListBlockItemStatus.Completed));
+                        Assert.AreEqual(currentBlock.GetAllItems().Count(), _blocksHelper.GetListBlockItemCountByStatus(currentBlock.ListBlockId, ListBlockItemStatus.Completed));
                     });
 
                     foreach (var listBlock in listBlocks)
                     {
                         listBlock.Start();
-                        Parallel.ForEach(listBlock.GetItems(), (currentItem) =>
+                        Parallel.ForEach(listBlock.GetAllItems(), (currentItem) =>
                         {
                             listBlock.ItemComplete(currentItem);
                         });

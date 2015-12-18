@@ -16,13 +16,13 @@ namespace Taskling.Blocks
         public int MaxBlocks { get; set; }
         
         public bool CheckForFailedExecutions { get; set; }
-        public int GoBackElapsedSecondsForFailedTasks { get; set; }
+        public TimeSpan GoBackTimePeriodForFailedTasks { get; set; }
         
         public TaskDeathMode TaskDeathMode { get; set; }
         public bool CheckForDeadExecutions { get; set; }
-        public int OverrideElapsedSecondsToBeDead { get; set; }
-        public int GoBackElapsedSecondsForDeadTasks { get; set; }
-        public int KeepAliveElapsedSecondsToBeDead { get; set; }
+        public TimeSpan OverrideDeathThreshold { get; set; }
+        public TimeSpan GoBackTimePeriodForDeadTasks { get; set; }
+        public TimeSpan KeepAliveDeathThreshold { get; set; }
 
         public BlockType BlockType { get; protected set; }
     }

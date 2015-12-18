@@ -19,7 +19,7 @@ namespace Taskling.InfrastructureContracts.CriticalSections
         }
 
         public TaskDeathMode TaskDeathMode { get; set; }
-        public int? SecondsOverride { get; set; }
-        public int? KeepAliveElapsedSeconds { get; set; }
+        public TimeSpan? OverrideThreshold { get; set; }
+        public TimeSpan? KeepAliveDeathThreshold { get; set; }
     }
 }

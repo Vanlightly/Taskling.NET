@@ -13,80 +13,56 @@ namespace Taskling.SqlServer.IntegrationTest.TestHelpers
     {
         #region .: Queries :.
 
-        private const string InsertDateRangeBlockQuery = @"INSERT INTO [Taskling].[DateRangeBlock]
-           ([TaskSecondaryId]
+        private const string InsertDateRangeBlockQuery = @"INSERT INTO [Taskling].[Block]
+           ([TaskDefinitionId]
            ,[FromDate]
            ,[ToDate]
-           ,[CreatedDate])
+           ,[CreatedDate]
+           ,[BlockType])
      VALUES
-           (@TaskSecondaryId
+           (@TaskDefinitionId
            ,@FromDate
            ,@ToDate
-           ,@FromDate);
+           ,@FromDate
+           ,@BlockType);
 
 SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
 
-        private const string InsertNumericRangeBlockQuery = @"INSERT INTO [Taskling].[NumericRangeBlock]
-           ([TaskSecondaryId]
+        private const string InsertNumericRangeBlockQuery = @"INSERT INTO [Taskling].[Block]
+           ([TaskDefinitionId]
            ,[FromNumber]
            ,[ToNumber]
-           ,[CreatedDate])
+           ,[CreatedDate]
+           ,[BlockType])
      VALUES
-           (@TaskSecondaryId
+           (@TaskDefinitionId
            ,@FromNumber
            ,@ToNumber
-           ,@CreatedDate);
+           ,@CreatedDate
+           ,@BlockType);
 
 SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
 
-        private const string InsertListBlockQuery = @"INSERT INTO [Taskling].[ListBlock]
-           ([TaskSecondaryId]
-           ,[CreatedDate])
+        private const string InsertListBlockQuery = @"INSERT INTO [Taskling].[Block]
+           ([TaskDefinitionId]
+           ,[CreatedDate]
+           ,[BlockType])
      VALUES
-           (@TaskSecondaryId
-           ,@CreatedDate);
+           (@TaskDefinitionId
+           ,@CreatedDate
+           ,@BlockType);
 
 SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
 
-        private const string InsertDateRangeBlockExecutionQuery = @"INSERT INTO [Taskling].[DateRangeBlockExecution]
+        private const string InsertBlockExecutionQuery = @"INSERT INTO [Taskling].[BlockExecution]
            ([TaskExecutionId]
-           ,[DateRangeBlockId]
+           ,[BlockId]
            ,[StartedAt]
            ,[CompletedAt]
            ,[BlockExecutionStatus])
      VALUES
            (@TaskExecutionId
-           ,@DateRangeBlockId
-           ,@StartedAt
-           ,@CompletedAt
-           ,@BlockExecutionStatus);
-
-SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
-
-        private const string InsertNumericRangeBlockExecutionQuery = @"INSERT INTO [Taskling].[NumericRangeBlockExecution]
-           ([TaskExecutionId]
-           ,[NumericRangeBlockId]
-           ,[StartedAt]
-           ,[CompletedAt]
-           ,[BlockExecutionStatus])
-     VALUES
-           (@TaskExecutionId
-           ,@NumericRangeBlockId
-           ,@StartedAt
-           ,@CompletedAt
-           ,@BlockExecutionStatus);
-
-SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
-
-        private const string InsertListBlockExecutionQuery = @"INSERT INTO [Taskling].[ListBlockExecution]
-           ([TaskExecutionId]
-           ,[ListBlockId]
-           ,[StartedAt]
-           ,[CompletedAt]
-           ,[BlockExecutionStatus])
-     VALUES
-           (@TaskExecutionId
-           ,@ListBlockId
+           ,@BlockId
            ,@StartedAt
            ,@CompletedAt
            ,@BlockExecutionStatus);
@@ -95,190 +71,105 @@ SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
 
         private const string DeleteBlocksQuery =
             @"
-DELETE DRBE FROM [Taskling].[DateRangeBlockExecution] DRBE
-LEFT JOIN [Taskling].[TaskExecution] TE ON DRBE.TaskExecutionId = TE.TaskExecutionId
-LEFT JOIN [Taskling].[Task] T ON TE.TaskSecondaryId = T.TaskSecondaryId
+DELETE BE FROM [Taskling].[BlockExecution] BE
+LEFT JOIN [Taskling].[TaskExecution] TE ON BE.TaskExecutionId = TE.TaskExecutionId
+LEFT JOIN [Taskling].[TaskDefinition] T ON TE.TaskDefinitionId = T.TaskDefinitionId
 WHERE (T.ApplicationName = @ApplicationName
 AND T.TaskName = @TaskName)
-OR T.TaskSecondaryId IS NULL
+OR T.TaskDefinitionId IS NULL
 OR TE.TaskExecutionId IS NULL;
 
-DELETE DRBE FROM [Taskling].[DateRangeBlock] DRBE
-LEFT JOIN [Taskling].[Task] T ON DRBE.TaskSecondaryId = T.TaskSecondaryId
+DELETE B FROM [Taskling].[Block] B
+LEFT JOIN [Taskling].[TaskDefinition] T ON B.TaskDefinitionId = T.TaskDefinitionId
 WHERE (T.ApplicationName = @ApplicationName
 AND T.TaskName = @TaskName)
-OR T.TaskSecondaryId IS NULL;
-
-DELETE NRBE FROM [Taskling].[NumericRangeBlockExecution] NRBE
-LEFT JOIN [Taskling].[TaskExecution] TE ON NRBE.TaskExecutionId = TE.TaskExecutionId
-LEFT JOIN [Taskling].[Task] T ON TE.TaskSecondaryId = T.TaskSecondaryId
-WHERE (T.ApplicationName = @ApplicationName
-AND T.TaskName = @TaskName)
-OR T.TaskSecondaryId IS NULL
-OR TE.TaskExecutionId IS NULL;
-
-DELETE NRBE FROM [Taskling].[NumericRangeBlock] NRBE
-LEFT JOIN [Taskling].[Task] T ON NRBE.TaskSecondaryId = T.TaskSecondaryId
-WHERE (T.ApplicationName = @ApplicationName
-AND T.TaskName = @TaskName)
-OR T.TaskSecondaryId IS NULL;
-
-DELETE LBE FROM [Taskling].[ListBlockExecution] LBE
-LEFT JOIN [Taskling].[ListBlock] LB ON LBE.ListBlockId = LB.ListBlockId
-LEFT JOIN [Taskling].[Task] T ON LB.TaskSecondaryId = T.TaskSecondaryId
-WHERE (T.ApplicationName = @ApplicationName
-AND T.TaskName = @TaskName)
-OR T.TaskSecondaryId IS NULL
-OR LB.ListBlockId IS NULL;
+OR T.TaskDefinitionId IS NULL;
 
 DELETE LBI FROM [Taskling].[ListBlockItem] LBI
-LEFT JOIN [Taskling].[ListBlock] LB ON LBI.ListBlockId = LB.ListBlockId 
-LEFT JOIN [Taskling].[Task] T ON LB.TaskSecondaryId = T.TaskSecondaryId
+LEFT JOIN [Taskling].[Block] B ON LBI.BlockId = B.BlockId 
+LEFT JOIN [Taskling].[TaskDefinition] T ON B.TaskDefinitionId = T.TaskDefinitionId
 WHERE (T.ApplicationName = @ApplicationName
 AND T.TaskName = @TaskName)
-OR T.TaskSecondaryId IS NULL
-OR LB.ListBlockId IS NULL;
+OR T.TaskDefinitionId IS NULL
+OR B.BlockId IS NULL;";
 
-DELETE LB FROM [Taskling].[ListBlock] LB
-LEFT JOIN [Taskling].[Task] T ON LB.TaskSecondaryId = T.TaskSecondaryId
-WHERE (T.ApplicationName = @ApplicationName
-AND T.TaskName = @TaskName)
-OR T.TaskSecondaryId IS NULL;";
-
-        private const string GetDateRangeBlockCountQuery = @"SELECT COUNT(*)
-FROM [Taskling].[DateRangeBlock] DRB
-JOIN [Taskling].[Task]  T ON DRB.TaskSecondaryId = T.TaskSecondaryId
+        private const string GetBlockCountQuery = @"SELECT COUNT(*)
+FROM [Taskling].[Block] B
+JOIN [Taskling].[TaskDefinition]  T ON B.TaskDefinitionId = T.TaskDefinitionId
 WHERE T.ApplicationName = @ApplicationName
 AND T.TaskName = @TaskName;";
 
-        private const string GetDateRangeBlockExecutionsCountByStatusQuery = @"SELECT COUNT(*)
-FROM [TasklingDb].[Taskling].[DateRangeBlockExecution] DRBE
-JOIN [Taskling].[TaskExecution] TE ON DRBE.TaskExecutionId = TE.TaskExecutionId
-JOIN [Taskling].[Task]  T ON TE.TaskSecondaryId = T.TaskSecondaryId
+        private const string GetBlockExecutionsCountByStatusQuery = @"SELECT COUNT(*)
+FROM [Taskling].[BlockExecution] BE
+JOIN [Taskling].[TaskExecution] TE ON BE.TaskExecutionId = TE.TaskExecutionId
+JOIN [Taskling].[TaskDefinition]  T ON TE.TaskDefinitionId = T.TaskDefinitionId
 WHERE T.ApplicationName = @ApplicationName
 AND T.TaskName = @TaskName
-AND DRBE.BlockExecutionStatus = @BlockExecutionStatus;";
-
-        private const string GetNumericRangeBlockCountQuery = @"SELECT COUNT(*)
-FROM [Taskling].[NumericRangeBlock] NRB
-JOIN [Taskling].[Task]  T ON NRB.TaskSecondaryId = T.TaskSecondaryId
-WHERE T.ApplicationName = @ApplicationName
-AND T.TaskName = @TaskName;";
-
-        private const string GetNumericRangeBlockExecutionsCountByStatusQuery = @"SELECT COUNT(*)
-FROM [TasklingDb].[Taskling].[NumericRangeBlockExecution] NRBE
-JOIN [Taskling].[TaskExecution] TE ON NRBE.TaskExecutionId = TE.TaskExecutionId
-JOIN [Taskling].[Task]  T ON TE.TaskSecondaryId = T.TaskSecondaryId
-WHERE T.ApplicationName = @ApplicationName
-AND T.TaskName = @TaskName
-AND NRBE.BlockExecutionStatus = @BlockExecutionStatus;";
-
-        private const string GetListBlockCountQuery = @"SELECT COUNT(*)
-FROM [Taskling].[ListBlock] LB
-JOIN [Taskling].[Task]  T ON LB.TaskSecondaryId = T.TaskSecondaryId
-WHERE T.ApplicationName = @ApplicationName
-AND T.TaskName = @TaskName;";
-
-        private const string GetListBlockExecutionsCountByStatusQuery = @"SELECT COUNT(*)
-FROM [TasklingDb].[Taskling].[ListBlockExecution] LBE
-JOIN [Taskling].[TaskExecution] TE ON LBE.TaskExecutionId = TE.TaskExecutionId
-JOIN [Taskling].[Task]  T ON TE.TaskSecondaryId = T.TaskSecondaryId
-WHERE T.ApplicationName = @ApplicationName
-AND T.TaskName = @TaskName
-AND LBE.BlockExecutionStatus = @BlockExecutionStatus;";
+AND BE.BlockExecutionStatus = @BlockExecutionStatus;";
 
         private const string GetListBlockItemCountByStatusQuery = @"SELECT COUNT(*)
 FROM [Taskling].[ListBlockItem] LBI
-WHERE LBI.ListBlockId = @ListBlockId
+WHERE LBI.BlockId = @BlockId
 AND LBI.Status = @Status;";
 
         #endregion .: Queries :.
 
         #region .: Insert and Delete Blocks :.
 
-        public long InsertDateRangeBlock(int taskSecondaryId, DateTime fromDate, DateTime toDate)
+        public long InsertDateRangeBlock(int taskDefinitionId, DateTime fromDate, DateTime toDate)
         {
             using (var connection = new SqlConnection(TestConstants.TestConnectionString))
             {
                 connection.Open();
                 var command = connection.CreateCommand();
                 command.CommandText = InsertDateRangeBlockQuery;
-                command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
+                command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
                 command.Parameters.Add("@FromDate", SqlDbType.DateTime).Value = fromDate;
                 command.Parameters.Add("@ToDate", SqlDbType.DateTime).Value = toDate;
+                command.Parameters.Add("@BlockType", SqlDbType.TinyInt).Value = (byte)BlockType.DateRange;
                 return (long)command.ExecuteScalar();
             }
         }
 
-        public long InsertNumericRangeBlock(int taskSecondaryId, long fromNumber, long toNumber, DateTime createdDate)
+        public long InsertNumericRangeBlock(int taskDefinitionId, long fromNumber, long toNumber, DateTime createdDate)
         {
             using (var connection = new SqlConnection(TestConstants.TestConnectionString))
             {
                 connection.Open();
                 var command = connection.CreateCommand();
                 command.CommandText = InsertNumericRangeBlockQuery;
-                command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
+                command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
                 command.Parameters.Add("@FromNumber", SqlDbType.BigInt).Value = fromNumber;
                 command.Parameters.Add("@ToNumber", SqlDbType.BigInt).Value = toNumber;
                 command.Parameters.Add("@CreatedDate", SqlDbType.DateTime).Value = createdDate;
+                command.Parameters.Add("@BlockType", SqlDbType.TinyInt).Value = (byte)BlockType.NumericRange;
                 return (long)command.ExecuteScalar();
             }
         }
 
-        public long InsertListBlock(int taskSecondaryId, DateTime createdDate)
+        public long InsertListBlock(int taskDefinitionId, DateTime createdDate)
         {
             using (var connection = new SqlConnection(TestConstants.TestConnectionString))
             {
                 connection.Open();
                 var command = connection.CreateCommand();
                 command.CommandText = InsertListBlockQuery;
-                command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
+                command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
                 command.Parameters.Add("@CreatedDate", SqlDbType.DateTime).Value = createdDate;
+                command.Parameters.Add("@BlockType", SqlDbType.TinyInt).Value = (byte)BlockType.List;
                 return (long)command.ExecuteScalar();
             }
         }
 
-        public long InsertDateRangeBlockExecution(string taskExecutionId, long dateRangeBlockId, DateTime startedAt, DateTime completedAt, BlockExecutionStatus executionStatus)
+        public long InsertBlockExecution(string taskExecutionId, long blockId, DateTime startedAt, DateTime completedAt, BlockExecutionStatus executionStatus)
         {
             using (var connection = new SqlConnection(TestConstants.TestConnectionString))
             {
                 connection.Open();
                 var command = connection.CreateCommand();
-                command.CommandText = InsertDateRangeBlockExecutionQuery;
+                command.CommandText = InsertBlockExecutionQuery;
                 command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = int.Parse(taskExecutionId);
-                command.Parameters.Add("@DateRangeBlockId", SqlDbType.BigInt).Value = dateRangeBlockId;
-                command.Parameters.Add("@StartedAt", SqlDbType.DateTime).Value = startedAt;
-                command.Parameters.Add("@CompletedAt", SqlDbType.DateTime).Value = completedAt;
-                command.Parameters.Add("@BlockExecutionStatus", SqlDbType.TinyInt).Value = (byte)executionStatus;
-                return (long)command.ExecuteScalar();
-            }
-        }
-
-        public long InsertNumericRangeBlockExecution(string taskExecutionId, long numericRangeBlockId, DateTime startedAt, DateTime completedAt, BlockExecutionStatus executionStatus)
-        {
-            using (var connection = new SqlConnection(TestConstants.TestConnectionString))
-            {
-                connection.Open();
-                var command = connection.CreateCommand();
-                command.CommandText = InsertNumericRangeBlockExecutionQuery;
-                command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = int.Parse(taskExecutionId);
-                command.Parameters.Add("@NumericRangeBlockId", SqlDbType.BigInt).Value = numericRangeBlockId;
-                command.Parameters.Add("@StartedAt", SqlDbType.DateTime).Value = startedAt;
-                command.Parameters.Add("@CompletedAt", SqlDbType.DateTime).Value = completedAt;
-                command.Parameters.Add("@BlockExecutionStatus", SqlDbType.TinyInt).Value = (byte)executionStatus;
-                return (long)command.ExecuteScalar();
-            }
-        }
-
-        public long InsertListBlockExecution(int taskExecutionId, long listBlockId, DateTime startedAt, DateTime completedAt, BlockExecutionStatus executionStatus)
-        {
-            using (var connection = new SqlConnection(TestConstants.TestConnectionString))
-            {
-                connection.Open();
-                var command = connection.CreateCommand();
-                command.CommandText = InsertListBlockExecutionQuery;
-                command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
-                command.Parameters.Add("@ListBlockId", SqlDbType.BigInt).Value = listBlockId;
+                command.Parameters.Add("@BlockId", SqlDbType.BigInt).Value = blockId;
                 command.Parameters.Add("@StartedAt", SqlDbType.DateTime).Value = startedAt;
                 command.Parameters.Add("@CompletedAt", SqlDbType.DateTime).Value = completedAt;
                 command.Parameters.Add("@BlockExecutionStatus", SqlDbType.TinyInt).Value = (byte)executionStatus;
@@ -303,19 +194,9 @@ AND LBI.Status = @Status;";
 
         #region .: Get Block Counts :.
 
-        public int GetDateRangeBlockCount(string applicationName, string taskName)
+        public int GetBlockCount(string applicationName, string taskName)
         {
-            return GetBlockCount(applicationName, taskName, GetDateRangeBlockCountQuery);
-        }
-
-        public int GetNumericRangeBlockCount(string applicationName, string taskName)
-        {
-            return GetBlockCount(applicationName, taskName, GetNumericRangeBlockCountQuery);
-        }
-
-        public int GetListBlockCount(string applicationName, string taskName)
-        {
-            return GetBlockCount(applicationName, taskName, GetListBlockCountQuery);
+            return GetBlockCount(applicationName, taskName, GetBlockCountQuery);
         }
 
         private int GetBlockCount(string applicationName, string taskName, string query)
@@ -335,19 +216,9 @@ AND LBI.Status = @Status;";
 
         #region .: Get Block Execution Counts :.
 
-        public int GetDateRangeBlockExecutionCountByStatus(string applicationName, string taskName, BlockExecutionStatus blockExecutionStatus)
+        public int GetBlockExecutionCountByStatus(string applicationName, string taskName, BlockExecutionStatus blockExecutionStatus)
         {
-            return GetBlockExecutionCountByStatus(applicationName, taskName, blockExecutionStatus, GetDateRangeBlockExecutionsCountByStatusQuery);
-        }
-
-        public int GetNumericRangeBlockExecutionCountByStatus(string applicationName, string taskName, BlockExecutionStatus blockExecutionStatus)
-        {
-            return GetBlockExecutionCountByStatus(applicationName, taskName, blockExecutionStatus, GetNumericRangeBlockExecutionsCountByStatusQuery);
-        }
-
-        public int GetListBlockExecutionCountByStatus(string applicationName, string taskName, BlockExecutionStatus blockExecutionStatus)
-        {
-            return GetBlockExecutionCountByStatus(applicationName, taskName, blockExecutionStatus, GetListBlockExecutionsCountByStatusQuery);
+            return GetBlockExecutionCountByStatus(applicationName, taskName, blockExecutionStatus, GetBlockExecutionsCountByStatusQuery);
         }
 
         private int GetBlockExecutionCountByStatus(string applicationName, string taskName, BlockExecutionStatus blockExecutionStatus, string query)
@@ -366,14 +237,14 @@ AND LBI.Status = @Status;";
 
         #endregion .: Get Block Execution Counts :.
 
-        public int GetListBlockItemCountByStatus(string listBlockId, ListBlockItemStatus status)
+        public int GetListBlockItemCountByStatus(string blockId, ListBlockItemStatus status)
         {
             using (var connection = new SqlConnection(TestConstants.TestConnectionString))
             {
                 connection.Open();
                 var command = connection.CreateCommand();
                 command.CommandText = GetListBlockItemCountByStatusQuery;
-                command.Parameters.Add("@ListBlockId", SqlDbType.BigInt).Value = long.Parse(listBlockId);
+                command.Parameters.Add("@BlockId", SqlDbType.BigInt).Value = long.Parse(blockId);
                 command.Parameters.Add("@Status", SqlDbType.TinyInt).Value = (byte)status;
                 return (int)command.ExecuteScalar();
             }

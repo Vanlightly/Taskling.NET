@@ -14,8 +14,7 @@ namespace Taskling.SqlServer.AncilliaryServices
     {
         protected string _connectionString;
         protected TimeSpan _queryTimeout;
-        protected string _tableSchema;
-
+        
         protected int QueryTimeout
         {
             get
@@ -25,12 +24,10 @@ namespace Taskling.SqlServer.AncilliaryServices
         }
 
         public DbOperationsService(string connectionString,
-                TimeSpan queryTimeout,
-                string tableSchema)
+                TimeSpan queryTimeout)
         {
             _connectionString = connectionString;
             _queryTimeout = queryTimeout;
-            _tableSchema = tableSchema;
         }
 
         protected SqlConnection CreateNewConnection()

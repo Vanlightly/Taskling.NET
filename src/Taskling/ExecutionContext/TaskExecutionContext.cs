@@ -61,11 +61,6 @@ namespace Taskling.ExecutionContext
                 _taskExecutionInstance.TaskExecutionId = response.TaskExecutionId;
                 _taskExecutionInstance.ExecutionTokenId = response.ExecutionTokenId;
 
-                if (response.GrantStatus == GrantStatus.GrantedWithoutLimit)
-                    _taskExecutionInstance.UnlimitedMode = true;
-                else
-                    _taskExecutionInstance.UnlimitedMode = false;
-
                 if (response.GrantStatus == GrantStatus.Denied)
                 {
                     Complete();
@@ -98,8 +93,6 @@ namespace Taskling.ExecutionContext
                 _taskExecutionInstance.TaskName,
                 _taskExecutionInstance.TaskExecutionId,
                 _taskExecutionInstance.ExecutionTokenId);
-
-            completeRequest.UnlimitedMode = _taskExecutionInstance.UnlimitedMode;
 
             var response = _taskExecutionService.Complete(completeRequest);
             _taskExecutionInstance.CompletedAt = response.CompletedAt;
@@ -170,16 +163,27 @@ namespace Taskling.ExecutionContext
         {
             var startRequest = new TaskExecutionStartRequest(_taskExecutionInstance.ApplicationName,
                 _taskExecutionInstance.TaskName,
-                _taskExecutionOptions.TaskDeathMode,
-                _taskExecutionOptions.SecondsOverride
-                );
+                _taskExecutionOptions.TaskDeathMode);
 
             if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.KeepAlive)
             {
-                if (!_taskExecutionOptions.KeepAliveElapsed.HasValue)
-                    throw new ExecutionArgumentsException("KeepAliveElapsed must be set when using KeepAlive mode");
+                if (!_taskExecutionOptions.KeepAliveInterval.HasValue)
+                    throw new ExecutionArgumentsException("KeepAliveInterval must be set when using KeepAlive mode");
 
-                startRequest.KeepAliveElapsedSeconds = (int)_taskExecutionOptions.KeepAliveElapsed.Value.TotalSeconds;
+                if (!_taskExecutionOptions.KeepAliveDeathThreshold.HasValue)
+                    throw new ExecutionArgumentsException("KeepAliveDeathThreshold must be set when using KeepAlive mode");
+
+
+                startRequest.KeepAliveDeathThreshold = _taskExecutionOptions.KeepAliveDeathThreshold;
+                startRequest.KeepAliveInterval = _taskExecutionOptions.KeepAliveInterval;
+            }
+
+            if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.Override)
+            {
+                if (!_taskExecutionOptions.OverrideThreshold.HasValue)
+                    throw new ExecutionArgumentsException("OverrideThreshold must be set when using KeepAlive mode");
+
+                startRequest.OverrideThreshold = _taskExecutionOptions.OverrideThreshold.Value;
             }
 
             return startRequest;
@@ -187,8 +191,16 @@ namespace Taskling.ExecutionContext
 
         private void StartKeepAlive()
         {
+            var keepAliveRequest = new SendKeepAliveRequest()
+            {
+                ApplicationName = _taskExecutionInstance.ApplicationName,
+                TaskName = _taskExecutionInstance.TaskName,
+                TaskExecutionId = _taskExecutionInstance.TaskExecutionId,
+                ExecutionTokenId = _taskExecutionInstance.ExecutionTokenId
+            };
+
             _keepAliveDaemon = new KeepAliveDaemon(_taskExecutionService, new WeakReference(this));
-            _keepAliveDaemon.Run(_taskExecutionInstance.TaskExecutionId, _taskExecutionOptions.KeepAliveInterval.Value);
+            _keepAliveDaemon.Run(keepAliveRequest, _taskExecutionOptions.KeepAliveInterval.Value);
         }
         
         private DateRangeBlockRequest ConvertToDateRangeBlockRequest(IBlockSettings settings)
@@ -201,17 +213,17 @@ namespace Taskling.ExecutionContext
             request.CheckForFailedExecutions = settings.MustReprocessFailedTasks;
             
             if (settings.MustReprocessDeadTasks)
-                request.GoBackElapsedSecondsForDeadTasks = (int)settings.DeadTaskDetectionRange.TotalSeconds;
+                request.GoBackTimePeriodForDeadTasks = settings.DeadTaskDetectionRange;
             
             if(settings.MustReprocessFailedTasks)
-                request.GoBackElapsedSecondsForFailedTasks = (int)settings.DeadTaskDetectionRange.TotalSeconds;
+                request.GoBackTimePeriodForFailedTasks = settings.DeadTaskDetectionRange;
 
             request.TaskDeathMode = _taskExecutionOptions.TaskDeathMode;
 
             if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.KeepAlive)
-                request.KeepAliveElapsedSecondsToBeDead = (int)settings.TreatAsDeadAfterRange.TotalSeconds;
+                request.KeepAliveDeathThreshold = settings.TreatAsDeadAfterRange;
             else
-                request.OverrideElapsedSecondsToBeDead = (int)settings.TreatAsDeadAfterRange.TotalSeconds;
+                request.OverrideDeathThreshold = settings.TreatAsDeadAfterRange;
 
             request.RangeBegin = settings.FromDate;
             request.RangeEnd = settings.ToDate;
@@ -231,17 +243,17 @@ namespace Taskling.ExecutionContext
             request.CheckForFailedExecutions = settings.MustReprocessFailedTasks;
 
             if (settings.MustReprocessDeadTasks)
-                request.GoBackElapsedSecondsForDeadTasks = (int)settings.DeadTaskDetectionRange.TotalSeconds;
+                request.GoBackTimePeriodForDeadTasks = settings.DeadTaskDetectionRange;
 
             if (settings.MustReprocessFailedTasks)
-                request.GoBackElapsedSecondsForFailedTasks = (int)settings.DeadTaskDetectionRange.TotalSeconds;
+                request.GoBackTimePeriodForFailedTasks = settings.DeadTaskDetectionRange;
 
             request.TaskDeathMode = _taskExecutionOptions.TaskDeathMode;
 
             if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.KeepAlive)
-                request.KeepAliveElapsedSecondsToBeDead = (int)settings.TreatAsDeadAfterRange.TotalSeconds;
+                request.KeepAliveDeathThreshold = settings.TreatAsDeadAfterRange;
             else
-                request.OverrideElapsedSecondsToBeDead = (int)settings.TreatAsDeadAfterRange.TotalSeconds;
+                request.OverrideDeathThreshold = settings.TreatAsDeadAfterRange;
 
             request.RangeBegin = settings.FromNumber;
             request.RangeEnd = settings.ToNumber;
@@ -261,17 +273,17 @@ namespace Taskling.ExecutionContext
             request.CheckForFailedExecutions = settings.MustReprocessFailedTasks;
 
             if (settings.MustReprocessDeadTasks)
-                request.GoBackElapsedSecondsForDeadTasks = (int)settings.DeadTaskDetectionRange.TotalSeconds;
+                request.GoBackTimePeriodForDeadTasks = settings.DeadTaskDetectionRange;
 
             if (settings.MustReprocessFailedTasks)
-                request.GoBackElapsedSecondsForFailedTasks = (int)settings.DeadTaskDetectionRange.TotalSeconds;
+                request.GoBackTimePeriodForFailedTasks = settings.DeadTaskDetectionRange;
 
             request.TaskDeathMode = _taskExecutionOptions.TaskDeathMode;
 
             if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.KeepAlive)
-                request.KeepAliveElapsedSecondsToBeDead = (int)settings.TreatAsDeadAfterRange.TotalSeconds;
+                request.KeepAliveDeathThreshold = settings.TreatAsDeadAfterRange;
             else
-                request.OverrideElapsedSecondsToBeDead = (int)settings.TreatAsDeadAfterRange.TotalSeconds;
+                request.OverrideDeathThreshold = settings.TreatAsDeadAfterRange;
 
             request.Values = settings.Values;
             request.MaxBlockSize = settings.MaxBlockSize;

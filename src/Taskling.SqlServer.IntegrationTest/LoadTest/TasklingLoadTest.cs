@@ -50,11 +50,11 @@ namespace Taskling.SqlServer.IntegrationTest.LoadTest
                 int lpcSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, "LPC" + process);
                 int lbcSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, "LBC" + process);
 
-                executionHelper.InsertUnlimitedExecutionToken(drSecondaryId);
+                executionHelper.InsertAvailableExecutionToken(drSecondaryId);
                 executionHelper.InsertAvailableExecutionToken(nrSecondaryId);
-                executionHelper.InsertUnlimitedExecutionToken(lsucSecondaryId);
+                executionHelper.InsertAvailableExecutionToken(lsucSecondaryId);
                 executionHelper.InsertAvailableExecutionToken(lpcSecondaryId);
-                executionHelper.InsertUnlimitedExecutionToken(lbcSecondaryId);
+                executionHelper.InsertAvailableExecutionToken(lbcSecondaryId);
             }
         }
 
@@ -375,5 +375,7 @@ namespace Taskling.SqlServer.IntegrationTest.LoadTest
 
             return list;
         }
+
+        
     }
 }

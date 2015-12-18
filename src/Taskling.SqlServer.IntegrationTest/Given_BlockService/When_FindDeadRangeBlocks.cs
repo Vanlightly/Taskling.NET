@@ -18,8 +18,9 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
     [TestClass]
     public class When_FindDeadRangeBlocks
     {
-        private int _taskSecondaryId;
+        private int _taskDefinitionId;
         private string _taskExecution1;
+        private string _executionTokenId;
         private string _block1;
         private string _block2;
         private string _block3;
@@ -37,45 +38,62 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
             _executionHelper = new ExecutionsHelper();
             _executionHelper.DeleteRecordsOfTask(TestConstants.ApplicationName, TestConstants.TaskName);
             
-            _taskSecondaryId = _executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            _executionHelper.InsertUnlimitedExecutionToken(_taskSecondaryId);
+            _taskDefinitionId = _executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            _executionTokenId = _executionHelper.InsertAvailableExecutionToken(_taskDefinitionId);
         }
 
-        private void InsertDateRangeTestData()
+        private void InsertDateRangeTestData(TaskDeathMode taskDeathMode)
         {
-            _taskExecution1 = _executionHelper.InsertTaskExecution(_taskSecondaryId);
-            _block1 = _blocksHelper.InsertDateRangeBlock(_taskSecondaryId, DateTime.UtcNow.AddMinutes(-180), DateTime.UtcNow.AddMinutes(-181)).ToString();
-            _block2 = _blocksHelper.InsertDateRangeBlock(_taskSecondaryId, DateTime.UtcNow.AddMinutes(-200), DateTime.UtcNow.AddMinutes(-201)).ToString();
-            _block3 = _blocksHelper.InsertDateRangeBlock(_taskSecondaryId, DateTime.UtcNow.AddMinutes(-220), DateTime.UtcNow.AddMinutes(-221)).ToString();
-            _block4 = _blocksHelper.InsertDateRangeBlock(_taskSecondaryId, DateTime.UtcNow.AddMinutes(-240), DateTime.UtcNow.AddMinutes(-241)).ToString();
-            _block5 = _blocksHelper.InsertDateRangeBlock(_taskSecondaryId, DateTime.UtcNow.AddMinutes(-250), DateTime.UtcNow.AddMinutes(-251)).ToString();
-            _blocksHelper.InsertDateRangeBlockExecution(_taskExecution1, long.Parse(_block1), DateTime.UtcNow.AddMinutes(-180), DateTime.UtcNow.AddMinutes(-185), BlockExecutionStatus.Failed);
-            _blocksHelper.InsertDateRangeBlockExecution(_taskExecution1, long.Parse(_block2), DateTime.UtcNow.AddMinutes(-200), DateTime.UtcNow.AddMinutes(-205), BlockExecutionStatus.Started);
-            _blocksHelper.InsertDateRangeBlockExecution(_taskExecution1, long.Parse(_block3), DateTime.UtcNow.AddMinutes(-220), DateTime.UtcNow.AddMinutes(-225), BlockExecutionStatus.NotStarted);
-            _blocksHelper.InsertDateRangeBlockExecution(_taskExecution1, long.Parse(_block4), DateTime.UtcNow.AddMinutes(-240), DateTime.UtcNow.AddMinutes(-245), BlockExecutionStatus.Completed);
-            _blocksHelper.InsertDateRangeBlockExecution(_taskExecution1, long.Parse(_block5), DateTime.UtcNow.AddMinutes(-250), DateTime.UtcNow.AddMinutes(-255), BlockExecutionStatus.Started);
+            if(taskDeathMode == TaskDeathMode.Override)
+                _taskExecution1 = _executionHelper.InsertOverrideTaskExecution(_taskDefinitionId);
+            else
+                _taskExecution1 = _executionHelper.InsertKeepAliveTaskExecution(_taskDefinitionId);
+
+            InsertDateRangeBlocksTestData();
         }
 
-        private void InsertNumericRangeTestData()
+        private void InsertDateRangeBlocksTestData()
         {
-            _taskExecution1 = _executionHelper.InsertTaskExecution(_taskSecondaryId);
-            _block1 = _blocksHelper.InsertNumericRangeBlock(_taskSecondaryId, 1, 100, DateTime.UtcNow.AddMinutes(-100)).ToString();
-            _block2 = _blocksHelper.InsertNumericRangeBlock(_taskSecondaryId, 101, 200, DateTime.UtcNow.AddMinutes(-90)).ToString();
-            _block3 = _blocksHelper.InsertNumericRangeBlock(_taskSecondaryId, 201, 300, DateTime.UtcNow.AddMinutes(-80)).ToString();
-            _block4 = _blocksHelper.InsertNumericRangeBlock(_taskSecondaryId, 301, 400, DateTime.UtcNow.AddMinutes(-70)).ToString();
-            _block5 = _blocksHelper.InsertNumericRangeBlock(_taskSecondaryId, 401, 500, DateTime.UtcNow.AddMinutes(-60)).ToString();
-            _blocksHelper.InsertNumericRangeBlockExecution(_taskExecution1, long.Parse(_block1), DateTime.UtcNow.AddMinutes(-180), DateTime.UtcNow.AddMinutes(-185), BlockExecutionStatus.Failed);
-            _blocksHelper.InsertNumericRangeBlockExecution(_taskExecution1, long.Parse(_block2), DateTime.UtcNow.AddMinutes(-200), DateTime.UtcNow.AddMinutes(-205), BlockExecutionStatus.Started);
-            _blocksHelper.InsertNumericRangeBlockExecution(_taskExecution1, long.Parse(_block3), DateTime.UtcNow.AddMinutes(-220), DateTime.UtcNow.AddMinutes(-225), BlockExecutionStatus.NotStarted);
-            _blocksHelper.InsertNumericRangeBlockExecution(_taskExecution1, long.Parse(_block4), DateTime.UtcNow.AddMinutes(-240), DateTime.UtcNow.AddMinutes(-245), BlockExecutionStatus.Completed);
-            _blocksHelper.InsertNumericRangeBlockExecution(_taskExecution1, long.Parse(_block5), DateTime.UtcNow.AddMinutes(-250), DateTime.UtcNow.AddMinutes(-255), BlockExecutionStatus.Started);
+            _block1 = _blocksHelper.InsertDateRangeBlock(_taskDefinitionId, DateTime.UtcNow.AddMinutes(-180), DateTime.UtcNow.AddMinutes(-181)).ToString();
+            _block2 = _blocksHelper.InsertDateRangeBlock(_taskDefinitionId, DateTime.UtcNow.AddMinutes(-200), DateTime.UtcNow.AddMinutes(-201)).ToString();
+            _block3 = _blocksHelper.InsertDateRangeBlock(_taskDefinitionId, DateTime.UtcNow.AddMinutes(-220), DateTime.UtcNow.AddMinutes(-221)).ToString();
+            _block4 = _blocksHelper.InsertDateRangeBlock(_taskDefinitionId, DateTime.UtcNow.AddMinutes(-240), DateTime.UtcNow.AddMinutes(-241)).ToString();
+            _block5 = _blocksHelper.InsertDateRangeBlock(_taskDefinitionId, DateTime.UtcNow.AddMinutes(-250), DateTime.UtcNow.AddMinutes(-251)).ToString();
+            _blocksHelper.InsertBlockExecution(_taskExecution1, long.Parse(_block1), DateTime.UtcNow.AddMinutes(-180), DateTime.UtcNow.AddMinutes(-185), BlockExecutionStatus.Failed);
+            _blocksHelper.InsertBlockExecution(_taskExecution1, long.Parse(_block2), DateTime.UtcNow.AddMinutes(-200), DateTime.UtcNow.AddMinutes(-205), BlockExecutionStatus.Started);
+            _blocksHelper.InsertBlockExecution(_taskExecution1, long.Parse(_block3), DateTime.UtcNow.AddMinutes(-220), DateTime.UtcNow.AddMinutes(-225), BlockExecutionStatus.NotStarted);
+            _blocksHelper.InsertBlockExecution(_taskExecution1, long.Parse(_block4), DateTime.UtcNow.AddMinutes(-240), DateTime.UtcNow.AddMinutes(-245), BlockExecutionStatus.Completed);
+            _blocksHelper.InsertBlockExecution(_taskExecution1, long.Parse(_block5), DateTime.UtcNow.AddMinutes(-250), DateTime.UtcNow.AddMinutes(-255), BlockExecutionStatus.Started);
+        }
+
+        private void InsertNumericRangeTestData(TaskDeathMode taskDeathMode)
+        {
+            if(taskDeathMode == TaskDeathMode.Override)
+                _taskExecution1 = _executionHelper.InsertOverrideTaskExecution(_taskDefinitionId);
+            else
+                _taskExecution1 = _executionHelper.InsertKeepAliveTaskExecution(_taskDefinitionId);
+            
+            InsertNumericRangeBlocksTestData();
+        }
+
+        private void InsertNumericRangeBlocksTestData()
+        {
+            _block1 = _blocksHelper.InsertNumericRangeBlock(_taskDefinitionId, 1, 100, DateTime.UtcNow.AddMinutes(-100)).ToString();
+            _block2 = _blocksHelper.InsertNumericRangeBlock(_taskDefinitionId, 101, 200, DateTime.UtcNow.AddMinutes(-90)).ToString();
+            _block3 = _blocksHelper.InsertNumericRangeBlock(_taskDefinitionId, 201, 300, DateTime.UtcNow.AddMinutes(-80)).ToString();
+            _block4 = _blocksHelper.InsertNumericRangeBlock(_taskDefinitionId, 301, 400, DateTime.UtcNow.AddMinutes(-70)).ToString();
+            _block5 = _blocksHelper.InsertNumericRangeBlock(_taskDefinitionId, 401, 500, DateTime.UtcNow.AddMinutes(-60)).ToString();
+            _blocksHelper.InsertBlockExecution(_taskExecution1, long.Parse(_block1), DateTime.UtcNow.AddMinutes(-180), DateTime.UtcNow.AddMinutes(-185), BlockExecutionStatus.Failed);
+            _blocksHelper.InsertBlockExecution(_taskExecution1, long.Parse(_block2), DateTime.UtcNow.AddMinutes(-200), DateTime.UtcNow.AddMinutes(-205), BlockExecutionStatus.Started);
+            _blocksHelper.InsertBlockExecution(_taskExecution1, long.Parse(_block3), DateTime.UtcNow.AddMinutes(-220), DateTime.UtcNow.AddMinutes(-225), BlockExecutionStatus.NotStarted);
+            _blocksHelper.InsertBlockExecution(_taskExecution1, long.Parse(_block4), DateTime.UtcNow.AddMinutes(-240), DateTime.UtcNow.AddMinutes(-245), BlockExecutionStatus.Completed);
+            _blocksHelper.InsertBlockExecution(_taskExecution1, long.Parse(_block5), DateTime.UtcNow.AddMinutes(-250), DateTime.UtcNow.AddMinutes(-255), BlockExecutionStatus.Started);
         }
 
         private BlockService CreateSut()
         {
             var settings = new SqlServerClientConnectionSettings()
             {
-                TableSchema = "Taskling",
                 ConnectionString = TestConstants.TestConnectionString,
                 ConnectTimeout = new TimeSpan(0, 1, 1)
             };
@@ -89,7 +107,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
         public void When_OverrideModeAndDateRange_DeadTasksInTargetPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
         {
             // ARRANGE
-            InsertDateRangeTestData();
+            InsertDateRangeTestData(TaskDeathMode.Override);
             int blockCountLimit = 5;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
@@ -114,7 +132,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
         public void When_OverrideModeAndDateRange_DeadTasksOutsideTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
-            InsertDateRangeTestData();
+            InsertDateRangeTestData(TaskDeathMode.Override);
             int blockCountLimit = 5;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
@@ -137,7 +155,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
         public void When_OverrideModeAndDateRange_DeadTasksInTargetPeriodAndMoreThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
         {
             // ARRANGE
-            InsertDateRangeTestData();
+            InsertDateRangeTestData(TaskDeathMode.Override);
             int blockCountLimit = 1;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
@@ -161,8 +179,8 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
         public void When_KeepAliveModeAndDateRange_DeadTasksPassedKeepAliveLimitPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
         {
             // ARRANGE
-            InsertDateRangeTestData();
-            _executionHelper.SetKeepAlive(_taskExecution1, DateTime.UtcNow.AddMinutes(-250));
+            InsertDateRangeTestData(TaskDeathMode.KeepAlive);
+            _executionHelper.SetKeepAlive(_taskDefinitionId, _taskExecution1, _executionTokenId, DateTime.UtcNow.AddMinutes(-250));
 
             int blockCountLimit = 5;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
@@ -188,8 +206,8 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
         public void When_KeepAliveModeAndDateRange_DeadTasksPassedKeepAliveLimitAndGreaterThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
         {
             // ARRANGE
-            InsertDateRangeTestData();
-            _executionHelper.SetKeepAlive(_taskExecution1, DateTime.UtcNow.AddMinutes(-250));
+            InsertDateRangeTestData(TaskDeathMode.KeepAlive);
+            _executionHelper.SetKeepAlive(_taskDefinitionId, _taskExecution1, _executionTokenId, DateTime.UtcNow.AddMinutes(-250));
 
             int blockCountLimit = 2;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
@@ -214,8 +232,8 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
         public void When_KeepAliveModeAndDateRange_DeadTasksNotPassedKeepAliveLimitInTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
-            InsertDateRangeTestData();
-            _executionHelper.SetKeepAlive(_taskExecution1, DateTime.UtcNow.AddMinutes(-50));
+            InsertDateRangeTestData(TaskDeathMode.KeepAlive);
+            _executionHelper.SetKeepAlive(_taskDefinitionId, _taskExecution1, _executionTokenId, DateTime.UtcNow.AddMinutes(-50));
 
             int blockCountLimit = 5;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
@@ -242,7 +260,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
         public void When_OverrideModeAndNumericRange_DeadTasksInTargetPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
         {
             // ARRANGE
-            InsertNumericRangeTestData();
+            InsertNumericRangeTestData(TaskDeathMode.Override);
             int blockCountLimit = 5;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
@@ -267,7 +285,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
         public void When_OverrideModeAndNumericRange_DeadTasksOutsideTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
-            InsertNumericRangeTestData();
+            InsertNumericRangeTestData(TaskDeathMode.Override);
             int blockCountLimit = 5;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
@@ -290,7 +308,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
         public void When_OverrideModeAndNumericRange_DeadTasksInTargetPeriodAndMoreThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
         {
             // ARRANGE
-            InsertNumericRangeTestData();
+            InsertNumericRangeTestData(TaskDeathMode.Override);
             int blockCountLimit = 1;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
@@ -314,8 +332,8 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
         public void When_KeepAliveModeAndNumericRange_DeadTasksPassedKeepAliveLimitPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
         {
             // ARRANGE
-            InsertNumericRangeTestData();
-            _executionHelper.SetKeepAlive(_taskExecution1, DateTime.UtcNow.AddMinutes(-250));
+            InsertNumericRangeTestData(TaskDeathMode.KeepAlive);
+            _executionHelper.SetKeepAlive(_taskDefinitionId, _taskExecution1, _executionTokenId, DateTime.UtcNow.AddMinutes(-250));
 
             int blockCountLimit = 5;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
@@ -341,8 +359,8 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
         public void When_KeepAliveModeAndNumericRange_DeadTasksPassedKeepAliveLimitAndGreaterThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
         {
             // ARRANGE
-            InsertNumericRangeTestData();
-            _executionHelper.SetKeepAlive(_taskExecution1, DateTime.UtcNow.AddMinutes(-250));
+            InsertNumericRangeTestData(TaskDeathMode.KeepAlive);
+            _executionHelper.SetKeepAlive(_taskDefinitionId, _taskExecution1, _executionTokenId, DateTime.UtcNow.AddMinutes(-250));
 
             int blockCountLimit = 2;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,
@@ -367,8 +385,8 @@ namespace Taskling.SqlServer.IntegrationTest.Given_BlockService
         public void When_KeepAliveModeAndNumericRange_DeadTasksNotPassedKeepAliveLimitInTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
-            InsertNumericRangeTestData();
-            _executionHelper.SetKeepAlive(_taskExecution1, DateTime.UtcNow.AddMinutes(-50));
+            InsertNumericRangeTestData(TaskDeathMode.KeepAlive);
+            _executionHelper.SetKeepAlive(_taskDefinitionId, _taskExecution1, _executionTokenId, DateTime.UtcNow.AddMinutes(-50));
 
             int blockCountLimit = 5;
             var request = new FindDeadBlocksRequest(TestConstants.ApplicationName,

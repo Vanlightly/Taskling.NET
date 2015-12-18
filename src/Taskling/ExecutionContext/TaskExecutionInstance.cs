@@ -16,6 +16,5 @@ namespace Taskling.ExecutionContext
         public DateTime StartedAt { get; set; }
         public DateTime? CompletedAt { get; set; }
         public string ExecutionTokenId { get; set; }
-        public bool UnlimitedMode { get; set; }
     }
 }

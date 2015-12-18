@@ -28,8 +28,9 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionContext
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertUnlimitedExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            for (int i = 0; i < 100; i++)
+                executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
             
             // ACT
             var filename = string.Empty;
@@ -46,8 +47,9 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionContext
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertUnlimitedExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            for (int i = 0; i < 100; i++)
+                executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
             // ACT
             var filename = "CSLOG_" + DateTime.Now.ToString("HH-mm-ss") + ".csv";
@@ -65,8 +67,9 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionContext
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertUnlimitedExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            for (int i = 0; i < 100; i++)
+                executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
             // ACT
             var filename = string.Empty;
@@ -83,8 +86,9 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionContext
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertUnlimitedExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            for (int i = 0; i < 100; i++)
+                executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
             // ACT
             var filename = "CSLOG_" + DateTime.Now.ToString("HH-mm-ss") + ".csv";
@@ -104,15 +108,14 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionContext
             var settings = new SqlServerClientConnectionSettings()
             {
                 ConnectionString = TestConstants.TestConnectionString,
-                ConnectTimeout = new TimeSpan(0, 0, 1, 0),
-                TableSchema = TestConstants.TestTableSchema
+                ConnectTimeout = new TimeSpan(0, 0, 1, 0)
             };
 
             var taskExecutionOptions = new TaskExecutionOptions()
             {
                 TaskDeathMode = TaskDeathMode.KeepAlive,
                 KeepAliveInterval = new TimeSpan(0, 0, 0, 30),
-                KeepAliveElapsed = new TimeSpan(0, 0, 2, 0)
+                KeepAliveDeathThreshold = new TimeSpan(0, 0, 2, 0)
             };
 
             var client = new SqlServerTasklingClient(settings);
@@ -146,15 +149,14 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionContext
             var settings = new SqlServerClientConnectionSettings()
             {
                 ConnectionString = TestConstants.TestConnectionString,
-                ConnectTimeout = new TimeSpan(0, 0, 1, 0),
-                TableSchema = TestConstants.TestTableSchema
+                ConnectTimeout = new TimeSpan(0, 0, 1, 0)
             };
 
             var taskExecutionOptions = new TaskExecutionOptions()
             {
                 TaskDeathMode = TaskDeathMode.KeepAlive,
                 KeepAliveInterval = new TimeSpan(0, 0, 0, 30),
-                KeepAliveElapsed = new TimeSpan(0, 0, 2, 0)
+                KeepAliveDeathThreshold = new TimeSpan(0, 0, 2, 0)
             };
 
             var client = new SqlServerTasklingClient(settings);

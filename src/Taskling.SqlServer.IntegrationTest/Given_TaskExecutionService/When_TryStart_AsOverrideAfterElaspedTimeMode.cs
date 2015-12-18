@@ -35,11 +35,18 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         {
             var settings = new SqlServerClientConnectionSettings()
             {
-                TableSchema = "Taskling",
                 ConnectionString = TestConstants.TestConnectionString,
                 ConnectTimeout = new TimeSpan(0, 1, 1)
             };
             return new TaskExecutionService(settings, new TaskService(settings));
+        }
+
+        private TaskExecutionStartRequest CreateOverrideStartRequest()
+        {
+            return new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.Override)
+            {
+                OverrideThreshold = new TimeSpan(0, 1, 0)
+            };
         }
 
         [TestMethod]
@@ -48,10 +55,10 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
-            var startRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate, 60);
+            var startRequest = CreateOverrideStartRequest();
 
             // ACT
             var sut = CreateSut();
@@ -68,10 +75,10 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
-            var startRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate, 60);
+            var startRequest = CreateOverrideStartRequest();
 
             // ACT
             var sut = CreateSut();
@@ -88,11 +95,11 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
-            var firstStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate, 60);
-            var secondStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate, 60);
+            var firstStartRequest = CreateOverrideStartRequest();
+            var secondStartRequest = CreateOverrideStartRequest();
 
             // ACT
             var sut = CreateSut();
@@ -106,37 +113,15 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
 
         [TestMethod]
         [TestCategory("FastIntegrationTest"), TestCategory("ExecutionTokens")]
-        public void If_TimeOverrideMode_TwoConcurrentTasksAndOneTokenAndIsUnlimited_ThenIsGrantBoth()
-        {
-            // ARRANGE
-            var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertUnlimitedExecutionToken(taskSecondaryId);
-
-            var firstStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate, 60);
-            var secondStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate, 60);
-
-            // ACT
-            var sut = CreateSut();
-            var firstResponse = sut.Start(firstStartRequest);
-            var secondResponse = sut.Start(secondStartRequest);
-
-            // ASSERT
-            Assert.AreEqual(GrantStatus.GrantedWithoutLimit, firstResponse.GrantStatus);
-            Assert.AreEqual(GrantStatus.GrantedWithoutLimit, secondResponse.GrantStatus);
-        }
-
-        [TestMethod]
-        [TestCategory("FastIntegrationTest"), TestCategory("ExecutionTokens")]
         public void If_TimeOverrideMode_TwoSequentialTasksAndOneTokenAndIsAvailable_ThenIsGrantFirstTaskAndThenGrantTheOther()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
-            var firstStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate, 60);
-            var secondStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate, 60);
+            var firstStartRequest = CreateOverrideStartRequest();
+            var secondStartRequest = CreateOverrideStartRequest();
 
             // ACT
             var sut = CreateSut();
@@ -157,17 +142,17 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
-            var firstStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate, 60);
-            var secondStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate, 60);
-            var thirdStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate, 60);
-            var fourthStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate, 60);
-            var fifthStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate, 60);
+            var firstStartRequest = CreateOverrideStartRequest();
+            var secondStartRequest = CreateOverrideStartRequest();
+            var thirdStartRequest = CreateOverrideStartRequest();
+            var fourthStartRequest = CreateOverrideStartRequest();
+            var fifthStartRequest = CreateOverrideStartRequest();
 
             // ACT
             var sut = CreateSut();
@@ -191,8 +176,8 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
             // ACT
             var sut = CreateSut();
@@ -224,7 +209,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
             var sut = (TaskExecutionService)sutObj;
             for (int i = 0; i < 100; i++)
             {
-                var firstStartRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate, 60);
+                var firstStartRequest = CreateOverrideStartRequest();
 
                 var firstStartResponse = sut.Start(firstStartRequest);
 
@@ -242,16 +227,18 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
-            var startRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate, 5);
-            var secondRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate, 5);
+            var startRequest = CreateOverrideStartRequest();
+            startRequest.OverrideThreshold = new TimeSpan(0, 0, 5);
+            var secondRequest = CreateOverrideStartRequest();
+            secondRequest.OverrideThreshold = new TimeSpan(0, 0, 5);
 
             // ACT
             var sut = CreateSut();
             var firstResponse = sut.Start(startRequest);
-            executionHelper.SetKeepAlive(firstResponse.TaskExecutionId);
+            executionHelper.SetKeepAlive(taskDefinitionId, firstResponse.TaskExecutionId, firstResponse.ExecutionTokenId);
 
             Thread.Sleep(6000);
 
@@ -269,11 +256,11 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionService
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
-            var taskSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
-            executionHelper.InsertAvailableExecutionToken(taskSecondaryId);
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
-            var startRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate, 60);
-            var secondRequest = new TaskExecutionStartRequest(TestConstants.ApplicationName, TestConstants.TaskName, TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate, 60);
+            var startRequest = CreateOverrideStartRequest();
+            var secondRequest = CreateOverrideStartRequest();
             
             // ACT
             var sut = CreateSut();

@@ -24,7 +24,7 @@ namespace Taskling.SqlServer.Blocks
         private readonly ITaskService _taskService;
 
         public BlockService(SqlServerClientConnectionSettings clientConnectionSettings, ITaskService taskService)
-            : base(clientConnectionSettings.ConnectionString, clientConnectionSettings.QueryTimeout, clientConnectionSettings.TableSchema)
+            : base(clientConnectionSettings.ConnectionString, clientConnectionSettings.QueryTimeout)
         {
             _taskService = taskService;
         }
@@ -35,10 +35,10 @@ namespace Taskling.SqlServer.Blocks
             switch (failedBlocksRequest.BlockType)
             {
                 case BlockType.DateRange:
-                    query = FailedBlocksQueryBuilder.GetFindFailedDateRangeBlocksQuery(failedBlocksRequest.BlockCountLimit, _tableSchema);
+                    query = FailedBlocksQueryBuilder.GetFindFailedDateRangeBlocksQuery(failedBlocksRequest.BlockCountLimit);
                     break;
                 case BlockType.NumericRange:
-                    query = FailedBlocksQueryBuilder.GetFindFailedNumericRangeBlocksQuery(failedBlocksRequest.BlockCountLimit, _tableSchema);
+                    query = FailedBlocksQueryBuilder.GetFindFailedNumericRangeBlocksQuery(failedBlocksRequest.BlockCountLimit);
                     break;
                 default:
                     throw new NotSupportedException("This range type is not supported");
@@ -51,7 +51,7 @@ namespace Taskling.SqlServer.Blocks
         {
             if (failedBlocksRequest.BlockType == BlockType.List)
             {
-                var query = FailedBlocksQueryBuilder.GetFindFailedListBlocksQuery(failedBlocksRequest.BlockCountLimit, _tableSchema);
+                var query = FailedBlocksQueryBuilder.GetFindFailedListBlocksQuery(failedBlocksRequest.BlockCountLimit);
                 return FindFailedListBlocks(failedBlocksRequest, query);
             }
 
@@ -65,15 +65,15 @@ namespace Taskling.SqlServer.Blocks
             {
                 case BlockType.DateRange:
                     if (deadBlocksRequest.TaskDeathMode == TaskDeathMode.KeepAlive)
-                        query = DeadBlocksQueryBuilder.GetFindDeadDateRangeBlocksWithKeepAliveQuery(deadBlocksRequest.BlockCountLimit, _tableSchema);
+                        query = DeadBlocksQueryBuilder.GetFindDeadDateRangeBlocksWithKeepAliveQuery(deadBlocksRequest.BlockCountLimit);
                     else
-                        query = DeadBlocksQueryBuilder.GetFindDeadDateRangeBlocksQuery(deadBlocksRequest.BlockCountLimit, _tableSchema);
+                        query = DeadBlocksQueryBuilder.GetFindDeadDateRangeBlocksQuery(deadBlocksRequest.BlockCountLimit);
                     break;
                 case BlockType.NumericRange:
                     if (deadBlocksRequest.TaskDeathMode == TaskDeathMode.KeepAlive)
-                        query = DeadBlocksQueryBuilder.GetFindDeadNumericRangeBlocksWithKeepAliveQuery(deadBlocksRequest.BlockCountLimit, _tableSchema);
+                        query = DeadBlocksQueryBuilder.GetFindDeadNumericRangeBlocksWithKeepAliveQuery(deadBlocksRequest.BlockCountLimit);
                     else
-                        query = DeadBlocksQueryBuilder.GetFindDeadNumericRangeBlocksQuery(deadBlocksRequest.BlockCountLimit, _tableSchema);
+                        query = DeadBlocksQueryBuilder.GetFindDeadNumericRangeBlocksQuery(deadBlocksRequest.BlockCountLimit);
                     break;
                 default:
                     throw new NotSupportedException("This range type is not supported");
@@ -88,9 +88,9 @@ namespace Taskling.SqlServer.Blocks
             {
                 string query = string.Empty;
                 if (deadBlocksRequest.TaskDeathMode == TaskDeathMode.KeepAlive)
-                    query = DeadBlocksQueryBuilder.GetFindDeadListBlocksWithKeepAliveQuery(deadBlocksRequest.BlockCountLimit, _tableSchema);
+                    query = DeadBlocksQueryBuilder.GetFindDeadListBlocksWithKeepAliveQuery(deadBlocksRequest.BlockCountLimit);
                 else
-                    query = DeadBlocksQueryBuilder.GetFindDeadListBlocksQuery(deadBlocksRequest.BlockCountLimit, _tableSchema);
+                    query = DeadBlocksQueryBuilder.GetFindDeadListBlocksQuery(deadBlocksRequest.BlockCountLimit);
 
                 return FindDeadListBlocks(deadBlocksRequest, query);
             }
@@ -106,10 +106,10 @@ namespace Taskling.SqlServer.Blocks
             switch (rangeBlockCreateRequest.BlockType)
             {
                 case BlockType.DateRange:
-                    response.Block = AddDateRangeRangeBlock(rangeBlockCreateRequest, taskDefinition.TaskSecondaryId);
+                    response.Block = AddDateRangeRangeBlock(rangeBlockCreateRequest, taskDefinition.TaskDefinitionId);
                     break;
                 case BlockType.NumericRange:
-                    response.Block = AddNumericRangeRangeBlock(rangeBlockCreateRequest, taskDefinition.TaskSecondaryId);
+                    response.Block = AddNumericRangeRangeBlock(rangeBlockCreateRequest, taskDefinition.TaskDefinitionId);
                     break;
                 default:
                     throw new NotSupportedException("This range type is not supported");
@@ -125,11 +125,11 @@ namespace Taskling.SqlServer.Blocks
             var response = new ListBlockCreateResponse();
             if (createRequest.BlockType == BlockType.List)
             {
-                var listBlockId = AddNewListBlock(taskDefinition.TaskSecondaryId);
-                AddListBlockItems(listBlockId, createRequest.Values);
+                var blockId = AddNewListBlock(taskDefinition.TaskDefinitionId);
+                AddListBlockItems(blockId, createRequest.Values);
 
                 // we do not populate the items here, they are lazy loaded
-                response.Block = new ListBlock() { ListBlockId = listBlockId.ToString() };
+                response.Block = new ListBlock() { ListBlockId = blockId.ToString() };
 
                 return response;
             }
@@ -139,23 +139,12 @@ namespace Taskling.SqlServer.Blocks
 
         public string AddRangeBlockExecution(BlockExecutionCreateRequest executionCreateRequest)
         {
-            switch (executionCreateRequest.BlockType)
-            {
-                case BlockType.DateRange:
-                    return AddDateRangeBlockExecution(executionCreateRequest);
-                case BlockType.NumericRange:
-                    return AddNumericRangeBlockExecution(executionCreateRequest);
-                default:
-                    throw new NotSupportedException("This range type is not supported");
-            }
+            return AddBlockExecution(executionCreateRequest);
         }
 
         public string AddListBlockExecution(BlockExecutionCreateRequest executionCreateRequest)
         {
-            if (executionCreateRequest.BlockType == BlockType.List)
-                return AddNewListBlockExecution(executionCreateRequest);
-
-            throw new NotSupportedException("This block type is not supported");
+            return AddBlockExecution(executionCreateRequest);
         }
 
 
@@ -171,7 +160,7 @@ namespace Taskling.SqlServer.Blocks
                     var command = connection.CreateCommand();
                     command.CommandText = query;
                     command.CommandTimeout = QueryTimeout;
-                    command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskDefinition.TaskSecondaryId;
+                    command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinition.TaskDefinitionId;
                     command.Parameters.Add("@FailedTaskDateLimit", SqlDbType.DateTime).Value = failedBlocksRequest.FailedTaskDateLimit;
                     var reader = command.ExecuteReader();
                     while (reader.Read())
@@ -218,7 +207,7 @@ namespace Taskling.SqlServer.Blocks
                     var command = connection.CreateCommand();
                     command.CommandText = query;
                     command.CommandTimeout = QueryTimeout;
-                    command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskDefinition.TaskSecondaryId;
+                    command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinition.TaskDefinitionId;
                     command.Parameters.Add("@FailedTaskDateLimit", SqlDbType.DateTime).Value = failedBlocksRequest.FailedTaskDateLimit;
                     var reader = command.ExecuteReader();
                     while (reader.Read())
@@ -253,7 +242,7 @@ namespace Taskling.SqlServer.Blocks
                     var command = connection.CreateCommand();
                     command.CommandText = query;
                     command.CommandTimeout = QueryTimeout;
-                    command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskDefinition.TaskSecondaryId;
+                    command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinition.TaskDefinitionId;
 
                     if (deadBlocksRequest.TaskDeathMode == TaskDeathMode.KeepAlive)
                     {
@@ -310,7 +299,7 @@ namespace Taskling.SqlServer.Blocks
                     var command = connection.CreateCommand();
                     command.CommandText = query;
                     command.CommandTimeout = QueryTimeout;
-                    command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskDefinition.TaskSecondaryId;
+                    command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinition.TaskDefinitionId;
 
                     if (deadBlocksRequest.TaskDeathMode == TaskDeathMode.KeepAlive)
                     {
@@ -343,7 +332,7 @@ namespace Taskling.SqlServer.Blocks
             return results;
         }
 
-        private RangeBlock AddDateRangeRangeBlock(RangeBlockCreateRequest dateRangeBlockCreateRequest, int taskSecondaryId)
+        private RangeBlock AddDateRangeRangeBlock(RangeBlockCreateRequest dateRangeBlockCreateRequest, int taskDefinitionId)
         {
             try
             {
@@ -351,10 +340,11 @@ namespace Taskling.SqlServer.Blocks
                 {
                     var command = connection.CreateCommand();
                     command.CommandTimeout = QueryTimeout;
-                    command.CommandText = RangeBlockQueryBuilder.GetInsertDateRangeBlockQuery(_tableSchema);
-                    command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
+                    command.CommandText = RangeBlockQueryBuilder.InsertDateRangeBlock;
+                    command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
                     command.Parameters.Add("@FromDate", SqlDbType.DateTime).Value = new DateTime(dateRangeBlockCreateRequest.From);
                     command.Parameters.Add("@ToDate", SqlDbType.DateTime).Value = new DateTime(dateRangeBlockCreateRequest.To);
+                    command.Parameters.Add("@BlockType", SqlDbType.TinyInt).Value = (byte)BlockType.DateRange;
                     var id = command.ExecuteScalar().ToString();
 
                     return new RangeBlock(id,
@@ -374,7 +364,7 @@ namespace Taskling.SqlServer.Blocks
             }
         }
 
-        private RangeBlock AddNumericRangeRangeBlock(RangeBlockCreateRequest dateRangeBlockCreateRequest, int taskSecondaryId)
+        private RangeBlock AddNumericRangeRangeBlock(RangeBlockCreateRequest dateRangeBlockCreateRequest, int taskDefinitionId)
         {
             try
             {
@@ -382,10 +372,11 @@ namespace Taskling.SqlServer.Blocks
                 {
                     var command = connection.CreateCommand();
                     command.CommandTimeout = QueryTimeout;
-                    command.CommandText = RangeBlockQueryBuilder.GetInsertNumericRangeBlockQuery(_tableSchema);
-                    command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
+                    command.CommandText = RangeBlockQueryBuilder.InsertNumericRangeBlock;
+                    command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
                     command.Parameters.Add("@FromNumber", SqlDbType.BigInt).Value = dateRangeBlockCreateRequest.From;
                     command.Parameters.Add("@ToNumber", SqlDbType.BigInt).Value = dateRangeBlockCreateRequest.To;
+                    command.Parameters.Add("@BlockType", SqlDbType.TinyInt).Value = (byte)BlockType.NumericRange;
                     var id = command.ExecuteScalar().ToString();
 
                     return new RangeBlock(id, dateRangeBlockCreateRequest.From, dateRangeBlockCreateRequest.To);
@@ -400,7 +391,7 @@ namespace Taskling.SqlServer.Blocks
             }
         }
 
-        private long AddNewListBlock(int taskSecondaryId)
+        private long AddNewListBlock(int taskDefinitionId)
         {
             try
             {
@@ -408,8 +399,9 @@ namespace Taskling.SqlServer.Blocks
                 {
                     var command = connection.CreateCommand();
                     command.CommandTimeout = QueryTimeout;
-                    command.CommandText = ListBlockQueryBuilder.GetInsertListBlockQuery(_tableSchema);
-                    command.Parameters.Add("@TaskSecondaryId", SqlDbType.Int).Value = taskSecondaryId;
+                    command.CommandText = ListBlockQueryBuilder.InsertListBlock;
+                    command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
+                    command.Parameters.Add("@BlockType", SqlDbType.TinyInt).Value = (byte)BlockType.List;
                     return (long) command.ExecuteScalar();
                 }
             }
@@ -422,7 +414,7 @@ namespace Taskling.SqlServer.Blocks
             }
         }
 
-        private void AddListBlockItems(long listBlockId, List<string> values)
+        private void AddListBlockItems(long blockId, List<string> values)
         {
             using (var connection = CreateNewConnection())
             {
@@ -434,8 +426,8 @@ namespace Taskling.SqlServer.Blocks
 
                 try
                 {
-                    var dt = GenerateDataTable(listBlockId, values);
-                    BulkLoadInTransactionOperation(dt, _tableSchema + ".ListBlockItem", connection, transaction);
+                    var dt = GenerateDataTable(blockId, values);
+                    BulkLoadInTransactionOperation(dt, "Taskling.ListBlockItem", connection, transaction);
 
                     transaction.Commit();
                 }
@@ -450,17 +442,17 @@ namespace Taskling.SqlServer.Blocks
             }
         }
 
-        private DataTable GenerateDataTable(long listBlockId, List<string> values)
+        private DataTable GenerateDataTable(long blockId, List<string> values)
         {
             var dt = new DataTable();
-            dt.Columns.Add("ListBlockId", typeof(long));
+            dt.Columns.Add("BlockId", typeof(long));
             dt.Columns.Add("Value", typeof(string));
             dt.Columns.Add("Status", typeof(byte));
 
             foreach (var value in values)
             {
                 var dr = dt.NewRow();
-                dr["ListBlockId"] = listBlockId;
+                dr["BlockId"] = blockId;
                 dr["Value"] = value;
                 dr["Status"] = 0;
                 dt.Rows.Add(dr);
@@ -469,7 +461,7 @@ namespace Taskling.SqlServer.Blocks
             return dt;
         }
 
-        private string AddDateRangeBlockExecution(BlockExecutionCreateRequest executionCreateRequest)
+        private string AddBlockExecution(BlockExecutionCreateRequest executionCreateRequest)
         {
             try
             {
@@ -477,9 +469,9 @@ namespace Taskling.SqlServer.Blocks
                 {
                     var command = connection.CreateCommand();
                     command.CommandTimeout = QueryTimeout;
-                    command.CommandText = RangeBlockQueryBuilder.GetInsertDateRangeBlockExecutionQuery(_tableSchema);
+                    command.CommandText = RangeBlockQueryBuilder.InsertBlockExecution;
                     command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = executionCreateRequest.TaskExecutionId;
-                    command.Parameters.Add("@DateRangeBlockId", SqlDbType.BigInt).Value = long.Parse(executionCreateRequest.BlockId);
+                    command.Parameters.Add("@BlockId", SqlDbType.BigInt).Value = long.Parse(executionCreateRequest.BlockId);
                     var id = command.ExecuteScalar().ToString();
 
                     return id;
@@ -494,54 +486,6 @@ namespace Taskling.SqlServer.Blocks
             }
         }
 
-        private string AddNumericRangeBlockExecution(BlockExecutionCreateRequest executionCreateRequest)
-        {
-            try
-            {
-                using (var connection = CreateNewConnection())
-                {
-                    var command = connection.CreateCommand();
-                    command.CommandTimeout = QueryTimeout;
-                    command.CommandText = RangeBlockQueryBuilder.GetInsertNumericRangeBlockExecutionQuery(_tableSchema);
-                    command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = executionCreateRequest.TaskExecutionId;
-                    command.Parameters.Add("@NumericRangeBlockId", SqlDbType.BigInt).Value = long.Parse(executionCreateRequest.BlockId);
-                    var id = command.ExecuteScalar().ToString();
-
-                    return id;
-                }
-            }
-            catch (SqlException sqlEx)
-            {
-                if (TransientErrorDetector.IsTransient(sqlEx))
-                    throw new TransientException("A transient exception has occurred", sqlEx);
-
-                throw;
-            }
-        }
-
-        private string AddNewListBlockExecution(BlockExecutionCreateRequest executionCreateRequest)
-        {
-            try
-            {
-                using (var connection = CreateNewConnection())
-                {
-                    var command = connection.CreateCommand();
-                    command.CommandTimeout = QueryTimeout;
-                    command.CommandText = ListBlockQueryBuilder.GetInsertListBlockExecutionQuery(_tableSchema);
-                    command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = executionCreateRequest.TaskExecutionId;
-                    command.Parameters.Add("@ListBlockId", SqlDbType.BigInt).Value = long.Parse(executionCreateRequest.BlockId);
-                    var id = command.ExecuteScalar().ToString();
-
-                    return id;
-                }
-            }
-            catch (SqlException sqlEx)
-            {
-                if (TransientErrorDetector.IsTransient(sqlEx))
-                    throw new TransientException("A transient exception has occurred", sqlEx);
-
-                throw;
-            }
-        }
+        
     }
 }

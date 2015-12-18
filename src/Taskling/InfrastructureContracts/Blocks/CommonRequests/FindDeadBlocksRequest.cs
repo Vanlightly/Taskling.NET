@@ -22,7 +22,7 @@ namespace Taskling.InfrastructureContracts.Blocks.CommonRequests
             SearchPeriodBegin = searchPeriodBegin;
             SearchPeriodEnd = searchPeriodEnd;
             BlockCountLimit = blockCountLimit;
-            TaskDeathMode = TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate;
+            TaskDeathMode = TaskDeathMode.Override;
         }
 
         public FindDeadBlocksRequest(string applicationName,

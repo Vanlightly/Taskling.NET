@@ -42,11 +42,11 @@ namespace Taskling.CriticalSection
                 _taskExecutionInstance.TaskExecutionId,
                 _taskExecutionOptions.TaskDeathMode);
 
-            if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate)
-                startRequest.SecondsOverride = _taskExecutionOptions.SecondsOverride.Value;
+            if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.Override)
+                startRequest.OverrideThreshold = _taskExecutionOptions.OverrideThreshold.Value;
 
             if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.KeepAlive)
-                startRequest.KeepAliveElapsedSeconds = (int)_taskExecutionOptions.KeepAliveElapsed.Value.TotalSeconds;
+                startRequest.KeepAliveDeathThreshold = _taskExecutionOptions.KeepAliveDeathThreshold.Value;
 
             var response = _criticalSectionService.Start(startRequest);
             if (response.GrantStatus == GrantStatus.Denied)
@@ -98,15 +98,15 @@ namespace Taskling.CriticalSection
         {
             if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.KeepAlive)
             {
-                if(!_taskExecutionOptions.KeepAliveElapsed.HasValue)
+                if(!_taskExecutionOptions.KeepAliveDeathThreshold.HasValue)
                     throw new ExecutionArgumentsException("KeepAliveElapsed must be set when using KeepAlive mode");
                 
                 if (!_taskExecutionOptions.KeepAliveInterval.HasValue)
                     throw new ExecutionArgumentsException("KeepAliveInterval must be set when using KeepAlive mode");
             }
-            else if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.OverrideAfterElapsedTimePeriodFromGrantDate)
+            else if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.Override)
             {
-                if (!_taskExecutionOptions.SecondsOverride.HasValue)
+                if (!_taskExecutionOptions.OverrideThreshold.HasValue)
                     throw new ExecutionArgumentsException("SecondsOverride must be set when using Override mode");
             }
         }

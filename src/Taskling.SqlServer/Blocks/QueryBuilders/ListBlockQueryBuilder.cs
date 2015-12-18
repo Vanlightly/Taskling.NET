@@ -7,79 +7,49 @@ namespace Taskling.SqlServer.Blocks.QueryBuilders
 {
     internal class ListBlockQueryBuilder
     {
-        private const string InsertListBlock = @"INSERT INTO {0}.[ListBlock]
-           ([TaskSecondaryId]
+        public const string InsertListBlock = @"INSERT INTO [Taskling].[Block]
+           ([TaskDefinitionId]
+           ,[BlockType]
            ,[CreatedDate])
      VALUES
-           (@TaskSecondaryId
+           (@TaskDefinitionId
+           ,@BlockType
            ,GETUTCDATE());
 
 SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
 
-        private const string InsertListBlockExecution = @"INSERT INTO {0}.[ListBlockExecution]
-           ([TaskExecutionId]
-           ,[ListBlockId]
-           ,[StartedAt]
-           ,[BlockExecutionStatus])
-     VALUES
-           (@TaskExecutionId
-           ,@ListBlockId
-           ,GETUTCDATE()
-           ,0);
-
-SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
-
-        private const string GetListBlockItems = @"SELECT [ListBlockItemId]
-      ,[ListBlockId]
+        public const string GetListBlockItems = @"SELECT [ListBlockItemId]
+      ,[BlockId]
       ,[Value]
       ,[Status]
-FROM {0}.[ListBlockItem]
-WHERE [ListBlockId] = @ListBlockId";
+FROM [Taskling].[ListBlockItem]
+WHERE [BlockId] = @BlockId";
 
-        private const string UpdateSingleBlockListItemStatus = @"UPDATE {0}.[ListBlockItem]
+        public const string UpdateSingleBlockListItemStatus = @"UPDATE [Taskling].[ListBlockItem]
    SET [Status] =@Status
-WHERE ListBlockId = @ListBlockId
+WHERE BlockId = @BlockId
 AND ListBlockItemId = @ListBlockItemId";
 
         private const string CreateTemporaryTable = @"CREATE TABLE {0}(
     [ListBlockItemId] bigint NOT NULL,
-    [ListBlockId] bigint NOT NULL,
+    [BlockId] bigint NOT NULL,
     [Status] tinyint NOT NULL);";
 
         private const string BulkUpdateBlockListItemStatus = @"UPDATE LBI
    SET [Status] =T.[Status]
-FROM {0}.[ListBlockItem] LBI
-JOIN {1} AS T ON LBI.ListBlockId = T.ListBlockId
+FROM [Taskling].[ListBlockItem] LBI
+JOIN {0} AS T ON LBI.BlockId = T.BlockId
 	AND LBI.ListBlockItemId = T.ListBlockItemId";
-
-        public static string GetInsertListBlockQuery(string tableSchema)
-        {
-            return string.Format(InsertListBlock, tableSchema);
-        }
-
-        public static string GetInsertListBlockExecutionQuery(string tableSchema)
-        {
-            return string.Format(InsertListBlockExecution, tableSchema);
-        }
-
-        public static string GetListBlockItemsQuery(string tableSchema)
-        {
-            return string.Format(GetListBlockItems, tableSchema);
-        }
 
         public static string GetCreateTemporaryTableQuery(string tableName)
         {
             return string.Format(CreateTemporaryTable, tableName);
         }
 
-        public static string GetBulkUpdateBlockListItemStatus(string tableSchema, string tableName)
+        public static string GetBulkUpdateBlockListItemStatus(string tableName)
         {
-            return string.Format(BulkUpdateBlockListItemStatus, tableSchema, tableName);
+            return string.Format(BulkUpdateBlockListItemStatus, tableName);
         }
 
-        public static string GetUpdateSingleBlockListItemStatus(string tableSchema)
-        {
-            return string.Format(UpdateSingleBlockListItemStatus, tableSchema);
-        }
     }
 }

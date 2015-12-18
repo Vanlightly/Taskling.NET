@@ -1,5 +1,5 @@
 ﻿CREATE TABLE [Taskling].[CriticalSectionToken](
-	[TaskSecondaryId] [int] NOT NULL,
+	[TaskDefinitionId] [int] NOT NULL,
 	[DateGranted] [datetime] NULL,
 	[DateReturned] [datetime] NULL,
 	[Status] [tinyint] NOT NULL,
@@ -7,6 +7,6 @@
 	[HoldLockTaskExecutionId] [int] NULL,
 PRIMARY KEY CLUSTERED 
 (
-	[TaskSecondaryId] ASC
+	[TaskDefinitionId] ASC
 )
 )

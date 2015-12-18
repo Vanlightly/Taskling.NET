@@ -9,59 +9,50 @@ namespace Taskling.SqlServer.TaskExecution
     {
         #region .: Tasks :.
 
-        private const string GetTaskQueryBase = @"SELECT [ApplicationName]
+        public const string GetTaskQuery = @"SELECT [ApplicationName]
       ,[TaskName]
-      ,[TaskSecondaryId]
-FROM {0}.[Task]
+      ,[TaskDefinitionId]
+FROM [Taskling].[TaskDefinition]
 WHERE [ApplicationName] = @ApplicationName
 AND [TaskName] = @TaskName";
 
-        internal static string GetTaskQuery(string schema)
-        {
-            return string.Format(GetTaskQueryBase, schema);
-        }
-
-        private const string InsertTaskQueryBase = @"INSERT INTO {0}.[Task]([ApplicationName],[TaskName])
+        public const string InsertTaskQuery = @"INSERT INTO [Taskling].[TaskDefinition]([ApplicationName],[TaskName])
 VALUES(@ApplicationName,@TaskName)
 
-SELECT TaskSecondaryId
-FROM {0}.[Task]
+SELECT TaskDefinitionId
+FROM [Taskling].[TaskDefinition]
 WHERE ApplicationName = @ApplicationName
 AND TaskName = @TaskName";
-
-        internal static string InsertTaskQuery(string schema)
-        {
-            return string.Format(InsertTaskQueryBase, schema);
-        }
 
         #endregion .: Tasks :.
 
         #region .: TaskExecutions :.
 
-        private const string InsertTaskExecutionBase = @"INSERT INTO {0}.[TaskExecution]([TaskSecondaryId],[StartedAt],[LastKeepAlive])
-VALUES (@TaskSecondaryId, GETUTCDATE(), GETUTCDATE());
+        public const string InsertKeepAliveTaskExecution = @"
+INSERT INTO [Taskling].[TaskExecution]([TaskDefinitionId],[StartedAt],[ServerName],[LastKeepAlive],[TaskDeathMode],[KeepAliveInterval],[KeepAliveDeathThreshold])
+VALUES (@TaskDefinitionId, GETUTCDATE(), @ServerName, GETUTCDATE(), @TaskDeathMode, @KeepAliveInterval, @KeepAliveDeathThreshold);
+SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+//            public const string InsertKeepAlive = @"
+//INSERT INTO [TasklingDb].[Taskling].[KeepAlive]([TaskDefinitionId],[TaskExecutionId],[LastKeepAlive])
+//VALUES(@TaskDefinitionId, @TaskExecutionId, GETUTCDATE())";
+
+        public const string InsertOverrideTaskExecution = @"
+INSERT INTO [Taskling].[TaskExecution]([TaskDefinitionId],[StartedAt],[ServerName],[LastKeepAlive],[TaskDeathMode],[OverrideThreshold])
+VALUES (@TaskDefinitionId, GETUTCDATE(), @ServerName, GETUTCDATE(), @TaskDeathMode, @OverrideThreshold);
 SELECT CAST(SCOPE_IDENTITY() AS INT)";
 
-        internal static string InsertTaskExecution(string schema)
-        {
-            return string.Format(InsertTaskExecutionBase, schema);
-        }
-
-        private const string KeepAliveQueryBase = @"
-UPDATE TE
-SET LastKeepAlive = GETUTCDATE()
-FROM {0}.[TaskExecution] TE
-WHERE [TaskExecutionId] = @TaskExecutionId;
-
+        public const string KeepAliveQuery = @"
 UPDATE ET
-SET LastKeepAlive = GETUTCDATE()
-FROM {0}.[ExecutionToken] ET WITH(INDEX(IX_ExecutionToken_TaskExecutionId))
-WHERE [TaskExecutionId] = @TaskExecutionId;";
+SET [LastKeepAlive] = GETUTCDATE()
+FROM [Taskling].[ExecutionToken] ET
+WHERE [TaskDefinitionId] = @TaskDefinitionId
+AND [ExecutionTokenId] = @ExecutionTokenId;
 
-        internal static string KeepAliveQuery(string schema)
-        {
-            return string.Format(KeepAliveQueryBase, schema);
-        }
+UPDATE TE
+SET [LastKeepAlive] = GETUTCDATE()
+FROM [Taskling].[TaskExecution] TE
+WHERE [TaskExecutionId] = @TaskExecutionId;";
 
         #endregion .: TaskExecutions :.
     }

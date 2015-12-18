@@ -1,13 +1,14 @@
 ﻿CREATE TABLE [Taskling].[ExecutionToken](
 	[ExecutionTokenId] INT IDENTITY NOT NULL,
-	[TaskSecondaryId] [int] NOT NULL,
+	[TaskDefinitionId] [int] NOT NULL,
 	[DateGranted] [datetime] NULL,
 	[DateReturned] [datetime] NULL,
 	[Status] [tinyint] NOT NULL,
 	[TaskExecutionId] [int] NULL,
-	[HoldLockTaskExecutionId] [int] NULL,
-	[LastKeepAlive] [datetime] NOT NULL,
+	[LastKeepAlive] [datetime] NULL, 
+	[HoldLockTaskExecutionId] [int] NULL
 PRIMARY KEY CLUSTERED 
 (
+	[TaskDefinitionId] ASC,
 	[ExecutionTokenId] ASC
 ))

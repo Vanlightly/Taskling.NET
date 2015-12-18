@@ -8,6 +8,6 @@ namespace Taskling.SqlServer.Configuration
 {
     public class SqlServerClientConnectionSettings : ClientConnectionSettings
     {
-        public string TableSchema { get; set; }
+        
     }
 }

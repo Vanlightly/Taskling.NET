@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace Taskling.SqlServer.DataObjects
+﻿namespace Taskling.SqlServer.DataObjects
 {
     public class TaskDefinition
     {
-        public int TaskSecondaryId { get; set; }
+        public int TaskDefinitionId { get; set; }
+        public string ApplicationName { get; set; }
+        public string TaskName { get; set; }
     }
 }

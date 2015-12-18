@@ -63,30 +63,24 @@
   </ItemGroup>
   <ItemGroup>
     <Build Include="TasklingSchema.sql" />
-    <Build Include="Tables\Task.sql" />
+    <Build Include="Tables\TaskDefinition.sql" />
     <Build Include="Tables\TaskExecution.sql" />
     <Build Include="Tables\ExecutionToken.sql" />
-    <Build Include="Tables\ExecutionTokenStatus.sql" />
     <Build Include="Tables\CriticalSectionToken.sql" />
     <Build Include="Tables\CriticalSectionQueue.sql" />
-    <Build Include="Indexes\IX_ExecutionToken_TaskSecondaryId.sql" />
+    <Build Include="Indexes\IX_ExecutionToken_TaskDefinitionId.sql" />
     <Build Include="Indexes\IX_ExecutionToken_TaskExecutionId.sql" />
     <Build Include="Indexes\IX_CriticalSectionToken_TaskExecutionId.sql" />
-    <Build Include="Tables\DateRangeBlock.sql" />
-    <Build Include="Tables\DateRangeBlockExecution.sql" />
-    <Build Include="Tables\NumericRangeBlock.sql" />
-    <Build Include="Tables\NumericRangeBlockExecution.sql" />
-    <Build Include="Indexes\IX_DateRangeBlock_TaskSecondaryId.sql" />
-    <Build Include="Indexes\IX_NumericRangeBlock_TaskSecondaryId.sql" />
-    <Build Include="Indexes\IX_NumericRangeBlockExecution_TaskExecutionId.sql" />
-    <Build Include="Indexes\IX_NumericRangeBlockExecution_NumericRangeBlockId.sql" />
-    <Build Include="Indexes\IX_DateRangeBlockExecution_TaskExecutionId.sql" />
-    <Build Include="Indexes\IX_DateRangeBlockExecution_DateRangeBlockId.sql" />
-    <Build Include="Tables\ListBlock.sql" />
-    <Build Include="Tables\ListBlockExecution.sql" />
+    <Build Include="Indexes\IX_Block_TaskDefinitionId.sql" />
+    <Build Include="Indexes\IX_BlockExecution_TaskExecutionId.sql" />
+    <Build Include="Indexes\IX_BlockExecution_BlockId.sql" />
     <Build Include="Tables\ListBlockItem.sql" />
-    <Build Include="Indexes\IX_CriticalSectionQueue_TaskSecondaryId.sql" />
+    <Build Include="Indexes\IX_CriticalSectionQueue_TaskDefinitionId.sql" />
     <Build Include="Indexes\IX_ExecutionToken_ForKeepAliveQuery.sql" />
-    <Build Include="Indexes\IX_TaskExecution_TaskSecondaryId.sql" />
+    <Build Include="Indexes\IX_TaskExecution_TaskDefinitionId.sql" />
+    <Build Include="Tables\Block.sql" />
+    <Build Include="Tables\BlockExecution.sql" />
+    <Build Include="Tables\TaskExecutionEvent.sql" />
+    <Build Include="Indexes\IX_TaskDefinition_Unique.sql" />
   </ItemGroup>
 </Project>
