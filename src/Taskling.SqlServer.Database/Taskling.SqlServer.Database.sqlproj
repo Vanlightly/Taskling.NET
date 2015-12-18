@@ -68,19 +68,17 @@
     <Build Include="Tables\ExecutionToken.sql" />
     <Build Include="Tables\CriticalSectionToken.sql" />
     <Build Include="Tables\CriticalSectionQueue.sql" />
-    <Build Include="Indexes\IX_ExecutionToken_TaskDefinitionId.sql" />
     <Build Include="Indexes\IX_ExecutionToken_TaskExecutionId.sql" />
     <Build Include="Indexes\IX_CriticalSectionToken_TaskExecutionId.sql" />
     <Build Include="Indexes\IX_Block_TaskDefinitionId.sql" />
     <Build Include="Indexes\IX_BlockExecution_TaskExecutionId.sql" />
     <Build Include="Indexes\IX_BlockExecution_BlockId.sql" />
     <Build Include="Tables\ListBlockItem.sql" />
-    <Build Include="Indexes\IX_CriticalSectionQueue_TaskDefinitionId.sql" />
-    <Build Include="Indexes\IX_ExecutionToken_ForKeepAliveQuery.sql" />
     <Build Include="Indexes\IX_TaskExecution_TaskDefinitionId.sql" />
     <Build Include="Tables\Block.sql" />
     <Build Include="Tables\BlockExecution.sql" />
     <Build Include="Tables\TaskExecutionEvent.sql" />
     <Build Include="Indexes\IX_TaskDefinition_Unique.sql" />
+    <Build Include="Indexes\IX_CriticalSectionQueue_TaskDefinitionId.sql" />
   </ItemGroup>
 </Project>
