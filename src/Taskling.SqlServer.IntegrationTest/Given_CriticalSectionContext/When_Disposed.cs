@@ -17,7 +17,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionContext
         public void Initialize()
         {
             var executionHelper = new ExecutionsHelper();
-            executionHelper.DeleteRecordsOfTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.DeleteRecordsOfApplication(TestConstants.ApplicationName);
         }
 
         [TestMethod]

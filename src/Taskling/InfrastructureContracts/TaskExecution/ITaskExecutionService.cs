@@ -10,8 +10,8 @@ namespace Taskling.InfrastructureContracts.TaskExecution
     {
         TaskExecutionStartResponse Start(TaskExecutionStartRequest startRequest);
         TaskExecutionCompleteResponse Complete(TaskExecutionCompleteRequest completeRequest);
-        TaskExecutionCheckpointResponse Checkpoint(TaskExecutionCheckpointRequest taskExecutionRequest);
-        TaskExecutionErrorResponse Error(TaskExecutionErrorRequest taskExecutionErrorRequest);
+        void Checkpoint(TaskExecutionCheckpointRequest taskExecutionRequest);
+        void Error(TaskExecutionErrorRequest taskExecutionErrorRequest);
         void SendKeepAlive(SendKeepAliveRequest sendKeepAliveRequest);
     }
 }

@@ -7,10 +7,10 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Taskling.ExecutionContext.FluentBlocks.List;
 using Taskling.SqlServer.IntegrationTest.TestHelpers;
 
-namespace Taskling.SqlServer.IntegrationTest.LoadTest
+namespace Taskling.SqlServer.IntegrationTest.StressTest
 {
     [TestClass]
-    public class TasklingLoadTest
+    public class TasklingStressTest
     {
         private List<string> _processes = new List<string>()
         {
@@ -23,7 +23,7 @@ namespace Taskling.SqlServer.IntegrationTest.LoadTest
 
         [TestMethod]
         [TestCategory("SlowIntegrationTest")]
-        public void StartLoadTest()
+        public void StartStressTest()
         {
             CreateTasksAndExecutionTokens();
             var tasks = new List<Task>();
@@ -36,25 +36,32 @@ namespace Taskling.SqlServer.IntegrationTest.LoadTest
         private void CreateTasksAndExecutionTokens()
         {
             var executionHelper = new ExecutionsHelper();
+            executionHelper.DeleteRecordsOfApplication(TestConstants.ApplicationName);
             foreach (var process in _processes)
             {
-                executionHelper.DeleteRecordsOfTask(TestConstants.ApplicationName, "DR" + process);
-                executionHelper.DeleteRecordsOfTask(TestConstants.ApplicationName, "NR" + process);
-                executionHelper.DeleteRecordsOfTask(TestConstants.ApplicationName, "LSUC" + process);
-                executionHelper.DeleteRecordsOfTask(TestConstants.ApplicationName, "LPC" + process);
-                executionHelper.DeleteRecordsOfTask(TestConstants.ApplicationName, "LBC" + process);
+                int drSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, "DR_" + process);
+                int nrSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, "NR_" + process);
+                int lsucSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, "LSUC_" + process);
+                int lpcSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, "LPC_" + process);
+                int lbcSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, "LBC_" + process);
 
-                int drSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, "DR" + process);
-                int nrSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, "NR" + process);
-                int lsucSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, "LSUC" + process);
-                int lpcSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, "LPC" + process);
-                int lbcSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, "LBC" + process);
-
+                int ovdrSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, "OV_DR_" + process);
+                int ovnrSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, "OV_NR_" + process);
+                int ovlsucSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, "OV_LSUC_" + process);
+                int ovlpcSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, "OV_LPC_" + process);
+                int ovlbcSecondaryId = executionHelper.InsertTask(TestConstants.ApplicationName, "OV_LBC_" + process);
+                
                 executionHelper.InsertAvailableExecutionToken(drSecondaryId);
                 executionHelper.InsertAvailableExecutionToken(nrSecondaryId);
                 executionHelper.InsertAvailableExecutionToken(lsucSecondaryId);
                 executionHelper.InsertAvailableExecutionToken(lpcSecondaryId);
                 executionHelper.InsertAvailableExecutionToken(lbcSecondaryId);
+
+                executionHelper.InsertAvailableExecutionToken(ovdrSecondaryId);
+                executionHelper.InsertAvailableExecutionToken(ovnrSecondaryId);
+                executionHelper.InsertAvailableExecutionToken(ovlsucSecondaryId);
+                executionHelper.InsertAvailableExecutionToken(ovlpcSecondaryId);
+                executionHelper.InsertAvailableExecutionToken(ovlbcSecondaryId);
             }
         }
 
@@ -101,7 +108,7 @@ namespace Taskling.SqlServer.IntegrationTest.LoadTest
 
         private void RunKeepAliveDateRangeTask()
         {
-            var taskName = "DR" + _processes[_random.Next(25)];
+            var taskName = "DR_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = SqlServerClientHelper.GetExecutionContextWithKeepAlive(taskName, new TimeSpan(0, 0, 5)))
             {
@@ -127,7 +134,7 @@ namespace Taskling.SqlServer.IntegrationTest.LoadTest
 
         private void RunKeepAliveNumericRangeTask()
         {
-            var taskName = "NR" + _processes[_random.Next(25)];
+            var taskName = "NR_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = SqlServerClientHelper.GetExecutionContextWithKeepAlive(taskName, new TimeSpan(0, 0, 5)))
             {
@@ -153,7 +160,7 @@ namespace Taskling.SqlServer.IntegrationTest.LoadTest
 
         private void RunKeepAliveListTaskWithSingleUnitCommit()
         {
-            var taskName = "LSUC" + _processes[_random.Next(25)];
+            var taskName = "LSUC_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = SqlServerClientHelper.GetExecutionContextWithKeepAlive(taskName, new TimeSpan(0, 0, 5)))
             {
@@ -180,7 +187,7 @@ namespace Taskling.SqlServer.IntegrationTest.LoadTest
 
         private void RunKeepAliveListTaskWithPeriodicCommit()
         {
-            var taskName = "LPC" + _processes[_random.Next(25)];
+            var taskName = "LPC_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = SqlServerClientHelper.GetExecutionContextWithKeepAlive(taskName, new TimeSpan(0, 0, 5)))
             {
@@ -207,7 +214,7 @@ namespace Taskling.SqlServer.IntegrationTest.LoadTest
 
         private void RunKeepAliveListTaskWithBatchCommit()
         {
-            var taskName = "LBC" + _processes[_random.Next(25)];
+            var taskName = "LBC_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = SqlServerClientHelper.GetExecutionContextWithKeepAlive(taskName, new TimeSpan(0, 0, 5)))
             {
@@ -235,7 +242,7 @@ namespace Taskling.SqlServer.IntegrationTest.LoadTest
 
         private void RunOverrideDateRangeTask()
         {
-            var taskName = "OV_DR" + _processes[_random.Next(25)];
+            var taskName = "OV_DR_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = SqlServerClientHelper.GetExecutionContextWithOverride(taskName, new TimeSpan(0, 1, 0)))
             {
@@ -261,7 +268,7 @@ namespace Taskling.SqlServer.IntegrationTest.LoadTest
 
         private void RunOverrideNumericRangeTask()
         {
-            var taskName = "OV_NR" + _processes[_random.Next(25)];
+            var taskName = "OV_NR_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = SqlServerClientHelper.GetExecutionContextWithOverride(taskName, new TimeSpan(0, 1, 0)))
             {
@@ -287,7 +294,7 @@ namespace Taskling.SqlServer.IntegrationTest.LoadTest
 
         private void RunOverrideListTaskWithSingleUnitCommit()
         {
-            var taskName = "OV_LSUC" + _processes[_random.Next(25)];
+            var taskName = "OV_LSUC_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = SqlServerClientHelper.GetExecutionContextWithOverride(taskName, new TimeSpan(0, 1, 0)))
             {
@@ -314,7 +321,7 @@ namespace Taskling.SqlServer.IntegrationTest.LoadTest
 
         private void RunOverrideListTaskWithPeriodicCommit()
         {
-            var taskName = "OV_LPC" + _processes[_random.Next(25)];
+            var taskName = "OV_LPC_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = SqlServerClientHelper.GetExecutionContextWithOverride(taskName, new TimeSpan(0, 1, 0)))
             {
@@ -341,7 +348,7 @@ namespace Taskling.SqlServer.IntegrationTest.LoadTest
 
         private void RunOverrideListTaskWithBatchCommit()
         {
-            var taskName = "OV_LBC" + _processes[_random.Next(25)];
+            var taskName = "OV_LBC_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = SqlServerClientHelper.GetExecutionContextWithOverride(taskName, new TimeSpan(0, 1, 0)))
             {

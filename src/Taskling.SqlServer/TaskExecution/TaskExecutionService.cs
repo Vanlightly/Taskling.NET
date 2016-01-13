@@ -28,18 +28,20 @@ namespace Taskling.SqlServer.TaskExecution
         public TaskExecutionStartResponse Start(TaskExecutionStartRequest startRequest)
         {
             ValidateStartRequest(startRequest);
-
             var taskDefinition = _taskService.GetTaskDefinition(startRequest.ApplicationName, startRequest.TaskName);
             
             if (startRequest.TaskDeathMode == TaskDeathMode.KeepAlive)
             {
                 var taskExecutionId = CreateKeepAliveTaskExecution(taskDefinition.TaskDefinitionId, startRequest.KeepAliveInterval.Value, startRequest.KeepAliveDeathThreshold.Value);
+                RegisterEvent(taskExecutionId.ToString(), EventType.Start, null);
                 return GetExecutionTokenUsingKeepAliveMode(taskDefinition.TaskDefinitionId, taskExecutionId, startRequest.KeepAliveDeathThreshold.Value);
             }
             
             if (startRequest.TaskDeathMode == TaskDeathMode.Override)
             {
-                return GetExecutionTokenUsingOverride(taskDefinition.TaskDefinitionId, startRequest.OverrideThreshold.Value);
+                var response = GetExecutionTokenUsingOverride(taskDefinition.TaskDefinitionId, startRequest.OverrideThreshold.Value);
+                RegisterEvent(response.TaskExecutionId, EventType.Start, null);
+                return response;
             }
 
             throw new ExecutionException("Unsupported TaskDeathMode");
@@ -47,17 +49,18 @@ namespace Taskling.SqlServer.TaskExecution
 
         public TaskExecutionCompleteResponse Complete(TaskExecutionCompleteRequest completeRequest)
         {
+            RegisterEvent(completeRequest.TaskExecutionId, EventType.End, null);
             return ReturnExecutionToken(completeRequest);
         }
 
-        public TaskExecutionCheckpointResponse Checkpoint(TaskExecutionCheckpointRequest taskExecutionRequest)
+        public void Checkpoint(TaskExecutionCheckpointRequest taskExecutionRequest)
         {
- 	        throw new NotImplementedException();
+            RegisterEvent(taskExecutionRequest.TaskExecutionId, EventType.End, taskExecutionRequest.Message);
         }
 
-        public TaskExecutionErrorResponse Error(TaskExecutionErrorRequest taskExecutionErrorRequest)
+        public void Error(TaskExecutionErrorRequest taskExecutionErrorRequest)
         {
- 	        throw new NotImplementedException();
+            RegisterEvent(taskExecutionErrorRequest.TaskExecutionId, EventType.Error, taskExecutionErrorRequest.Error);
         }
 
         public void SendKeepAlive(SendKeepAliveRequest sendKeepAliveRequest)
@@ -216,6 +219,7 @@ namespace Taskling.SqlServer.TaskExecution
                     command.Parameters.Add(new SqlParameter("@KeepAliveInterval", SqlDbType.Time)).Value = keepAliveInterval;
                     command.Parameters.Add(new SqlParameter("@KeepAliveDeathThreshold", SqlDbType.Time)).Value = keepAliveDeathThreshold;
                     var taskExecutionId = (int) command.ExecuteScalar();
+
                     return taskExecutionId;
                 }
             }
@@ -230,6 +234,9 @@ namespace Taskling.SqlServer.TaskExecution
             command.Parameters.Add(new SqlParameter("@TaskDeathMode", SqlDbType.TinyInt)).Value = (byte)TaskDeathMode.Override;
             command.Parameters.Add(new SqlParameter("@OverrideThreshold", SqlDbType.Time)).Value = overrideThreshold;
             var taskExecutionId = (int)command.ExecuteScalar();
+
+            RegisterEvent(taskExecutionId.ToString(), EventType.Start, null);
+
             return taskExecutionId;
         }
 
@@ -268,6 +275,32 @@ namespace Taskling.SqlServer.TaskExecution
 
             return response;
         }
-       
+
+        private void RegisterEvent(string taskExecutionId, EventType eventType, string message)
+        {
+            using (var connection = CreateNewConnection())
+            {
+                using (var command = new SqlCommand(TaskQueryBuilder.InsertTaskExecutionEventQuery, connection))
+                {
+                    command.Parameters.Add(new SqlParameter("@TaskExecutionId", SqlDbType.Int)).Value = int.Parse(taskExecutionId);
+                    command.Parameters.Add(new SqlParameter("@EventType", SqlDbType.Int)).Value = (int)eventType;
+
+                    if (message == null)
+                    {
+                        command.Parameters.Add(new SqlParameter("@Message", SqlDbType.VarChar, 1000)).Value = DBNull.Value;
+                    }
+                    else
+                    {
+                        if (message.Length > 1000)
+                            message = message.Substring(0, 1000);
+                        command.Parameters.Add(new SqlParameter("@Message", SqlDbType.VarChar, 1000)).Value = message;
+                    }
+
+                    command.Parameters.Add(new SqlParameter("@EventDateTime", SqlDbType.DateTime)).Value = DateTime.UtcNow;
+                    command.ExecuteNonQuery();
+                }
+            }
+
+        }
     }
 }

@@ -186,7 +186,7 @@ AND T.TaskName = @TaskName";
         #endregion .: Queries :.
 
 
-        public void DeleteRecordsOfTask(string applicationName, string taskName)
+        public void DeleteRecordsOfApplication(string applicationName)
         {
             using (var connection = new SqlConnection(TestConstants.TestConnectionString))
             {

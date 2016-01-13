@@ -55,5 +55,21 @@ FROM [Taskling].[TaskExecution] TE
 WHERE [TaskExecutionId] = @TaskExecutionId;";
 
         #endregion .: TaskExecutions :.
+
+        #region .: TaskExecutionEvents :.
+
+        public const string InsertTaskExecutionEventQuery = @"
+INSERT INTO [Taskling].[TaskExecutionEvent]
+           ([TaskExecutionId]
+           ,[EventType]
+           ,[Message]
+           ,[EventDateTime])
+     VALUES
+           (@TaskExecutionId
+           ,@EventType
+           ,@Message
+           ,@EventDateTime)";
+
+        #endregion .: TaskExecutionEvents :.
     }
 }

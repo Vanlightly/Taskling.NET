@@ -18,6 +18,8 @@ namespace Taskling.ExecutionContext
 {
     public class TaskExecutionContext : ITaskExecutionContext
     {
+        #region .: Fields and services :.
+
         private readonly ITaskExecutionService _taskExecutionService;
         private readonly ICriticalSectionService _criticalSectionService;
         private readonly IBlockFactory _blockFactory;
@@ -27,6 +29,10 @@ namespace Taskling.ExecutionContext
         private bool _startedCalled;
         private bool _completeCalled;
         private KeepAliveDaemon _keepAliveDaemon;
+
+        #endregion .: Fields and services :.
+
+        #region .: Constructors and disposal :.
 
         public TaskExecutionContext(ITaskExecutionService taskExecutionService,
             ICriticalSectionService criticalSectionService,
@@ -45,6 +51,28 @@ namespace Taskling.ExecutionContext
 
             _taskExecutionOptions = taskExecutionOptions;
         }
+
+        ~TaskExecutionContext()
+        {
+            if (_startedCalled && !_completeCalled)
+            {
+                Complete();
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_startedCalled && !_completeCalled)
+            {
+                Complete();
+            }
+
+            GC.SuppressFinalize(this);
+        }
+
+        #endregion .: Constructors and disposal :.
+
+        #region .: Public methods :.
 
         public bool TryStart()
         {
@@ -100,12 +128,26 @@ namespace Taskling.ExecutionContext
 
         public void Checkpoint(string checkpointMessage)
         {
-            throw new NotImplementedException();
+            var request = new TaskExecutionCheckpointRequest()
+            {
+                ApplicationName = _taskExecutionInstance.ApplicationName,
+                TaskName = _taskExecutionInstance.TaskName,
+                TaskExecutionId = _taskExecutionInstance.TaskExecutionId,
+                Message = checkpointMessage
+            };
+            _taskExecutionService.Checkpoint(request);
         }
 
         public void Error(string errorMessage)
         {
-            throw new NotImplementedException();
+            var request = new TaskExecutionErrorRequest()
+            {
+                ApplicationName = _taskExecutionInstance.ApplicationName,
+                TaskName = _taskExecutionInstance.TaskName,
+                TaskExecutionId = _taskExecutionInstance.TaskExecutionId,
+                Error = errorMessage
+            };
+            _taskExecutionService.Error(request);
         }
 
         public ICriticalSectionContext CreateCriticalSection()
@@ -151,13 +193,9 @@ namespace Taskling.ExecutionContext
             throw new NotSupportedException("BlockType not supported");
         }
 
-        public void Dispose()
-        {
-            if (_startedCalled && !_completeCalled)
-            {
-                Complete();
-            }
-        }
+        #endregion .: Public methods :.
+
+        #region .: Private methods :.
 
         private TaskExecutionStartRequest CreateStartRequest()
         {
@@ -293,5 +331,7 @@ namespace Taskling.ExecutionContext
 
             return request;
         }
+
+        #endregion .: Private methods :.
     }
 }

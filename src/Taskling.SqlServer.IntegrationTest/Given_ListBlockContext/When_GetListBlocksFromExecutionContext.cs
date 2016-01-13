@@ -25,7 +25,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
             _blocksHelper = new BlocksHelper();
             _blocksHelper.DeleteBlocks(TestConstants.ApplicationName, TestConstants.TaskName);
             _executionHelper = new ExecutionsHelper();
-            _executionHelper.DeleteRecordsOfTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            _executionHelper.DeleteRecordsOfApplication(TestConstants.ApplicationName);
 
             var taskDefinitionId = _executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             _executionHelper.InsertExecutionToken(taskDefinitionId, TaskExecutionStatus.Available, "0");

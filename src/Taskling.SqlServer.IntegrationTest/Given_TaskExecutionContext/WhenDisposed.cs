@@ -18,7 +18,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_TaskExecutionContext
         public void Initialize()
         {
             var executionHelper = new ExecutionsHelper();
-            executionHelper.DeleteRecordsOfTask(TestConstants.ApplicationName, TestConstants.TaskName);
+            executionHelper.DeleteRecordsOfApplication(TestConstants.ApplicationName);
         }
 
         [TestMethod]
