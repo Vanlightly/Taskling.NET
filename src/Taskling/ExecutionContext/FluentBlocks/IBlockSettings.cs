@@ -16,8 +16,7 @@ namespace Taskling.ExecutionContext.FluentBlocks
 
         bool MustReprocessDeadTasks { get; set; }
         TimeSpan DeadTaskDetectionRange { get; set; }
-        TimeSpan TreatAsDeadAfterRange { get; set; }
-
+        
         int MaximumNumberOfBlocksLimit { get; set; }
 
         // DateRange

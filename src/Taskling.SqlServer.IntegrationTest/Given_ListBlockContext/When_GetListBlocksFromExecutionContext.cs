@@ -49,7 +49,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
                     short maxBlockSize = 4;
                     var listBlocks = executionContext.GetListBlocks(x => x.WithSingleUnitCommit(values, maxBlockSize)
                                                                 .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
-                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                                                                 .MaximumBlocksToGenerate(10));
                     // There should be 3 blocks - 4, 4, 1
                     Assert.AreEqual(3, _blocksHelper.GetBlockCount(TestConstants.ApplicationName, TestConstants.TaskName));
@@ -114,7 +114,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
                     short maxBlockSize = 4;
                     var listBlocks = executionContext.GetListBlocks(x => x.WithBatchCommitAtEnd(values, maxBlockSize)
                                                                 .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
-                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                                                                 .MaximumBlocksToGenerate(10));
                     // There should be 3 blocks - 4, 4, 1
                     Assert.AreEqual(3, _blocksHelper.GetBlockCount(TestConstants.ApplicationName, TestConstants.TaskName));
@@ -180,7 +180,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
                     short maxBlockSize = 15;
                     var listBlocks = executionContext.GetListBlocks(x => x.WithPeriodicCommit(values, maxBlockSize, BatchSize.Ten)
                                                                 .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
-                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                                                                 .MaximumBlocksToGenerate(10));
                     // There should be 2 blocks - 15, 11
                     Assert.AreEqual(2, _blocksHelper.GetBlockCount(TestConstants.ApplicationName, TestConstants.TaskName));
@@ -254,7 +254,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
                     short maxBlockSize = 15;
                     var listBlocks = executionContext.GetListBlocks(x => x.WithPeriodicCommit(values, maxBlockSize, BatchSize.Ten)
                                                                 .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
-                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                                                                 .MaximumBlocksToGenerate(10));
 
                     foreach (var listBlock in listBlocks)

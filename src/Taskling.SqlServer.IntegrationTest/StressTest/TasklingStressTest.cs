@@ -120,7 +120,7 @@ namespace Taskling.SqlServer.IntegrationTest.StressTest
                 }
 
                 var blocks = executionContext.GetRangeBlocks(x => x.AsDateRange(DateTime.UtcNow.AddDays(-1), DateTime.UtcNow, new TimeSpan(0, 1, 0, 0))
-                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                     .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
                     .MaximumBlocksToGenerate(50));
 
@@ -146,7 +146,7 @@ namespace Taskling.SqlServer.IntegrationTest.StressTest
                 }
 
                 var blocks = executionContext.GetRangeBlocks(x => x.AsNumericRange(1, 10000, 100)
-                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                     .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
                     .MaximumBlocksToGenerate(50));
 
@@ -173,7 +173,7 @@ namespace Taskling.SqlServer.IntegrationTest.StressTest
 
                 var values = GetList("SUC", 1000);
                 var blocks = executionContext.GetListBlocks(x => x.WithSingleUnitCommit(values, 50)
-                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                     .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
                     .MaximumBlocksToGenerate(50));
 
@@ -200,7 +200,7 @@ namespace Taskling.SqlServer.IntegrationTest.StressTest
 
                 var values = GetList("PC", 1000);
                 var blocks = executionContext.GetListBlocks(x => x.WithPeriodicCommit(values, 50, BatchSize.Hundred)
-                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                     .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
                     .MaximumBlocksToGenerate(50));
 
@@ -227,7 +227,7 @@ namespace Taskling.SqlServer.IntegrationTest.StressTest
 
                 var values = GetList("BC", 1000);
                 var blocks = executionContext.GetListBlocks(x => x.WithBatchCommitAtEnd(values, 50)
-                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                     .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
                     .MaximumBlocksToGenerate(50));
 
@@ -254,7 +254,7 @@ namespace Taskling.SqlServer.IntegrationTest.StressTest
                 }
 
                 var blocks = executionContext.GetRangeBlocks(x => x.AsDateRange(DateTime.UtcNow.AddDays(-1), DateTime.UtcNow, new TimeSpan(0, 1, 0, 0))
-                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                     .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
                     .MaximumBlocksToGenerate(50));
 
@@ -280,7 +280,7 @@ namespace Taskling.SqlServer.IntegrationTest.StressTest
                 }
 
                 var blocks = executionContext.GetRangeBlocks(x => x.AsNumericRange(1, 10000, 100)
-                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                     .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
                     .MaximumBlocksToGenerate(50));
 
@@ -307,7 +307,7 @@ namespace Taskling.SqlServer.IntegrationTest.StressTest
 
                 var values = GetList("SUC", 1000);
                 var blocks = executionContext.GetListBlocks(x => x.WithSingleUnitCommit(values, 50)
-                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                     .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
                     .MaximumBlocksToGenerate(50));
 
@@ -334,7 +334,7 @@ namespace Taskling.SqlServer.IntegrationTest.StressTest
 
                 var values = GetList("PC", 1000);
                 var blocks = executionContext.GetListBlocks(x => x.WithPeriodicCommit(values, 50, BatchSize.Hundred)
-                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                     .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
                     .MaximumBlocksToGenerate(50));
 
@@ -361,7 +361,7 @@ namespace Taskling.SqlServer.IntegrationTest.StressTest
 
                 var values = GetList("BC", 1000);
                 var blocks = executionContext.GetListBlocks(x => x.WithBatchCommitAtEnd(values, 50)
-                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                    .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                     .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
                     .MaximumBlocksToGenerate(50));
 

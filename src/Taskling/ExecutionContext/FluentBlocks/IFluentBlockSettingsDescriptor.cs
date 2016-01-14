@@ -8,7 +8,7 @@ namespace Taskling.ExecutionContext.FluentBlocks
     public interface IFluentBlockSettingsDescriptor
     {
         IFluentBlockSettingsDescriptor ReprocessFailedTasks(TimeSpan detectionRange);
-        IFluentBlockSettingsDescriptor ReprocessDeadTasks(TimeSpan detectionRange, TimeSpan treatAsDeadAfter);
+        IFluentBlockSettingsDescriptor ReprocessDeadTasks(TimeSpan detectionRange);
         IFluentBlockSettingsDescriptor MaximumBlocksToGenerate(int maximumNumberOfBlocks);
     }
 }

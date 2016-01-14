@@ -293,9 +293,9 @@ namespace Taskling.ExecutionContext
             request.TaskDeathMode = _taskExecutionOptions.TaskDeathMode;
 
             if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.KeepAlive)
-                request.KeepAliveDeathThreshold = settings.TreatAsDeadAfterRange;
+                request.KeepAliveDeathThreshold = _taskExecutionOptions.KeepAliveDeathThreshold.Value;
             else
-                request.OverrideDeathThreshold = settings.TreatAsDeadAfterRange;
+                request.OverrideDeathThreshold = _taskExecutionOptions.OverrideThreshold.Value;
 
             request.RangeBegin = settings.FromDate;
             request.RangeEnd = settings.ToDate;
@@ -323,9 +323,9 @@ namespace Taskling.ExecutionContext
             request.TaskDeathMode = _taskExecutionOptions.TaskDeathMode;
 
             if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.KeepAlive)
-                request.KeepAliveDeathThreshold = settings.TreatAsDeadAfterRange;
+                request.KeepAliveDeathThreshold = _taskExecutionOptions.KeepAliveDeathThreshold.Value;
             else
-                request.OverrideDeathThreshold = settings.TreatAsDeadAfterRange;
+                request.OverrideDeathThreshold = _taskExecutionOptions.OverrideThreshold.Value;
 
             request.RangeBegin = settings.FromNumber;
             request.RangeEnd = settings.ToNumber;
@@ -353,9 +353,9 @@ namespace Taskling.ExecutionContext
             request.TaskDeathMode = _taskExecutionOptions.TaskDeathMode;
 
             if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.KeepAlive)
-                request.KeepAliveDeathThreshold = settings.TreatAsDeadAfterRange;
+                request.KeepAliveDeathThreshold = _taskExecutionOptions.KeepAliveDeathThreshold.Value;
             else
-                request.OverrideDeathThreshold = settings.TreatAsDeadAfterRange;
+                request.OverrideDeathThreshold = _taskExecutionOptions.OverrideThreshold.Value;
 
             request.Values = settings.Values;
             request.MaxBlockSize = settings.MaxBlockSize;

@@ -62,7 +62,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_RangeBlockContext
                     var maxBlockRange = new TimeSpan(0, 30, 0);
                     var rangeBlocks = executionContext.GetRangeBlocks(x => x.AsDateRange(fromDate, toDate, maxBlockRange)
                                                                 .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
-                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                                                                 .MaximumBlocksToGenerate(10));
                     Assert.AreEqual(10, _blocksHelper.GetBlockCount(TestConstants.ApplicationName, TestConstants.TaskName));
                     int expectedNotStartedCount = 10;
@@ -121,7 +121,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_RangeBlockContext
                     var maxBlockRange = 100;
                     var blocks = executionContext.GetRangeBlocks(x => x.AsNumericRange(fromNumber, toNumber, maxBlockRange)
                                                                 .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
-                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                                                                 .MaximumBlocksToGenerate(10));
                     Assert.AreEqual(10, _blocksHelper.GetBlockCount(TestConstants.ApplicationName, TestConstants.TaskName));
                     int expectedNotStartedCount = 10;

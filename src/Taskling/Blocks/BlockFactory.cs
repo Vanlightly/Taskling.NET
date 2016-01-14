@@ -327,8 +327,8 @@ namespace Taskling.Blocks
                     blockRequest.TaskName,
                     blockRequest.TaskExecutionId,
                     blockRequest.BlockType,
+                    utcNow - blockRequest.OverrideDeathThreshold,
                     utcNow-blockRequest.GoBackTimePeriodForDeadTasks,
-                    utcNow-blockRequest.GoBackTimePeriodForFailedTasks,
                     blockCountLimit
                     );
             }

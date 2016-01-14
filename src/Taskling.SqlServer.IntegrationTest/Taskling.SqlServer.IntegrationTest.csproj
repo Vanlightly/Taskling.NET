@@ -55,6 +55,9 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="Examples\When_DateRangeBlocks.cs" />
+    <Compile Include="Examples\When_ListBlocks.cs" />
+    <Compile Include="Examples\When_NumericRangeBlocks.cs" />
     <Compile Include="Given_BlockService\When_FindDeadRangeBlocks.cs" />
     <Compile Include="Given_BlockService\When_FindFailedRangeBlocks.cs" />
     <Compile Include="Given_CriticalSectionContext\When_ConcurrentNoDeadlocks.cs" />

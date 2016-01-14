@@ -14,8 +14,7 @@ namespace Taskling.ExecutionContext.FluentBlocks
 
         public bool MustReprocessDeadTasks { get; set; }
         public TimeSpan DeadTaskDetectionRange { get; set; }
-        public TimeSpan TreatAsDeadAfterRange { get; set; }
-
+        
         public int MaximumNumberOfBlocksLimit { get; set; }
 
         public TaskDeathMode TaskDeathMode { get; set; }
@@ -44,11 +43,10 @@ namespace Taskling.ExecutionContext.FluentBlocks
             return this;
         }
 
-        public IFluentBlockSettingsDescriptor ReprocessDeadTasks(TimeSpan detectionRange, TimeSpan treatAsDeadAfter)
+        public IFluentBlockSettingsDescriptor ReprocessDeadTasks(TimeSpan detectionRange)
         {
             MustReprocessDeadTasks = true;
             DeadTaskDetectionRange = detectionRange;
-            TreatAsDeadAfterRange = treatAsDeadAfter;
             return this;
         }
 

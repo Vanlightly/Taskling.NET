@@ -47,7 +47,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
                     short maxBlockSize = 1000;
                     var listBlocks = executionContext.GetListBlocks(x => x.WithSingleUnitCommit(values, maxBlockSize)
                                                                 .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
-                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                                                                 .MaximumBlocksToGenerate(10000));
                     foreach (var listBlock in listBlocks)
                     {
@@ -81,7 +81,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
                     short maxBlockSize = 1000;
                     var listBlocks = executionContext.GetListBlocks(x => x.WithBatchCommitAtEnd(values, maxBlockSize)
                                                                 .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
-                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                                                                 .MaximumBlocksToGenerate(10000));
                     foreach (var listBlock in listBlocks)
                     {
@@ -115,7 +115,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
                     short maxBlockSize = 1000;
                     var listBlocks = executionContext.GetListBlocks(x => x.WithPeriodicCommit(values, maxBlockSize, BatchSize.Hundred)
                                                                 .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
-                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                                                                 .MaximumBlocksToGenerate(10000));
                     foreach (var listBlock in listBlocks)
                     {
@@ -149,7 +149,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
                     short maxBlockSize = 1000;
                     var listBlocks = executionContext.GetListBlocks(x => x.WithSingleUnitCommit(values, maxBlockSize)
                                                                 .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
-                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0))
                                                                 .MaximumBlocksToGenerate(10000));
 
                     Parallel.ForEach(listBlocks, (currentBlock) =>
