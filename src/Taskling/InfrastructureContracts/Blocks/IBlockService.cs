@@ -15,10 +15,11 @@ namespace Taskling.InfrastructureContracts.Blocks
         IList<RangeBlock> FindDeadRangeBlocks(FindDeadBlocksRequest deadBlocksRequest);
         RangeBlockCreateResponse AddRangeBlock(RangeBlockCreateRequest rangeBlockCreateRequest);
         string AddRangeBlockExecution(BlockExecutionCreateRequest executionCreateRequest);
-
+        
         IList<ListBlock> FindFailedListBlocks(FindFailedBlocksRequest failedBlocksRequest);
         IList<ListBlock> FindDeadListBlocks(FindDeadBlocksRequest deadBlocksRequest);
         ListBlockCreateResponse AddListBlock(ListBlockCreateRequest createRequest);
         string AddListBlockExecution(BlockExecutionCreateRequest executionCreateRequest);
+        
     }
 }

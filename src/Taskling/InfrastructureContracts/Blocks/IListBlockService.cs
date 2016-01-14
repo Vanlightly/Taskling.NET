@@ -14,5 +14,6 @@ namespace Taskling.InfrastructureContracts.Blocks
         IList<ListBlockItem> GetListBlockItems(string listBlockId);
         void UpdateListBlockItem(SingleUpdateRequest singeUpdateRequest);
         void BatchUpdateListBlockItems(BatchUpdateRequest batchUpdateRequest);
+        ListBlock GetLastListBlock(LastBlockRequest lastRangeBlockRequest);
     }
 }

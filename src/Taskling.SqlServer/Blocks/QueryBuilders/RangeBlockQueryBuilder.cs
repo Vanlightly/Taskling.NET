@@ -50,6 +50,30 @@ SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
 
 SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
 
-        
+        public const string GetLastDateRangeBlock = @"
+SELECT TOP 1 [BlockId]
+      ,[TaskDefinitionId]
+      ,[FromDate]
+      ,[ToDate]
+      ,[FromNumber]
+      ,[ToNumber]
+      ,[BlockType]
+      ,[CreatedDate]
+FROM [Taskling].[Block]
+WHERE [TaskDefinitionId] = @TaskDefinitionId 
+ORDER BY [ToDate] DESC";
+
+        public const string GetLastNumericRangeBlock = @"
+SELECT TOP 1 [BlockId]
+      ,[TaskDefinitionId]
+      ,[FromDate]
+      ,[ToDate]
+      ,[FromNumber]
+      ,[ToNumber]
+      ,[BlockType]
+      ,[CreatedDate]
+FROM [Taskling].[Block]
+WHERE [TaskDefinitionId] = @TaskDefinitionId 
+ORDER BY [ToNumber] DESC";
     }
 }

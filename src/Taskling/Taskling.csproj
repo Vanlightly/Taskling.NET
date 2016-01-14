@@ -87,6 +87,7 @@
     <Compile Include="InfrastructureContracts\Blocks\ListBlocks\ListBlockCreateResponse.cs" />
     <Compile Include="InfrastructureContracts\Blocks\CommonRequests\BlockExecutionChangeStatusRequest.cs" />
     <Compile Include="InfrastructureContracts\Blocks\ListBlocks\SingleUpdateRequest.cs" />
+    <Compile Include="InfrastructureContracts\Blocks\LastBlockRequest.cs" />
     <Compile Include="InfrastructureContracts\Blocks\RangeBlocks\RangeBlockCreateRequest.cs" />
     <Compile Include="Blocks\RangeBlock.cs" />
     <Compile Include="InfrastructureContracts\Blocks\IBlockService.cs" />

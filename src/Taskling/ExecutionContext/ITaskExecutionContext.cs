@@ -17,6 +17,9 @@ namespace Taskling.ExecutionContext
         void Checkpoint(string checkpointMessage);
         void Error(string errorMessage);
         ICriticalSectionContext CreateCriticalSection();
+        RangeBlock GetLastDateRangeBlock();
+        RangeBlock GetLastNumericRangeBlock();
+        ListBlock GetLastListBlock();
         IList<IRangeBlockContext> GetRangeBlocks(Func<FluentRangeBlockDescriptor, IFluentBlockSettingsDescriptor> fluentBlockRequest);
         IList<IListBlockContext> GetListBlocks(Func<FluentListBlockDescriptorBase, IFluentBlockSettingsDescriptor> fluentBlockRequest);
         

@@ -13,14 +13,18 @@ using Taskling.InfrastructureContracts.Blocks.ListBlocks;
 using Taskling.SqlServer.AncilliaryServices;
 using Taskling.SqlServer.Blocks.QueryBuilders;
 using Taskling.SqlServer.Configuration;
+using Taskling.SqlServer.Tasks;
 
 namespace Taskling.SqlServer.Blocks
 {
     public class ListBlockService : DbOperationsService, IListBlockService
     {
-        public ListBlockService(SqlServerClientConnectionSettings clientConnectionSettings)
+        private readonly ITaskService _taskService;
+
+        public ListBlockService(SqlServerClientConnectionSettings clientConnectionSettings, ITaskService taskService)
             : base(clientConnectionSettings.ConnectionString, clientConnectionSettings.QueryTimeout)
         {
+            _taskService = taskService;
         }
 
         public void ChangeStatus(BlockExecutionChangeStatusRequest changeStatusRequest)
@@ -134,6 +138,41 @@ namespace Taskling.SqlServer.Blocks
                 }
             }
         }
+
+        public ListBlock GetLastListBlock(LastBlockRequest lastRangeBlockRequest)
+        {
+            var taskDefinition = _taskService.GetTaskDefinition(lastRangeBlockRequest.ApplicationName, lastRangeBlockRequest.TaskName);
+
+            try
+            {
+                using (var connection = CreateNewConnection())
+                {
+                    var command = connection.CreateCommand();
+                    command.CommandText = ListBlockQueryBuilder.GetLastListBlock;
+                    command.CommandTimeout = QueryTimeout;
+                    command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinition.TaskDefinitionId;
+                    var reader = command.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        var listBlock = new ListBlock();
+                        listBlock.ListBlockId = reader["BlockId"].ToString();
+                        listBlock.Items = GetListBlockItems(listBlock.ListBlockId).ToList();
+                        
+                        return listBlock;
+                    }
+                }
+            }
+            catch (SqlException sqlEx)
+            {
+                if (TransientErrorDetector.IsTransient(sqlEx))
+                    throw new TransientException("A transient exception has occurred", sqlEx);
+
+                throw;
+            }
+
+            return new ListBlock();
+        }
+
 
         private string GetListUpdateQuery(BlockExecutionStatus executionStatus)
         {

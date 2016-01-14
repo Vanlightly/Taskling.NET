@@ -18,9 +18,12 @@ namespace Taskling.SqlServer.Blocks
 {
     public class RangeBlockService : DbOperationsService, IRangeBlockService
     {
-        public RangeBlockService(SqlServerClientConnectionSettings clientConnectionSettings)
+        private readonly ITaskService _taskService;
+        
+        public RangeBlockService(SqlServerClientConnectionSettings clientConnectionSettings, ITaskService taskService)
             : base(clientConnectionSettings.ConnectionString, clientConnectionSettings.QueryTimeout)
         {
+            _taskService = taskService;
         }
 
         public void ChangeStatus(BlockExecutionChangeStatusRequest changeStatusRequest)
@@ -37,6 +40,60 @@ namespace Taskling.SqlServer.Blocks
                     throw new NotSupportedException("This range type is not supported");
             }
         }
+
+        public RangeBlock GetLastRangeBlock(LastBlockRequest lastRangeBlockRequest)
+        {
+            var taskDefinition = _taskService.GetTaskDefinition(lastRangeBlockRequest.ApplicationName, lastRangeBlockRequest.TaskName);
+
+            var query = string.Empty;
+            if (lastRangeBlockRequest.BlockType == BlockType.DateRange)
+                query = RangeBlockQueryBuilder.GetLastDateRangeBlock;
+            else if (lastRangeBlockRequest.BlockType == BlockType.NumericRange)
+                query = RangeBlockQueryBuilder.GetLastNumericRangeBlock;
+            else
+                throw new ArgumentException("An invalid BlockType was supplied: " + lastRangeBlockRequest.BlockType);
+
+            try
+            {
+                using (var connection = CreateNewConnection())
+                {
+                    var command = connection.CreateCommand();
+                    command.CommandText = query;
+                    command.CommandTimeout = QueryTimeout;
+                    command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinition.TaskDefinitionId;
+                    var reader = command.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        var rangeBlockId = reader["BlockId"].ToString();
+                        long rangeBegin;
+                        long rangeEnd;
+
+                        if (lastRangeBlockRequest.BlockType == BlockType.DateRange)
+                        {
+                            rangeBegin = DateTime.Parse(reader["FromDate"].ToString()).Ticks;
+                            rangeEnd = DateTime.Parse(reader["ToDate"].ToString()).Ticks;
+                        }
+                        else
+                        {
+                            rangeBegin = long.Parse(reader["FromNumber"].ToString());
+                            rangeEnd = long.Parse(reader["ToNumber"].ToString());
+                        }
+
+                        return new RangeBlock(rangeBlockId, rangeBegin, rangeEnd);
+                    }
+                }
+            }
+            catch (SqlException sqlEx)
+            {
+                if (TransientErrorDetector.IsTransient(sqlEx))
+                    throw new TransientException("A transient exception has occurred", sqlEx);
+
+                throw;
+            }
+
+            return new RangeBlock("0", 0, 0);
+        }
+
 
         private void ChangeStatusOfDateRangeExecution(BlockExecutionChangeStatusRequest changeStatusRequest)
         {

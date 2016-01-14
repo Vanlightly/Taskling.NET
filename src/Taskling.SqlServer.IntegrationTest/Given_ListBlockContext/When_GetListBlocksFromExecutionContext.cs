@@ -36,23 +36,10 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
         public void If_AsListWithSingleUnitCommit_NumberOfBlocksAndStatusesOfBlockExecutionsCorrectAtEveryStep()
         {
             // ARRANGE
-            var settings = new SqlServerClientConnectionSettings()
-            {
-                ConnectionString = TestConstants.TestConnectionString,
-                ConnectTimeout = new TimeSpan(0, 0, 1, 0)
-            };
-
-            var taskExecutionOptions = new TaskExecutionOptions()
-            {
-                TaskDeathMode = TaskDeathMode.KeepAlive,
-                KeepAliveInterval = new TimeSpan(0, 0, 0, 30),
-                KeepAliveDeathThreshold = new TimeSpan(0, 0, 2, 0)
-            };
-
+            
             // ACT and // ASSERT
             bool startedOk;
-            var client = new SqlServerTasklingClient(settings);
-            using (var executionContext = client.CreateTaskExecutionContext(TestConstants.ApplicationName, TestConstants.TaskName, taskExecutionOptions))
+            using (var executionContext = CreateTaskExecutionContext())
             {
                 startedOk = executionContext.TryStart();
                 Assert.AreEqual(true, startedOk);
@@ -114,23 +101,10 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
         public void If_AsListWithBatchCommitAtEnd_NumberOfBlocksAndStatusesOfBlockExecutionsCorrectAtEveryStep()
         {
             // ARRANGE
-            var settings = new SqlServerClientConnectionSettings()
-            {
-                ConnectionString = TestConstants.TestConnectionString,
-                ConnectTimeout = new TimeSpan(0, 0, 1, 0)
-            };
-
-            var taskExecutionOptions = new TaskExecutionOptions()
-            {
-                TaskDeathMode = TaskDeathMode.KeepAlive,
-                KeepAliveInterval = new TimeSpan(0, 0, 0, 30),
-                KeepAliveDeathThreshold = new TimeSpan(0, 0, 2, 0)
-            };
-
+            
             // ACT and // ASSERT
             bool startedOk;
-            var client = new SqlServerTasklingClient(settings);
-            using (var executionContext = client.CreateTaskExecutionContext(TestConstants.ApplicationName, TestConstants.TaskName, taskExecutionOptions))
+            using (var executionContext = CreateTaskExecutionContext())
             {
                 startedOk = executionContext.TryStart();
                 Assert.AreEqual(true, startedOk);
@@ -193,23 +167,10 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
         public void If_AsListWithPeriodicCommit_NumberOfBlocksAndStatusesOfBlockExecutionsCorrectAtEveryStep()
         {
             // ARRANGE
-            var settings = new SqlServerClientConnectionSettings()
-            {
-                ConnectionString = TestConstants.TestConnectionString,
-                ConnectTimeout = new TimeSpan(0, 0, 1, 0)
-            };
-
-            var taskExecutionOptions = new TaskExecutionOptions()
-            {
-                TaskDeathMode = TaskDeathMode.KeepAlive,
-                KeepAliveInterval = new TimeSpan(0, 0, 0, 30),
-                KeepAliveDeathThreshold = new TimeSpan(0, 0, 2, 0)
-            };
-
+            
             // ACT and // ASSERT
             bool startedOk;
-            var client = new SqlServerTasklingClient(settings);
-            using (var executionContext = client.CreateTaskExecutionContext(TestConstants.ApplicationName, TestConstants.TaskName, taskExecutionOptions))
+            using (var executionContext = CreateTaskExecutionContext())
             {
                 startedOk = executionContext.TryStart();
                 Assert.AreEqual(true, startedOk);
@@ -276,6 +237,121 @@ namespace Taskling.SqlServer.IntegrationTest.Given_ListBlockContext
                     }
                 }
             }
+        }
+
+        [TestMethod]
+        [TestCategory("FastIntegrationTest"), TestCategory("Blocks")]
+        public void If_PreviousBlock_ThenLastBlockContainsCorrectItems()
+        {
+            // ARRANGE
+            // Create previous blocks
+            using (var executionContext = CreateTaskExecutionContext())
+            {
+                var startedOk = executionContext.TryStart();
+                if (startedOk)
+                {
+                    var values = new List<string>() { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
+                    short maxBlockSize = 15;
+                    var listBlocks = executionContext.GetListBlocks(x => x.WithPeriodicCommit(values, maxBlockSize, BatchSize.Ten)
+                                                                .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0))
+                                                                .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), new TimeSpan(0, 1, 0, 0))
+                                                                .MaximumBlocksToGenerate(10));
+
+                    foreach (var listBlock in listBlocks)
+                    {
+                        listBlock.Start();
+                        foreach (var itemToProcess in listBlock.GetAllItems())
+                            listBlock.ItemComplete(itemToProcess);
+
+                        listBlock.Complete();
+                    }
+                }
+            }
+
+            var expectedLastBlock = new ListBlock()
+            {
+                Items = new List<ListBlockItem>()
+                {
+                    new ListBlockItem() { Value = "P" }, 
+                    new ListBlockItem() { Value = "Q" }, 
+                    new ListBlockItem() { Value = "R" },
+                    new ListBlockItem() { Value = "S" },
+                    new ListBlockItem() { Value = "T" },
+                    new ListBlockItem() { Value = "U" },
+                    new ListBlockItem() { Value = "V" },
+                    new ListBlockItem() { Value = "W" },
+                    new ListBlockItem() { Value = "X" },
+                    new ListBlockItem() { Value = "Y" },
+                    new ListBlockItem() { Value = "Z" }
+                }
+            };
+
+
+            // ACT
+            ListBlock lastBlock = null;
+            using (var executionContext = CreateTaskExecutionContext())
+            {
+                var startedOk = executionContext.TryStart();
+                if (startedOk)
+                {
+                    lastBlock = executionContext.GetLastListBlock();
+                }
+            }
+
+            // ASSERT
+            Assert.AreEqual(expectedLastBlock.Items.Count, lastBlock.Items.Count);
+            Assert.AreEqual(expectedLastBlock.Items[0].Value, lastBlock.Items[0].Value);
+            Assert.AreEqual(expectedLastBlock.Items[1].Value, lastBlock.Items[1].Value);
+            Assert.AreEqual(expectedLastBlock.Items[2].Value, lastBlock.Items[2].Value);
+            Assert.AreEqual(expectedLastBlock.Items[3].Value, lastBlock.Items[3].Value);
+            Assert.AreEqual(expectedLastBlock.Items[4].Value, lastBlock.Items[4].Value);
+            Assert.AreEqual(expectedLastBlock.Items[5].Value, lastBlock.Items[5].Value);
+            Assert.AreEqual(expectedLastBlock.Items[6].Value, lastBlock.Items[6].Value);
+            Assert.AreEqual(expectedLastBlock.Items[7].Value, lastBlock.Items[7].Value);
+            Assert.AreEqual(expectedLastBlock.Items[8].Value, lastBlock.Items[8].Value);
+            Assert.AreEqual(expectedLastBlock.Items[9].Value, lastBlock.Items[9].Value);
+            Assert.AreEqual(expectedLastBlock.Items[10].Value, lastBlock.Items[10].Value);
+        }
+
+        [TestMethod]
+        [TestCategory("FastIntegrationTest"), TestCategory("Blocks")]
+        public void If_NoPreviousBlock_ThenLastBlockIsEmpty()
+        {
+            // ARRANGE
+            // all previous blocks were deleted in TestInitialize
+
+            // ACT
+            ListBlock lastBlock = null;
+            using (var executionContext = CreateTaskExecutionContext())
+            {
+                var startedOk = executionContext.TryStart();
+                if (startedOk)
+                {
+                    lastBlock = executionContext.GetLastListBlock();
+                }
+            }
+
+            // ASSERT
+            Assert.AreEqual(0, lastBlock.Items.Count);
+        }
+
+        private ITaskExecutionContext CreateTaskExecutionContext()
+        {
+            var settings = new SqlServerClientConnectionSettings()
+            {
+                ConnectionString = TestConstants.TestConnectionString,
+                ConnectTimeout = new TimeSpan(0, 0, 1, 0)
+            };
+
+            var taskExecutionOptions = new TaskExecutionOptions()
+            {
+                TaskDeathMode = TaskDeathMode.KeepAlive,
+                KeepAliveInterval = new TimeSpan(0, 0, 0, 30),
+                KeepAliveDeathThreshold = new TimeSpan(0, 0, 2, 0)
+            };
+
+            var client = new SqlServerTasklingClient(settings);
+            return client.CreateTaskExecutionContext(TestConstants.ApplicationName, TestConstants.TaskName, taskExecutionOptions);
         }
     }
 }

@@ -11,6 +11,7 @@ using Taskling.Exceptions;
 using Taskling.ExecutionContext.FluentBlocks;
 using Taskling.ExecutionContext.FluentBlocks.List;
 using Taskling.InfrastructureContracts;
+using Taskling.InfrastructureContracts.Blocks;
 using Taskling.InfrastructureContracts.Blocks.RangeBlocks;
 using Taskling.InfrastructureContracts.TaskExecution;
 
@@ -21,6 +22,8 @@ namespace Taskling.ExecutionContext
         #region .: Fields and services :.
 
         private readonly ITaskExecutionService _taskExecutionService;
+        private readonly IRangeBlockService _rangeBlockService;
+        private readonly IListBlockService _listBlockService;
         private readonly ICriticalSectionService _criticalSectionService;
         private readonly IBlockFactory _blockFactory;
 
@@ -37,6 +40,8 @@ namespace Taskling.ExecutionContext
         public TaskExecutionContext(ITaskExecutionService taskExecutionService,
             ICriticalSectionService criticalSectionService,
             IBlockFactory blockFactory,
+            IRangeBlockService rangeBlockService,
+            IListBlockService listBlockService,
             string applicationName,
             string taskName,
             TaskExecutionOptions taskExecutionOptions)
@@ -44,6 +49,8 @@ namespace Taskling.ExecutionContext
             _taskExecutionService = taskExecutionService;
             _criticalSectionService = criticalSectionService;
             _blockFactory = blockFactory;
+            _rangeBlockService = rangeBlockService;
+            _listBlockService = listBlockService;
 
             _taskExecutionInstance = new TaskExecutionInstance();
             _taskExecutionInstance.ApplicationName = applicationName;
@@ -191,6 +198,33 @@ namespace Taskling.ExecutionContext
             }
 
             throw new NotSupportedException("BlockType not supported");
+        }
+
+        public RangeBlock GetLastDateRangeBlock()
+        {
+            var request = new LastBlockRequest(_taskExecutionInstance.ApplicationName,
+                _taskExecutionInstance.TaskName,
+                BlockType.DateRange);
+
+            return _rangeBlockService.GetLastRangeBlock(request);
+        }
+
+        public RangeBlock GetLastNumericRangeBlock()
+        {
+            var request = new LastBlockRequest(_taskExecutionInstance.ApplicationName,
+                _taskExecutionInstance.TaskName,
+                BlockType.NumericRange);
+        
+            return _rangeBlockService.GetLastRangeBlock(request);
+        }
+
+        public ListBlock GetLastListBlock()
+        {
+            var request = new LastBlockRequest(_taskExecutionInstance.ApplicationName,
+                _taskExecutionInstance.TaskName,
+                BlockType.List);
+
+            return _listBlockService.GetLastListBlock(request);
         }
 
         #endregion .: Public methods :.

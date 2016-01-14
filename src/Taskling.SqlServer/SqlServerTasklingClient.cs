@@ -54,12 +54,12 @@ namespace Taskling.SqlServer
                 _blockService = blockService;
 
             if (rangeBlockService == null)
-                _rangeBlockService = new RangeBlockService(_clientConnectionSettings);
+                _rangeBlockService = new RangeBlockService(_clientConnectionSettings, taskService);
             else
                 _rangeBlockService = rangeBlockService;
 
             if (listBlockService == null)
-                _listBlockService = new ListBlockService(_clientConnectionSettings);
+                _listBlockService = new ListBlockService(_clientConnectionSettings, taskService);
             else
                 _listBlockService = listBlockService;
 
@@ -70,6 +70,8 @@ namespace Taskling.SqlServer
             return new TaskExecutionContext(_taskExecutionService, 
                 _criticalSectionService, 
                 new BlockFactory(_blockService, _rangeBlockService, _listBlockService), 
+                _rangeBlockService,
+                _listBlockService,
                 applicationName, 
                 taskName, 
                 taskExecutionOptions);

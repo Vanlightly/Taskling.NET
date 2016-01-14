@@ -41,6 +41,19 @@ FROM [Taskling].[ListBlockItem] LBI
 JOIN {0} AS T ON LBI.BlockId = T.BlockId
 	AND LBI.ListBlockItemId = T.ListBlockItemId";
 
+        public const string GetLastListBlock = @"
+SELECT TOP 1 [BlockId]
+      ,[TaskDefinitionId]
+      ,[FromDate]
+      ,[ToDate]
+      ,[FromNumber]
+      ,[ToNumber]
+      ,[BlockType]
+      ,[CreatedDate]
+FROM [Taskling].[Block]
+WHERE [TaskDefinitionId] = @TaskDefinitionId 
+ORDER BY [BlockId] DESC";
+
         public static string GetCreateTemporaryTableQuery(string tableName)
         {
             return string.Format(CreateTemporaryTable, tableName);

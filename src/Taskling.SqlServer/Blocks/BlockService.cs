@@ -21,13 +21,23 @@ namespace Taskling.SqlServer.Blocks
 {
     public class BlockService : DbOperationsService, IBlockService
     {
+        #region .: Fields and services :.
+
         private readonly ITaskService _taskService;
+
+        #endregion .: Fields and services :.
+
+        #region .: Constructor :.
 
         public BlockService(SqlServerClientConnectionSettings clientConnectionSettings, ITaskService taskService)
             : base(clientConnectionSettings.ConnectionString, clientConnectionSettings.QueryTimeout)
         {
             _taskService = taskService;
         }
+
+        #endregion .: Constructor :.
+
+        #region .: Public Methods :.
 
         public IList<RangeBlock> FindFailedRangeBlocks(FindFailedBlocksRequest failedBlocksRequest)
         {
@@ -45,17 +55,6 @@ namespace Taskling.SqlServer.Blocks
             }
 
             return FindFailedDateRangeBlocks(failedBlocksRequest, query);
-        }
-
-        public IList<ListBlock> FindFailedListBlocks(FindFailedBlocksRequest failedBlocksRequest)
-        {
-            if (failedBlocksRequest.BlockType == BlockType.List)
-            {
-                var query = FailedBlocksQueryBuilder.GetFindFailedListBlocksQuery(failedBlocksRequest.BlockCountLimit);
-                return FindFailedListBlocks(failedBlocksRequest, query);
-            }
-
-            throw new NotSupportedException("This block type is not supported");
         }
 
         public IList<RangeBlock> FindDeadRangeBlocks(FindDeadBlocksRequest deadBlocksRequest)
@@ -82,22 +81,6 @@ namespace Taskling.SqlServer.Blocks
             return FindDeadDateRangeBlocks(deadBlocksRequest, query);
         }
 
-        public IList<ListBlock> FindDeadListBlocks(FindDeadBlocksRequest deadBlocksRequest)
-        {
-            if (deadBlocksRequest.BlockType == BlockType.List)
-            {
-                string query = string.Empty;
-                if (deadBlocksRequest.TaskDeathMode == TaskDeathMode.KeepAlive)
-                    query = DeadBlocksQueryBuilder.GetFindDeadListBlocksWithKeepAliveQuery(deadBlocksRequest.BlockCountLimit);
-                else
-                    query = DeadBlocksQueryBuilder.GetFindDeadListBlocksQuery(deadBlocksRequest.BlockCountLimit);
-
-                return FindDeadListBlocks(deadBlocksRequest, query);
-            }
-
-            throw new NotSupportedException("This block type is not supported");
-        }
-
         public RangeBlockCreateResponse AddRangeBlock(RangeBlockCreateRequest rangeBlockCreateRequest)
         {
             var taskDefinition = _taskService.GetTaskDefinition(rangeBlockCreateRequest.ApplicationName, rangeBlockCreateRequest.TaskName);
@@ -116,6 +99,39 @@ namespace Taskling.SqlServer.Blocks
             }
 
             return response;
+        }
+
+        public string AddRangeBlockExecution(BlockExecutionCreateRequest executionCreateRequest)
+        {
+            return AddBlockExecution(executionCreateRequest);
+        }
+
+        
+        public IList<ListBlock> FindFailedListBlocks(FindFailedBlocksRequest failedBlocksRequest)
+        {
+            if (failedBlocksRequest.BlockType == BlockType.List)
+            {
+                var query = FailedBlocksQueryBuilder.GetFindFailedListBlocksQuery(failedBlocksRequest.BlockCountLimit);
+                return FindFailedListBlocks(failedBlocksRequest, query);
+            }
+
+            throw new NotSupportedException("This block type is not supported");
+        }
+
+        public IList<ListBlock> FindDeadListBlocks(FindDeadBlocksRequest deadBlocksRequest)
+        {
+            if (deadBlocksRequest.BlockType == BlockType.List)
+            {
+                string query = string.Empty;
+                if (deadBlocksRequest.TaskDeathMode == TaskDeathMode.KeepAlive)
+                    query = DeadBlocksQueryBuilder.GetFindDeadListBlocksWithKeepAliveQuery(deadBlocksRequest.BlockCountLimit);
+                else
+                    query = DeadBlocksQueryBuilder.GetFindDeadListBlocksQuery(deadBlocksRequest.BlockCountLimit);
+
+                return FindDeadListBlocks(deadBlocksRequest, query);
+            }
+
+            throw new NotSupportedException("This block type is not supported");
         }
 
         public ListBlockCreateResponse AddListBlock(ListBlockCreateRequest createRequest)
@@ -137,16 +153,14 @@ namespace Taskling.SqlServer.Blocks
             throw new NotSupportedException("This block type is not supported");
         }
 
-        public string AddRangeBlockExecution(BlockExecutionCreateRequest executionCreateRequest)
-        {
-            return AddBlockExecution(executionCreateRequest);
-        }
-
         public string AddListBlockExecution(BlockExecutionCreateRequest executionCreateRequest)
         {
             return AddBlockExecution(executionCreateRequest);
         }
 
+        #endregion .: Public Methods :.
+
+        #region .: Private Methods :.
 
         private IList<RangeBlock> FindFailedDateRangeBlocks(FindFailedBlocksRequest failedBlocksRequest, string query)
         {
@@ -486,6 +500,6 @@ namespace Taskling.SqlServer.Blocks
             }
         }
 
-        
+        #endregion .: Private Methods :.
     }
 }
