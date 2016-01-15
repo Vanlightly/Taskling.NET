@@ -9,15 +9,15 @@ namespace Taskling.SqlServer.Blocks
     {
         private const string FindDeadBlocksQuery = @"SELECT DISTINCT BE.[BlockId]
 INTO #PostPeriodExecution
-FROM [Taskling].[BlockExecution] BE
+FROM [Taskling].[BlockExecution] BE WITH(NOLOCK)
 JOIN [Taskling].[TaskExecution] TE ON BE.TaskExecutionId = TE.TaskExecutionId
 WHERE TE.TaskDefinitionId = @TaskDefinitionId
 AND BE.StartedAt > @SearchPeriodEnd
 
 SELECT TOP {0} B.[BlockId]
       {1}
-FROM [Taskling].[Block] B
-JOIN [Taskling].[BlockExecution] BE ON B.BlockId = BE.BlockId
+FROM [Taskling].[Block] B WITH(NOLOCK)
+JOIN [Taskling].[BlockExecution] BE WITH(NOLOCK) ON B.BlockId = BE.BlockId
 LEFT JOIN #PostPeriodExecution PPE ON B.BlockId = PPE.BlockId
 WHERE B.TaskDefinitionId = @TaskDefinitionId
 AND BE.StartedAt >= @SearchPeriodBegin
@@ -28,15 +28,15 @@ ORDER BY B.CreatedDate ASC";
 
         private const string FindDeadBlocksWithKeepAliveQuery = @"SELECT DISTINCT BE.[BlockId]
 INTO #PostPeriodExecution
-FROM [Taskling].[BlockExecution] BE
+FROM [Taskling].[BlockExecution] BE WITH(NOLOCK)
 JOIN [Taskling].[TaskExecution] TE ON BE.TaskExecutionId = TE.TaskExecutionId
 WHERE TE.TaskDefinitionId = @TaskDefinitionId
 AND BE.StartedAt > @LastKeepAliveLimit
 
 SELECT TOP {0} B.[BlockId] 
       {1}
-FROM [Taskling].[Block] B
-JOIN [Taskling].[BlockExecution] BE ON B.BlockId = BE.BlockId
+FROM [Taskling].[Block] B WITH(NOLOCK)
+JOIN [Taskling].[BlockExecution] BE WITH(NOLOCK) ON B.BlockId = BE.BlockId
 LEFT JOIN [Taskling].[TaskExecution] TE ON BE.TaskExecutionId = TE.TaskExecutionId
 LEFT JOIN #PostPeriodExecution PPE ON B.BlockId = PPE.BlockId
 WHERE B.TaskDefinitionId = @TaskDefinitionId

@@ -111,7 +111,7 @@ namespace Taskling.SqlServer.CriticalSections
                 var command = connection.CreateCommand();
                 command.Transaction = transaction;
                 command.CommandTimeout = QueryTimeout;
-                command.CommandText = TokensQueryBuilder.OverrideBasedRequestCriticalSectionTokenQuery;
+                command.CommandText = TokensQueryBuilder.OverrideBasedCriticalSectionQuery2;
                 command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
                 command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = int.Parse(taskExecutionId);
                 command.Parameters.Add("@SecondsOverride", SqlDbType.Int).Value = secondsOverride;

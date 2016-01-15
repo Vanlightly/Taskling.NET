@@ -9,6 +9,7 @@ using Taskling.InfrastructureContracts.CriticalSections;
 using Taskling.SqlServer.Configuration;
 using Taskling.SqlServer.CriticalSections;
 using Taskling.SqlServer.IntegrationTest.TestHelpers;
+using Taskling.SqlServer.TaskExecution;
 using Taskling.SqlServer.Tasks;
 
 namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
@@ -41,7 +42,7 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
 
         [TestMethod]
         [TestCategory("FastIntegrationTest"), TestCategory("CriticalSectionTokens")]
-        public void If_OverrideMode_TokenAvailable_ThenGrant()
+        public void If_OverrideMode_TokenAvailableAndNothingInQueue_ThenGrant()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -65,71 +66,218 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
 
         [TestMethod]
         [TestCategory("FastIntegrationTest"), TestCategory("CriticalSectionTokens")]
-        public void If_OverrideMode_TwoConcurrentExecutionsAndTokenAvailable_ThenGrantFirstAndDenySecond()
+        public void If_OverrideMode_TokenNotAvailableAndNothingInQueue_ThenAddToQueueAndDeny()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
             var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+
+            // Create execution 1 and assign critical section to it
             var taskExecutionId1 = executionHelper.InsertOverrideTaskExecution(taskDefinitionId);
-            var taskExecutionId2 = executionHelper.InsertOverrideTaskExecution(taskDefinitionId);
             executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId1);
+            executionHelper.InsertUnavailableCriticalSectionToken(taskDefinitionId, taskExecutionId1);
+
+            // Create second execution
+            var taskExecutionId2 = executionHelper.InsertOverrideTaskExecution(taskDefinitionId);
             executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId2);
 
-            var request1 = new StartCriticalSectionRequest(TestConstants.ApplicationName,
-                TestConstants.TaskName,
-                taskExecutionId1,
-                TaskDeathMode.Override);
-            request1.OverrideThreshold = new TimeSpan(0, 1, 0);
-
-            var request2 = new StartCriticalSectionRequest(TestConstants.ApplicationName,
+            var request = new StartCriticalSectionRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
                 taskExecutionId2,
                 TaskDeathMode.Override);
-            request2.OverrideThreshold = new TimeSpan(0, 1, 0);
+            request.OverrideThreshold = new TimeSpan(0, 1, 0);
 
             // ACT
             var sut = CreateSut();
-            var response1 = sut.Start(request1);
-            var response2 = sut.Start(request2);
+            var response = sut.Start(request);
 
             // ASSERT
-            Assert.AreEqual(GrantStatus.Granted, response1.GrantStatus);
-            Assert.AreEqual(GrantStatus.Denied, response2.GrantStatus);
+            var isInQueue = executionHelper.GetQueueCount(taskExecutionId2) == 1;
+            Assert.AreEqual(true, isInQueue);
+            Assert.AreEqual(GrantStatus.Denied, response.GrantStatus);
         }
 
         [TestMethod]
         [TestCategory("FastIntegrationTest"), TestCategory("CriticalSectionTokens")]
-        public void If_OverrideMode_TwoConcurrentExecutionsAndTokenAvailableAndFirstHasPassedOverrideLimit_ThenGrantFirstAndSecond()
+        public void If_OverrideMode_TokenNotAvailableAndAlreadyInQueue_ThenDoNotAddToQueueAndDeny()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
             var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+
+            // Create execution 1 and assign critical section to it
             var taskExecutionId1 = executionHelper.InsertOverrideTaskExecution(taskDefinitionId);
-            var taskExecutionId2 = executionHelper.InsertOverrideTaskExecution(taskDefinitionId);
             executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId1);
+            executionHelper.InsertUnavailableCriticalSectionToken(taskDefinitionId, taskExecutionId1);
+
+            // Create second execution and insert into queue
+            var taskExecutionId2 = executionHelper.InsertOverrideTaskExecution(taskDefinitionId);
             executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId2);
+            executionHelper.InsertIntoCriticalSectionQueue(taskDefinitionId, taskExecutionId2);
 
-            var request1 = new StartCriticalSectionRequest(TestConstants.ApplicationName,
-                TestConstants.TaskName,
-                taskExecutionId1,
-                TaskDeathMode.Override);
-            request1.OverrideThreshold = new TimeSpan(0, 0, 5);
-
-            var request2 = new StartCriticalSectionRequest(TestConstants.ApplicationName,
+            var request = new StartCriticalSectionRequest(TestConstants.ApplicationName,
                 TestConstants.TaskName,
                 taskExecutionId2,
                 TaskDeathMode.Override);
-            request2.OverrideThreshold = new TimeSpan(0, 0, 5);
+            request.OverrideThreshold = new TimeSpan(0, 10, 0);
 
             // ACT
             var sut = CreateSut();
-            var response1 = sut.Start(request1);
-            Thread.Sleep(6000);
-            var response2 = sut.Start(request2);
+            var response = sut.Start(request);
 
             // ASSERT
-            Assert.AreEqual(GrantStatus.Granted, response1.GrantStatus);
-            Assert.AreEqual(GrantStatus.Granted, response2.GrantStatus);
+            var numberOfQueueRecords = executionHelper.GetQueueCount(taskExecutionId2);
+            Assert.AreEqual(1, numberOfQueueRecords);
+            Assert.AreEqual(GrantStatus.Denied, response.GrantStatus);
         }
+
+        [TestMethod]
+        [TestCategory("FastIntegrationTest"), TestCategory("CriticalSectionTokens")]
+        public void If_OverrideMode_TokenAvailableAndIsFirstInQueue_ThenRemoveFromQueueAndGrant()
+        {
+            // ARRANGE
+            var executionHelper = new ExecutionsHelper();
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+
+            // Create execution 1 and create available critical section token
+            var taskExecutionId1 = executionHelper.InsertOverrideTaskExecution(taskDefinitionId);
+            executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId1);
+            executionHelper.InsertIntoCriticalSectionQueue(taskDefinitionId, taskExecutionId1);
+            executionHelper.InsertAvailableCriticalSectionToken(taskDefinitionId, "0");
+
+            var request = new StartCriticalSectionRequest(TestConstants.ApplicationName,
+                TestConstants.TaskName,
+                taskExecutionId1,
+                TaskDeathMode.Override);
+            request.OverrideThreshold = new TimeSpan(0, 1, 0);
+
+            // ACT
+            var sut = CreateSut();
+            var response = sut.Start(request);
+
+            // ASSERT
+            var numberOfQueueRecords = executionHelper.GetQueueCount(taskExecutionId1);
+            Assert.AreEqual(0, numberOfQueueRecords);
+            Assert.AreEqual(GrantStatus.Granted, response.GrantStatus);
+        }
+
+        [TestMethod]
+        [TestCategory("FastIntegrationTest"), TestCategory("CriticalSectionTokens")]
+        public void If_OverrideMode_TokenAvailableAndIsNotFirstInQueue_ThenDoNotChangeQueueAndDeny()
+        {
+            // ARRANGE
+            var executionHelper = new ExecutionsHelper();
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+
+            // Create execution 1 and add it to the queue
+            var taskExecutionId1 = executionHelper.InsertOverrideTaskExecution(taskDefinitionId);
+            executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId1);
+            executionHelper.InsertIntoCriticalSectionQueue(taskDefinitionId, taskExecutionId1);
+
+            // Create execution 2 and add it to the queue
+            var taskExecutionId2 = executionHelper.InsertOverrideTaskExecution(taskDefinitionId);
+            executionHelper.InsertExecutionToken(taskDefinitionId, 0, taskExecutionId2);
+            executionHelper.InsertIntoCriticalSectionQueue(taskDefinitionId, taskExecutionId2);
+
+            // Create an available critical section token
+            executionHelper.InsertAvailableCriticalSectionToken(taskDefinitionId, "0");
+
+            var request = new StartCriticalSectionRequest(TestConstants.ApplicationName,
+                TestConstants.TaskName,
+                taskExecutionId2,
+                TaskDeathMode.Override);
+            request.OverrideThreshold = new TimeSpan(0, 1, 0);
+
+            // ACT
+            var sut = CreateSut();
+            var response = sut.Start(request);
+
+            // ASSERT
+            var numberOfQueueRecords = executionHelper.GetQueueCount(taskExecutionId2);
+            Assert.AreEqual(1, numberOfQueueRecords);
+            Assert.AreEqual(GrantStatus.Denied, response.GrantStatus);
+        }
+
+        [TestMethod]
+        [TestCategory("FastIntegrationTest"), TestCategory("CriticalSectionTokens")]
+        public void If_OverrideMode_TokenAvailableAndIsNotFirstInQueueButFirstHasExpiredTimeout_ThenRemoveBothFromQueueAndGrant()
+        {
+            // ARRANGE
+            var executionHelper = new ExecutionsHelper();
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+
+            // Create execution 1 and add it to the queue
+            var taskExecutionId1 = executionHelper.InsertOverrideTaskExecution(taskDefinitionId);
+            var executionTokenId1 = executionHelper.InsertExecutionToken(taskDefinitionId, TaskExecutionStatus.Unavailable, taskExecutionId1);
+            executionHelper.InsertIntoCriticalSectionQueue(taskDefinitionId, taskExecutionId1);
+
+            Thread.Sleep(6000);
+
+            // Create execution 2 and add it to the queue
+            var taskExecutionId2 = executionHelper.InsertOverrideTaskExecution(taskDefinitionId);
+            var executionTokenId2 = executionHelper.InsertExecutionToken(taskDefinitionId, TaskExecutionStatus.Unavailable, taskExecutionId2);
+            executionHelper.InsertIntoCriticalSectionQueue(taskDefinitionId, taskExecutionId2);
+
+            // Create an available critical section token
+            executionHelper.InsertAvailableCriticalSectionToken(taskDefinitionId, "0");
+
+            var request = new StartCriticalSectionRequest(TestConstants.ApplicationName,
+                TestConstants.TaskName,
+                taskExecutionId2,
+                TaskDeathMode.Override);
+            request.OverrideThreshold = new TimeSpan(0, 0, 5);
+
+            // ACT
+            var sut = CreateSut();
+            var response = sut.Start(request);
+
+            // ASSERT
+            var numberOfQueueRecordsForExecution1 = executionHelper.GetQueueCount(taskExecutionId1);
+            var numberOfQueueRecordsForExecution2 = executionHelper.GetQueueCount(taskExecutionId2);
+            Assert.AreEqual(0, numberOfQueueRecordsForExecution1);
+            Assert.AreEqual(0, numberOfQueueRecordsForExecution2);
+            Assert.AreEqual(GrantStatus.Granted, response.GrantStatus);
+        }
+
+        [TestMethod]
+        [TestCategory("FastIntegrationTest"), TestCategory("CriticalSectionTokens")]
+        public void If_OverrideMode_TokenAvailableAndIsNotFirstInQueueButFirstHasCompleted_ThenRemoveBothFromQueueAndGrant()
+        {
+            // ARRANGE
+            var executionHelper = new ExecutionsHelper();
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+
+            // Create execution 1 and add it to the queue
+            var taskExecutionId1 = executionHelper.InsertOverrideTaskExecution(taskDefinitionId);
+            var executionTokenId1 = executionHelper.InsertExecutionToken(taskDefinitionId, TaskExecutionStatus.Unavailable, taskExecutionId1);
+            executionHelper.InsertIntoCriticalSectionQueue(taskDefinitionId, taskExecutionId1);
+            executionHelper.SetTaskExecutionAsCompleted(taskExecutionId1);
+
+            // Create execution 2 and add it to the queue
+            var taskExecutionId2 = executionHelper.InsertOverrideTaskExecution(taskDefinitionId);
+            var executionTokenId2 = executionHelper.InsertExecutionToken(taskDefinitionId, TaskExecutionStatus.Unavailable, taskExecutionId2);
+            executionHelper.InsertIntoCriticalSectionQueue(taskDefinitionId, taskExecutionId2);
+
+            // Create an available critical section token
+            executionHelper.InsertAvailableCriticalSectionToken(taskDefinitionId, "0");
+
+            var request = new StartCriticalSectionRequest(TestConstants.ApplicationName,
+                TestConstants.TaskName,
+                taskExecutionId2,
+                TaskDeathMode.Override);
+            request.OverrideThreshold = new TimeSpan(0, 30, 0);
+
+            // ACT
+            var sut = CreateSut();
+            var response = sut.Start(request);
+
+            // ASSERT
+            var numberOfQueueRecordsForExecution1 = executionHelper.GetQueueCount(taskExecutionId1);
+            var numberOfQueueRecordsForExecution2 = executionHelper.GetQueueCount(taskExecutionId2);
+            Assert.AreEqual(0, numberOfQueueRecordsForExecution1);
+            Assert.AreEqual(0, numberOfQueueRecordsForExecution2);
+            Assert.AreEqual(GrantStatus.Granted, response.GrantStatus);
+        }
+        
     }
 }

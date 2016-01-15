@@ -242,6 +242,48 @@ namespace Taskling.SqlServer.IntegrationTest.Given_CriticalSectionService
             Assert.AreEqual(GrantStatus.Granted, response.GrantStatus);
         }
 
+        [TestMethod]
+        [TestCategory("FastIntegrationTest"), TestCategory("CriticalSectionTokens")]
+        public void If_KeepAliveMode_TokenAvailableAndIsNotFirstInQueueButFirstHasCompleted_ThenRemoveBothFromQueueAndGrant()
+        {
+            // ARRANGE
+            var executionHelper = new ExecutionsHelper();
+            var taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
+
+            // Create execution 1 and add it to the queue
+            var taskExecutionId1 = executionHelper.InsertKeepAliveTaskExecution(taskDefinitionId);
+            var executionTokenId1 = executionHelper.InsertExecutionToken(taskDefinitionId, TaskExecutionStatus.Unavailable, taskExecutionId1);
+            executionHelper.SetKeepAlive(taskDefinitionId, taskExecutionId1, executionTokenId1);
+            executionHelper.InsertIntoCriticalSectionQueue(taskDefinitionId, taskExecutionId1);
+            executionHelper.SetTaskExecutionAsCompleted(taskExecutionId1);
+
+            // Create execution 2 and add it to the queue
+            var taskExecutionId2 = executionHelper.InsertKeepAliveTaskExecution(taskDefinitionId);
+            var executionTokenId2 = executionHelper.InsertExecutionToken(taskDefinitionId, TaskExecutionStatus.Unavailable, taskExecutionId2);
+            executionHelper.SetKeepAlive(taskDefinitionId, taskExecutionId2, executionTokenId2);
+            executionHelper.InsertIntoCriticalSectionQueue(taskDefinitionId, taskExecutionId2);
+
+            // Create an available critical section token
+            executionHelper.InsertAvailableCriticalSectionToken(taskDefinitionId, "0");
+
+            var request = new StartCriticalSectionRequest(TestConstants.ApplicationName,
+                TestConstants.TaskName,
+                taskExecutionId2,
+                TaskDeathMode.KeepAlive);
+            request.KeepAliveDeathThreshold = new TimeSpan(0, 30, 0);
+
+            // ACT
+            var sut = CreateSut();
+            var response = sut.Start(request);
+
+            // ASSERT
+            var numberOfQueueRecordsForExecution1 = executionHelper.GetQueueCount(taskExecutionId1);
+            var numberOfQueueRecordsForExecution2 = executionHelper.GetQueueCount(taskExecutionId2);
+            Assert.AreEqual(0, numberOfQueueRecordsForExecution1);
+            Assert.AreEqual(0, numberOfQueueRecordsForExecution2);
+            Assert.AreEqual(GrantStatus.Granted, response.GrantStatus);
+        }
+
         
 
         

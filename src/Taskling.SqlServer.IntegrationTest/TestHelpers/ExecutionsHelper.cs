@@ -142,6 +142,12 @@ SELECT CAST(SCOPE_IDENTITY() AS INT);
 SELECT CAST(SCOPE_IDENTITY() AS INT);
 ";
 
+        private const string UpdateTaskExecutionStatusQuery = @"
+UPDATE [TasklingDb].[Taskling].[TaskExecution]
+SET [CompletedAt] = GETUTCDATE()
+WHERE TaskExecutionId = @TaskExecutionId
+";
+
         #endregion .: Task Executions :.
 
         #region .: Critical Sections :.
@@ -355,7 +361,18 @@ AND T.TaskName = @TaskName";
             }
         }
 
+        public void SetTaskExecutionAsCompleted(string taskExecutionId)
+        {
+            using (var connection = new SqlConnection(TestConstants.TestConnectionString))
+            {
+                connection.Open();
+                var command = connection.CreateCommand();
+                command.CommandText = UpdateTaskExecutionStatusQuery;
+                command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
 
+                command.ExecuteNonQuery();
+            }
+        }
         
         #endregion .: Task Executions :.
 

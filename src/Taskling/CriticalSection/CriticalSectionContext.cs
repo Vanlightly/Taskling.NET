@@ -30,9 +30,58 @@ namespace Taskling.CriticalSection
             ValidateOptions();
         }
 
+        ~CriticalSectionContext()
+        {
+            if (_started && !_completeCalled)
+                Complete();
+        }
+
         public bool TryStart()
         {
-            if(_started)
+            return TryStart(new TimeSpan(0, 0, 30), 3);
+        }
+
+        public bool TryStart(TimeSpan retryInterval, int numberOfAttempts)
+        {
+            int tryCount = 0;
+            bool started = false;
+
+            while (started == false && tryCount <= numberOfAttempts)
+            {
+                tryCount++;
+                started = TryStartCriticalSection();
+                if(!started)
+                    Thread.Sleep(retryInterval);
+            }
+
+            return started;
+        }
+
+        public void Complete()
+        {
+            if(!_started || _completeCalled)
+                throw new ExecutionException("There is no active critical section to complete");
+
+            var completeRequest = new CompleteCriticalSectionRequest(_taskExecutionInstance.ApplicationName,
+                _taskExecutionInstance.TaskName,
+                _taskExecutionInstance.TaskExecutionId);
+
+            _criticalSectionService.Complete(completeRequest);
+
+            _completeCalled = true;
+        }
+
+        public void Dispose()
+        {
+            if(_started && !_completeCalled)
+                Complete();
+
+            GC.SuppressFinalize(this);
+        }
+
+        private bool TryStartCriticalSection()
+        {
+            if (_started)
                 throw new ExecutionException("There is already an active critical section");
 
             _started = true;
@@ -56,42 +105,6 @@ namespace Taskling.CriticalSection
             }
 
             return true;
-        }
-
-        public bool TryStart(TimeSpan retryInterval, int numberOfAttempts)
-        {
-            int tryCount = 0;
-            bool started = false;
-
-            while (started == false && tryCount <= numberOfAttempts)
-            {
-                tryCount++;
-                started = TryStart();
-                if(!started)
-                    Thread.Sleep(retryInterval);
-            }
-
-            return started;
-        }
-
-        public void Complete()
-        {
-            if(!_started)
-                throw new ExecutionException("There is no active critical section to complete");
-
-            var completeRequest = new CompleteCriticalSectionRequest(_taskExecutionInstance.ApplicationName,
-                _taskExecutionInstance.TaskName,
-                _taskExecutionInstance.TaskExecutionId);
-
-            _criticalSectionService.Complete(completeRequest);
-
-            _completeCalled = true;
-        }
-
-        public void Dispose()
-        {
-            if(_started && !_completeCalled)
-                Complete();
         }
 
         private void ValidateOptions()
