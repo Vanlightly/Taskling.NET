@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Taskling.InfrastructureContracts.Blocks.RangeBlocks;
+using Taskling.Blocks.Common;
 
 namespace Taskling.Blocks.Requests
 {
@@ -12,9 +12,9 @@ namespace Taskling.Blocks.Requests
         {
             BlockType = BlockType.NumericRange;
         }
-
-        public long RangeBegin { get; set; }
-        public long RangeEnd { get; set; }
-        public long BlockSize { get; set; }
+        
+        public long? RangeBegin { get; set; }
+        public long? RangeEnd { get; set; }
+        public long? BlockSize { get; set; }
     }
 }

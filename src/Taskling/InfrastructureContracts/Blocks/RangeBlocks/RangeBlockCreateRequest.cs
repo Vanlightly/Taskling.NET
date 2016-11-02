@@ -9,23 +9,21 @@ namespace Taskling.InfrastructureContracts.Blocks.RangeBlocks
 {
     public class RangeBlockCreateRequest : BlockRequestBase
     {
-        public RangeBlockCreateRequest(string applicationName, 
-            string taskName, 
+        public RangeBlockCreateRequest(TaskId taskId,
             string taskExecutionId,
             DateTime fromDate,
             DateTime toDate)
-            : base(applicationName, taskName, taskExecutionId, BlockType.DateRange)
+            : base(taskId, taskExecutionId, Taskling.Blocks.Common.BlockType.DateRange)
         {
             From = fromDate.Ticks;
             To = toDate.Ticks;
         }
 
-        public RangeBlockCreateRequest(string applicationName,
-            string taskName,
+        public RangeBlockCreateRequest(TaskId taskId,
             string taskExecutionId,
             long from,
             long to)
-            : base(applicationName, taskName, taskExecutionId, BlockType.NumericRange)
+            : base(taskId, taskExecutionId, Taskling.Blocks.Common.BlockType.NumericRange)
         {
             From = from;
             To = to;

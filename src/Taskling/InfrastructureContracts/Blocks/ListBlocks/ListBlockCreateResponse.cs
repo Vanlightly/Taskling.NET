@@ -8,6 +8,6 @@ namespace Taskling.InfrastructureContracts.Blocks.ListBlocks
 {
     public class ListBlockCreateResponse
     {
-        public ListBlock Block { get; set; }
+        public ProtoListBlock Block { get; set; }
     }
 }

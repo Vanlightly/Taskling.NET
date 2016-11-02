@@ -3,23 +3,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Taskling.Blocks;
+using Taskling.Blocks.Common;
 using Taskling.InfrastructureContracts.TaskExecution;
 
 namespace Taskling.InfrastructureContracts.Blocks
 {
     public class LastBlockRequest
     {
-        public LastBlockRequest(string applicationName,
-            string taskName,
+        public LastBlockRequest(TaskId taskId,
             BlockType blockType)
         {
-            ApplicationName = applicationName;
-            TaskName = taskName;
+            TaskId = taskId;
             BlockType = blockType;
         }
 
-        public string ApplicationName { get; set; }
-        public string TaskName { get; set; }
+        public TaskId TaskId { get; set; }
         public BlockType BlockType { get; set; }
+        public LastBlockOrder LastBlockOrder { get; set; }
     }
 }

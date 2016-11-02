@@ -7,12 +7,14 @@ namespace Taskling.InfrastructureContracts.TaskExecution
 {
     public class TaskExecutionCompleteRequest : RequestBase
     {
-        public TaskExecutionCompleteRequest(string applicationName, string taskName, string taskExecutionId, string executionTokenId)
-            : base(applicationName, taskName, taskExecutionId)
+        public TaskExecutionCompleteRequest(TaskId taskId, string taskExecutionId, string executionTokenId)
+            : base(taskId, taskExecutionId)
         {
             ExecutionTokenId = executionTokenId;
         }
 
         public string ExecutionTokenId { get; set; }
+        public bool Failed { get; set; }
+
     }
 }

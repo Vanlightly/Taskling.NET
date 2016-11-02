@@ -7,34 +7,17 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Taskling.Exceptions;
+using Taskling.InfrastructureContracts;
 
 namespace Taskling.SqlServer.AncilliaryServices
 {
     public class DbOperationsService
     {
-        protected string _connectionString;
-        protected TimeSpan _queryTimeout;
-        
-        protected int QueryTimeout
-        {
-            get
-            {
-                return (int)_queryTimeout.TotalMilliseconds;
-            }
-        }
-
-        public DbOperationsService(string connectionString,
-                TimeSpan queryTimeout)
-        {
-            _connectionString = connectionString;
-            _queryTimeout = queryTimeout;
-        }
-
-        protected SqlConnection CreateNewConnection()
+        protected SqlConnection CreateNewConnection(TaskId taskId)
         {
             try
             {
-                var connection = new SqlConnection(_connectionString);
+                var connection = new SqlConnection(ConnectionStore.Instance.GetConnection(taskId).ConnectionString);
                 connection.Open();
 
                 return connection;
@@ -46,6 +29,17 @@ namespace Taskling.SqlServer.AncilliaryServices
 
                 throw;
             }
+        }
+
+        protected string LimitLength(string inputStr, int lengthLimit)
+        {
+            if (inputStr == null)
+                return inputStr;
+
+            if (inputStr.Length > lengthLimit)
+                return inputStr.Substring(0, lengthLimit);
+
+            return inputStr;
         }
 
         protected void BulkLoadInTransactionOperation(DataTable dataTable, string tableNameAndSchema, SqlConnection connection, SqlTransaction transaction)

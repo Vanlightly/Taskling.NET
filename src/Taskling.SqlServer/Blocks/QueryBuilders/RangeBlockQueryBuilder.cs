@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Taskling.Blocks.Common;
 
 namespace Taskling.SqlServer.Blocks
 {
@@ -40,17 +41,19 @@ SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
         public const string InsertBlockExecution = @"INSERT INTO [Taskling].[BlockExecution]
            ([TaskExecutionId]
            ,[BlockId]
-           ,[StartedAt]
-           ,[BlockExecutionStatus])
+           ,[CreatedAt]
+           ,[BlockExecutionStatus]
+           ,[Attempt])
      VALUES
            (@TaskExecutionId
            ,@BlockId
            ,GETUTCDATE()
-           ,0);
+           ,@Status
+           ,@Attempt);
 
 SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
 
-        public const string GetLastDateRangeBlock = @"
+        public const string GetLastDateRangeBlockQuery = @"
 SELECT TOP 1 [BlockId]
       ,[TaskDefinitionId]
       ,[FromDate]
@@ -60,10 +63,10 @@ SELECT TOP 1 [BlockId]
       ,[BlockType]
       ,[CreatedDate]
 FROM [Taskling].[Block]
-WHERE [TaskDefinitionId] = @TaskDefinitionId 
-ORDER BY [ToDate] DESC";
+WHERE [TaskDefinitionId] = @TaskDefinitionId
+AND IsPhantom = 0";
 
-        public const string GetLastNumericRangeBlock = @"
+        public const string GetLastNumericRangeBlockQuery = @"
 SELECT TOP 1 [BlockId]
       ,[TaskDefinitionId]
       ,[FromDate]
@@ -73,7 +76,37 @@ SELECT TOP 1 [BlockId]
       ,[BlockType]
       ,[CreatedDate]
 FROM [Taskling].[Block]
-WHERE [TaskDefinitionId] = @TaskDefinitionId 
-ORDER BY [ToNumber] DESC";
+WHERE [TaskDefinitionId] = @TaskDefinitionId
+AND IsPhantom = 0";
+
+        public static string GetLastDateRangeBlock(LastBlockOrder lastBlockOrder)
+        {
+            switch (lastBlockOrder)
+            {
+                case LastBlockOrder.LastCreated:
+                    return GetLastDateRangeBlockQuery + " ORDER BY [CreatedDate] DESC";
+                case LastBlockOrder.MaxRangeStartValue:
+                    return GetLastDateRangeBlockQuery + " ORDER BY [FromDate] DESC";
+                case LastBlockOrder.MaxRangeEndValue:
+                    return GetLastDateRangeBlockQuery + " ORDER BY [ToDate] DESC";
+                default:
+                    return GetLastDateRangeBlockQuery + " ORDER BY [CreatedDate] DESC";
+            }
+        }
+
+        public static string GetLastNumericRangeBlock(LastBlockOrder lastBlockOrder)
+        {
+            switch (lastBlockOrder)
+            {
+                case LastBlockOrder.LastCreated:
+                    return GetLastNumericRangeBlockQuery + " ORDER BY [CreatedDate] DESC";
+                case LastBlockOrder.MaxRangeStartValue:
+                    return GetLastNumericRangeBlockQuery + " ORDER BY [FromNumber] DESC";
+                case LastBlockOrder.MaxRangeEndValue:
+                    return GetLastNumericRangeBlockQuery + " ORDER BY [ToNumber] DESC";
+                default:
+                    return GetLastNumericRangeBlockQuery + " ORDER BY [CreatedDate] DESC";
+            }
+        }
     }
 }

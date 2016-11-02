@@ -3,37 +3,47 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Taskling.Contexts;
 using Taskling.Exceptions;
 using Taskling.ExecutionContext;
 using Taskling.InfrastructureContracts;
 using Taskling.InfrastructureContracts.CriticalSections;
+using Taskling.InfrastructureContracts.TaskExecution;
+using Taskling.Tasks;
 
 namespace Taskling.CriticalSection
 {
     public class CriticalSectionContext : ICriticalSectionContext
     {
-        private readonly ICriticalSectionService _criticalSectionService;
+        private readonly ICriticalSectionRepository _criticalSectionRepository;
         private readonly TaskExecutionInstance _taskExecutionInstance;
         private readonly TaskExecutionOptions _taskExecutionOptions;
+        private readonly CriticalSectionType _criticalSectionType;
 
         private bool _started;
         private bool _completeCalled;
 
-        public CriticalSectionContext(ICriticalSectionService criticalSectionService, 
+        public CriticalSectionContext(ICriticalSectionRepository criticalSectionRepository,
             TaskExecutionInstance taskExecutionInstance,
-            TaskExecutionOptions taskExecutionOptions)
+            TaskExecutionOptions taskExecutionOptions,
+            CriticalSectionType criticalSectionType)
         {
-            _criticalSectionService = criticalSectionService;
+            _criticalSectionRepository = criticalSectionRepository;
             _taskExecutionInstance = taskExecutionInstance;
             _taskExecutionOptions = taskExecutionOptions;
+            _criticalSectionType = criticalSectionType;
 
             ValidateOptions();
         }
 
         ~CriticalSectionContext()
         {
-            if (_started && !_completeCalled)
-                Complete();
+            Dispose(false);
+        }
+
+        public bool IsActive()
+        {
+            return _started && !_completeCalled;
         }
 
         public bool TryStart()
@@ -50,7 +60,7 @@ namespace Taskling.CriticalSection
             {
                 tryCount++;
                 started = TryStartCriticalSection();
-                if(!started)
+                if (!started)
                     Thread.Sleep(retryInterval);
             }
 
@@ -59,24 +69,37 @@ namespace Taskling.CriticalSection
 
         public void Complete()
         {
-            if(!_started || _completeCalled)
+            if (!_started || _completeCalled)
                 throw new ExecutionException("There is no active critical section to complete");
 
-            var completeRequest = new CompleteCriticalSectionRequest(_taskExecutionInstance.ApplicationName,
-                _taskExecutionInstance.TaskName,
-                _taskExecutionInstance.TaskExecutionId);
+            var completeRequest = new CompleteCriticalSectionRequest(new TaskId(_taskExecutionInstance.ApplicationName, _taskExecutionInstance.TaskName),
+                _taskExecutionInstance.TaskExecutionId,
+                _criticalSectionType);
 
-            _criticalSectionService.Complete(completeRequest);
+            _criticalSectionRepository.Complete(completeRequest);
 
             _completeCalled = true;
         }
 
         public void Dispose()
         {
-            if(_started && !_completeCalled)
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        private bool disposed = false;
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposed)
+                return;
+
+            if (disposing)
+            { }
+
+            if (_started && !_completeCalled)
                 Complete();
 
-            GC.SuppressFinalize(this);
+            disposed = true;
         }
 
         private bool TryStartCriticalSection()
@@ -86,10 +109,10 @@ namespace Taskling.CriticalSection
 
             _started = true;
 
-            var startRequest = new StartCriticalSectionRequest(_taskExecutionInstance.ApplicationName,
-                _taskExecutionInstance.TaskName,
+            var startRequest = new StartCriticalSectionRequest(new TaskId(_taskExecutionInstance.ApplicationName, _taskExecutionInstance.TaskName),
                 _taskExecutionInstance.TaskExecutionId,
-                _taskExecutionOptions.TaskDeathMode);
+                _taskExecutionOptions.TaskDeathMode,
+                _criticalSectionType);
 
             if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.Override)
                 startRequest.OverrideThreshold = _taskExecutionOptions.OverrideThreshold.Value;
@@ -97,7 +120,7 @@ namespace Taskling.CriticalSection
             if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.KeepAlive)
                 startRequest.KeepAliveDeathThreshold = _taskExecutionOptions.KeepAliveDeathThreshold.Value;
 
-            var response = _criticalSectionService.Start(startRequest);
+            var response = _criticalSectionRepository.Start(startRequest);
             if (response.GrantStatus == GrantStatus.Denied)
             {
                 _started = false;
@@ -111,9 +134,9 @@ namespace Taskling.CriticalSection
         {
             if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.KeepAlive)
             {
-                if(!_taskExecutionOptions.KeepAliveDeathThreshold.HasValue)
+                if (!_taskExecutionOptions.KeepAliveDeathThreshold.HasValue)
                     throw new ExecutionArgumentsException("KeepAliveElapsed must be set when using KeepAlive mode");
-                
+
                 if (!_taskExecutionOptions.KeepAliveInterval.HasValue)
                     throw new ExecutionArgumentsException("KeepAliveInterval must be set when using KeepAlive mode");
             }

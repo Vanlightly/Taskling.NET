@@ -55,27 +55,41 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="Examples\When_DateRangeBlocks.cs" />
-    <Compile Include="Examples\When_ListBlocks.cs" />
-    <Compile Include="Examples\When_NumericRangeBlocks.cs" />
-    <Compile Include="Given_BlockService\When_FindDeadRangeBlocks.cs" />
-    <Compile Include="Given_BlockService\When_FindFailedRangeBlocks.cs" />
-    <Compile Include="Given_CriticalSectionContext\When_ConcurrentNoDeadlocks.cs" />
-    <Compile Include="Given_CriticalSectionContext\When_Disposed.cs" />
-    <Compile Include="Given_CriticalSectionService\When_TryStart_AsKeepAliveMode.cs" />
-    <Compile Include="Given_CriticalSectionService\When_TryStart_AsOverrideAfterElaspedTimeMode.cs" />
-    <Compile Include="Given_ListBlockContext\When_ConcurrentIsThreadSafe.cs" />
-    <Compile Include="Given_ListBlockContext\When_GetListBlocksFromExecutionContext.cs" />
-    <Compile Include="Given_RangeBlockContext\When_GetRangeBlocksFromExecutionContext.cs" />
-    <Compile Include="Given_TaskExecutionContext\WhenDisposed.cs" />
-    <Compile Include="Given_TaskExecutionService\When_TryStart_AsKeepAliveMode.cs" />
-    <Compile Include="Given_TaskExecutionService\When_TryStart_AsOverrideAfterElaspedTimeMode.cs" />
-    <Compile Include="StressTest\TasklingStressTest.cs" />
-    <Compile Include="TestHelpers\BlocksHelper.cs" />
-    <Compile Include="TestHelpers\ExecutionsHelper.cs" />
+    <Compile Include="Contexts\Given_ObjectBlockContext\MyComplexClass.cs" />
+    <Compile Include="Contexts\Given_ObjectBlockContext\When_GetObjectBlocksFromExecutionContext.cs" />
+    <Compile Include="Contexts\Given_RangeBlockContext\When_GetRangeBlocksFromExecutionContext.cs" />
+    <Compile Include="Contexts\Given_TaskExecutionContext\MyHeader.cs" />
+    <Compile Include="Contexts\Given_TaskExecutionContext\WhenDisposed.cs" />
+    <Compile Include="Contexts\Given_TaskExecutionContext\When_Blocked.cs" />
+    <Compile Include="Contexts\Given_TaskExecutionContext\When_Checkpoint.cs" />
+    <Compile Include="Contexts\Given_TaskExecutionContext\When_GetLastExecutionMeta.cs" />
+    <Compile Include="Contexts\Given_TaskExecutionContext\When_Start.cs" />
+    <Compile Include="Contexts\PersonDto.cs" />
+    <Compile Include="Contexts\StressTest\TasklingStressTest.cs" />
+    <Compile Include="Contexts\TestHeader.cs" />
+    <Compile Include="Contexts\Given_ListBlockContext\When_ConcurrentIsThreadSafe.cs" />
+    <Compile Include="Contexts\Given_ListBlockContext\When_GetListBlocksFromExecutionContext.cs" />
+    <Compile Include="Contexts\Given_ListBlockContext\When_GetListBlocksWithHeaderFromExecutionContext.cs" />
+    <Compile Include="Helpers\BlocksHelper.cs" />
+    <Compile Include="Helpers\ClientHelper.cs" />
+    <Compile Include="Helpers\ExecutionsHelper.cs" />
+    <Compile Include="Helpers\TaskExecutionStatus.cs" />
+    <Compile Include="Helpers\TestConfigurationReader.cs" />
+    <Compile Include="Helpers\TestConstants.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TestHelpers\SqlServerClientHelper.cs" />
-    <Compile Include="TestHelpers\TestConstants.cs" />
+    <Compile Include="Repositories\Given_BlockRepository\When_FindDeadBlocks.cs" />
+    <Compile Include="Repositories\Given_BlockRepository\When_FindFailedBlocks.cs" />
+    <Compile Include="Repositories\Given_CriticalSectionService\When_TryStart_AsKeepAliveMode.cs" />
+    <Compile Include="Repositories\Given_CriticalSectionService\When_TryStart_AsOverrideAfterElaspedTimeMode.cs" />
+    <Compile Include="Repositories\Given_ListBlockRepository\DateRange.cs" />
+    <Compile Include="Repositories\Given_ListBlockRepository\When_GetLastListBlock.cs" />
+    <Compile Include="Repositories\Given_ObjectBlockRepository\When_ChangeStatus.cs" />
+    <Compile Include="Repositories\Given_ObjectBlockRepository\When_GetLastObjectBlock.cs" />
+    <Compile Include="Repositories\Given_RangeBlockRepository\When_ChangeStatus.cs" />
+    <Compile Include="Repositories\Given_RangeBlockRepository\When_GetLastDateRangeBlock.cs" />
+    <Compile Include="Repositories\Given_RangeBlockRepository\When_GetLastNumericRangeBlock.cs" />
+    <Compile Include="Repositories\Given_TaskExecutionService\When_TryStart_AsKeepAliveMode.cs" />
+    <Compile Include="Repositories\Given_TaskExecutionService\When_TryStart_AsOverrideAfterElaspedTimeMode.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Taskling.SqlServer\Taskling.SqlServer.csproj">

@@ -8,7 +8,8 @@ namespace Taskling.InfrastructureContracts.Blocks.ListBlocks
 {
     public class BatchUpdateRequest
     {
+        public TaskId TaskId { get; set; }
         public string ListBlockId { get; set; }
-        public IList<ListBlockItem> ListBlockItems { get; set; } 
+        public IList<ProtoListBlockItem> ListBlockItems { get; set; }
     }
 }

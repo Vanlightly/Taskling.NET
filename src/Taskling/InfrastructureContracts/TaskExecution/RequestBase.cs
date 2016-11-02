@@ -2,30 +2,26 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Taskling.ExecutionContext;
 
 namespace Taskling.InfrastructureContracts.TaskExecution
 {
     public class RequestBase
     {
         public RequestBase()
-        {}
+        { }
 
-        public RequestBase(string applicationName, string taskName)
+        public RequestBase(TaskId taskId)
         {
-            ApplicationName = applicationName;
-            TaskName = taskName;
+            TaskId = taskId;
         }
 
-        public RequestBase(string applicationName, string taskName, string taskExecutionId)
+        public RequestBase(TaskId taskId, string taskExecutionId)
         {
-            ApplicationName = applicationName;
-            TaskName = taskName;
+            TaskId = taskId;
             TaskExecutionId = taskExecutionId;
         }
 
-        public string ApplicationName { get; set; }
-        public string TaskName { get; set; }
+        public TaskId TaskId { get; set; }
         public string TaskExecutionId { get; set; }
     }
 }

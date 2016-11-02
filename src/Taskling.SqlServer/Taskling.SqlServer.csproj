@@ -30,6 +30,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net35\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -38,31 +42,51 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Blocks\BlockExecutionStatus.cs" />
-    <Compile Include="Blocks\BlockService.cs" />
-    <Compile Include="Blocks\ListBlockService.cs" />
+    <Compile Include="AncilliaryServices\TransientErrorDetector.cs" />
+    <Compile Include="Blocks\BlockRepository.cs" />
+    <Compile Include="Blocks\ListBlockRepository.cs" />
+    <Compile Include="Blocks\ObjectBlockRepository.cs" />
     <Compile Include="Blocks\QueryBuilders\BlockExecutionQueryBuilder.cs" />
+    <Compile Include="Blocks\QueryBuilders\BlocksOfTaskQueryBuilder.cs" />
     <Compile Include="Blocks\QueryBuilders\DeadBlocksQueryBuilder.cs" />
     <Compile Include="Blocks\QueryBuilders\FailedBlocksQueryBuilder.cs" />
+    <Compile Include="Blocks\QueryBuilders\ForcedBlockQueueQueryBuilder.cs" />
     <Compile Include="Blocks\QueryBuilders\ListBlockQueryBuilder.cs" />
+    <Compile Include="Blocks\QueryBuilders\ObjectBlockQueryBuilder.cs" />
     <Compile Include="Blocks\QueryBuilders\RangeBlockQueryBuilder.cs" />
-    <Compile Include="Blocks\RangeBlockService.cs" />
     <Compile Include="AncilliaryServices\DbOperationsService.cs" />
-    <Compile Include="Configuration\SqlServerClientConnectionSettings.cs" />
-    <Compile Include="DataObjects\TaskDefinition.cs" />
-    <Compile Include="SqlServerTasklingClient.cs" />
-    <Compile Include="CriticalSections\CriticalSectionService.cs" />
-    <Compile Include="CriticalSections\TokensQueryBuilder.cs" />
+    <Compile Include="Blocks\RangeBlockRepository.cs" />
+    <Compile Include="Blocks\Serialization\LargeValueCompressor.cs" />
+    <Compile Include="Blocks\Serialization\SerializedValueReader.cs" />
+    <Compile Include="Blocks\Serialization\XmlGenericSerializer.cs" />
+    <Compile Include="Configuration\TokenFormatException.cs" />
+    <Compile Include="CustomDependencies.cs" />
+    <Compile Include="Events\EventsQueryBuilder.cs" />
+    <Compile Include="Events\EventsRepository.cs" />
+    <Compile Include="Events\IEventsRepository.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TaskExecution\EventType.cs" />
-    <Compile Include="TaskExecution\TaskExecutionService.cs" />
-    <Compile Include="TaskExecution\TaskExecutionStatus.cs" />
-    <Compile Include="TaskExecution\TaskQueryBuilder.cs" />
-    <Compile Include="TaskExecution\TokensQueryBuilder.cs" />
+    <Compile Include="TaskExecution\CleanUpRepository.cs" />
+    <Compile Include="TaskExecution\QueryBuilders\CleanUpQueryBuilder.cs" />
+    <Compile Include="TaskExecution\QueryBuilders\TaskQueryBuilder.cs" />
+    <Compile Include="TaskExecution\QueryBuilders\TokensQueryBuilder.cs" />
+    <Compile Include="TaskExecution\TaskExecutionRepository.cs" />
+    <Compile Include="TasklingClient.cs" />
     <Compile Include="Tasks\CachedTaskDefinition.cs" />
-    <Compile Include="Tasks\ITaskService.cs" />
-    <Compile Include="Tasks\TaskService.cs" />
-    <Compile Include="TransientErrorDetector.cs" />
+    <Compile Include="Tasks\TaskRepository.cs" />
+    <Compile Include="Tokens\CommonTokenRepository.cs" />
+    <Compile Include="Tokens\CriticalSections\CriticalSectionQueueItem.cs" />
+    <Compile Include="Tokens\CriticalSections\CriticalSectionRepository.cs" />
+    <Compile Include="Tokens\CriticalSections\CriticalSectionState.cs" />
+    <Compile Include="Tokens\Executions\ExecutionToken.cs" />
+    <Compile Include="Tokens\Executions\ExecutionTokenList.cs" />
+    <Compile Include="Tokens\Executions\ExecutionTokenRepository.cs" />
+    <Compile Include="Tokens\Executions\ExecutionTokenStatus.cs" />
+    <Compile Include="Tokens\Executions\IExecutionTokenRepository.cs" />
+    <Compile Include="Tokens\Executions\TokenRequest.cs" />
+    <Compile Include="Tokens\Executions\TokenResponse.cs" />
+    <Compile Include="Tokens\ICommonTokenRepository.cs" />
+    <Compile Include="Tokens\TaskExecutionState.cs" />
+    <Compile Include="Tokens\TokensQueryBuilder.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Taskling\Taskling.csproj">
@@ -70,7 +94,9 @@
       <Name>Taskling</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

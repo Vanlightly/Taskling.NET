@@ -8,7 +8,7 @@ namespace Taskling.ExecutionContext
     public class TaskExecutionInstance
     {
         public TaskExecutionInstance()
-        {}
+        { }
 
         public string TaskExecutionId { get; set; }
         public string ApplicationName { get; set; }

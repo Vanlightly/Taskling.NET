@@ -2,14 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Taskling.ExecutionContext;
 
 namespace Taskling.InfrastructureContracts.TaskExecution
 {
     public class TaskExecutionStartResponse : ResponseBase
     {
         public TaskExecutionStartResponse()
-        {}
+        { }
 
         public TaskExecutionStartResponse(string executionTokenId,
             DateTime startedAt,
