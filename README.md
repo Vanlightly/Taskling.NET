@@ -1,12 +1,12 @@
 # Taskling.NET
-API for batch and micro-match tasks:
+API for batch and micro-batch tasks:
 - Partioning of batches into blocks of work with guaranteed isolation between blocks across batches
 - Recover from failures with automatic reprocessing
 - Limiting the number of concurrent task executions (across servers)
 - Critical sections across servers
 - Standardised activity logging and alerting.
 
-## Taskling is host agnostic library
+## Taskling is a host agnostic library
 Taskling helps you manage your data processing tasks whether they be hosted in web applications, console applications, Windows Services or Cloud (worker roles, Azure Functions etc).
 It is not a framework or platform like Spark or Hadoop, it is just a nuget package you can add to any project.
 
@@ -43,7 +43,7 @@ Lists are suitable when one or more of the following match your situation
 
 List Blocks are partitioned on the number of items per block. So if you have 10000 items to process, and a block size of 500 then Taskling wil generate you 20 List Blocks each of 500 data items. List Blocks and their items can be processed in parallel.
 
-A great example is sending emails. You partition your data (ordered or unordered) into lists of data items and need to send an email for each item. If a single item fails then when the block is reprocessed you need to guarantee that you don't resend the emails for the data items that succeeded. Because List Blocks track each indivual item you can select only the failed items to reprocess.
+A great example is sending emails. You partition your data (ordered or unordered) into lists of data items and need to send an email for each item. If a single item fails then when the block is reprocessed you need to guarantee that you don't resend the emails for the data items that succeeded. Because List Blocks track each individual item you can select only the failed items to reprocess.
 When data is unordered you can load that unordered data into list blocks and process each data item. Depending on your data source, you may need a way of marking that data as processed so the next time the job runs it does not try and process it again.
  
 ### Custom Data Structures (Object Blocks)
