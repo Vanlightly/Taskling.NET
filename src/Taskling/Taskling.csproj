@@ -12,6 +12,17 @@
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{CBF76ACC-EB9B-42E7-A681-FA02558E08E4}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Taskling</RootNamespace>
+    <AssemblyName>Taskling</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
@@ -171,7 +182,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Retries\RetryService.cs" />
     <Compile Include="Serialization\JsonGenericSerializer.cs" />
-    <Compile Include="TasklingClient.cs" />
     <Compile Include="Tasks\ClientConnectionSettings.cs" />
     <Compile Include="Tasks\ReprocessOption.cs" />
     <Compile Include="Tasks\TaskDeathMode.cs" />

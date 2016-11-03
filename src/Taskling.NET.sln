@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Taskling", "Taskling\Taskling.csproj", "{CBF76ACC-EB9B-42E7-A681-FA02558E08E4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Taskling.SqlServer", "Taskling.SqlServer\Taskling.SqlServer.csproj", "{9BA0520D-D75D-474C-B495-B0852F01620B}"
@@ -21,6 +23,7 @@ Global
 		{CBF76ACC-EB9B-42E7-A681-FA02558E08E4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CBF76ACC-EB9B-42E7-A681-FA02558E08E4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CBF76ACC-EB9B-42E7-A681-FA02558E08E4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CBF76ACC-EB9B-42E7-A681-FA02558E08E4}.Release|Any CPU.Deploy.0 = Release|Any CPU
 		{9BA0520D-D75D-474C-B495-B0852F01620B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9BA0520D-D75D-474C-B495-B0852F01620B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9BA0520D-D75D-474C-B495-B0852F01620B}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -41,7 +44,7 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{9BA0520D-D75D-474C-B495-B0852F01620B} = {8BCF138F-576D-4AE3-9DFE-34EFEEEF01C5}
-		{31AE36B5-DD56-4EA7-B42A-86C5B0C07CF2} = {8BCF138F-576D-4AE3-9DFE-34EFEEEF01C5}
 		{78CD1BFB-6534-4F78-B2FB-C9E942D7C2FA} = {8BCF138F-576D-4AE3-9DFE-34EFEEEF01C5}
+		{31AE36B5-DD56-4EA7-B42A-86C5B0C07CF2} = {8BCF138F-576D-4AE3-9DFE-34EFEEEF01C5}
 	EndGlobalSection
 EndGlobal
