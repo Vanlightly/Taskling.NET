@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Taskling.InfrastructureContracts.TaskExecution;
 
 namespace Taskling.ExecutionContext
 {
     internal class KeepAliveDaemon
     {
-        private delegate void KeepAliveDelegate(SendKeepAliveRequest sendKeepAliveRequest, TimeSpan keepAliveInterval);
         private WeakReference _owner;
         private readonly ITaskExecutionRepository _taskExecutionRepository;
         private bool _completeCalled;
@@ -27,8 +27,7 @@ namespace Taskling.ExecutionContext
 
         public void Run(SendKeepAliveRequest sendKeepAliveRequest, TimeSpan keepAliveInterval)
         {
-            var sendDelegate = new KeepAliveDelegate(StartKeepAlive);
-            sendDelegate.BeginInvoke(sendKeepAliveRequest, keepAliveInterval, new AsyncCallback(KeepAliveCallback), sendDelegate);
+            Task.Run(() => StartKeepAlive(sendKeepAliveRequest, keepAliveInterval));
         }
 
         private void StartKeepAlive(SendKeepAliveRequest sendKeepAliveRequest, TimeSpan keepAliveInterval)
@@ -46,19 +45,6 @@ namespace Taskling.ExecutionContext
                 }
                 Thread.Sleep(1000);
             }
-        }
-
-
-
-        private void KeepAliveCallback(IAsyncResult ar)
-        {
-            try
-            {
-                var caller = (KeepAliveDelegate)ar.AsyncState;
-                caller.EndInvoke(ar);
-            }
-            catch (Exception)
-            { }
         }
     }
 }

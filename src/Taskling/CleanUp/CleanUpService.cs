@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Taskling.Configuration;
 using Taskling.InfrastructureContracts;
 using Taskling.InfrastructureContracts.CleanUp;
@@ -14,8 +15,6 @@ namespace Taskling.CleanUp
         private readonly ICleanUpRepository _cleanUpRepository;
         private readonly ITasklingConfiguration _tasklingConfiguration;
 
-        private delegate void CleanUpDelegate(string applicationName, string taskName);
-
         public CleanUpService(ITasklingConfiguration tasklingConfiguration, ICleanUpRepository cleanUpRepository)
         {
             _cleanUpRepository = cleanUpRepository;
@@ -24,8 +23,7 @@ namespace Taskling.CleanUp
 
         public void CleanOldData(string applicationName, string taskName)
         {
-            var cleanUpDelegate = new CleanUpDelegate(StartCleanOldData);
-            cleanUpDelegate.BeginInvoke(applicationName, taskName, new AsyncCallback(CleanUpCallback), cleanUpDelegate);
+            Task.Run(() => StartCleanOldData(applicationName, taskName));
         }
 
         private void StartCleanOldData(string applicationName, string taskName)
@@ -41,19 +39,6 @@ namespace Taskling.CleanUp
                     TimeSinceLastCleaningThreashold = new TimeSpan(configuration.MinimumCleanUpIntervalHours, 0, 0)
                 };
                 _cleanUpRepository.CleanOldData(request);
-            }
-            catch (Exception ex)
-            {
-                Trace.TraceError("Failed to clean old data. If this continues, data size could grow very large. " + ex);
-            }
-        }
-
-        private void CleanUpCallback(IAsyncResult ar)
-        {
-            try
-            {
-                var caller = (CleanUpDelegate)ar.AsyncState;
-                caller.EndInvoke(ar);
             }
             catch (Exception ex)
             {

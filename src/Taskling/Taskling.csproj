@@ -1,203 +1,21 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{CBF76ACC-EB9B-42E7-A681-FA02558E08E4}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Taskling</RootNamespace>
-    <AssemblyName>Taskling</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-  </PropertyGroup>
-  <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{CBF76ACC-EB9B-42E7-A681-FA02558E08E4}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Taskling</RootNamespace>
-    <AssemblyName>Taskling</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+    <TargetFrameworks>netstandard2.0;net45</TargetFrameworks>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Version>2.0.0</Version>
+    <Authors>Jack Vanlightly</Authors>
+    <Company>Jack Vanlightly</Company>
+    <Description>Framework for batch jobs for processing data in blocks and lists.</Description>
+    <Copyright>Jack Vanlightly</Copyright>
+    <RepositoryUrl>https://github.com/Vanlightly/Taskling.NET</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/Vanlightly/Taskling.NET/wiki</PackageProjectUrl>
+    <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net35\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.Windows.Forms" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
+    <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Blocks\Common\BlockExecutionStatus.cs" />
-    <Compile Include="Blocks\Common\BlockType.cs" />
-    <Compile Include="Blocks\Common\LastBlockOrder.cs" />
-    <Compile Include="Blocks\Factories\BlockFactory.cs" />
-    <Compile Include="Blocks\Factories\IBlockFactory.cs" />
-    <Compile Include="Blocks\ListBlocks\BatchSize.cs" />
-    <Compile Include="Blocks\ListBlocks\IListBlock.cs" />
-    <Compile Include="Blocks\ListBlocks\IListBlockItem.cs" />
-    <Compile Include="Blocks\ListBlocks\ItemOrder.cs" />
-    <Compile Include="Blocks\ListBlocks\ItemStatus.cs" />
-    <Compile Include="Blocks\ListBlocks\ListBlock.cs" />
-    <Compile Include="Blocks\ListBlocks\ListBlockContext.cs" />
-    <Compile Include="Blocks\ListBlocks\ListBlockContextBase.cs" />
-    <Compile Include="Blocks\ListBlocks\ListBlockContextDelegates.cs" />
-    <Compile Include="Blocks\ListBlocks\ListBlockContextWithHeader.cs" />
-    <Compile Include="Blocks\ListBlocks\ListBlockItem.cs" />
-    <Compile Include="Blocks\ListBlocks\ListUpdateMode.cs" />
-    <Compile Include="Blocks\ObjectBlocks\IObjectBlock.cs" />
-    <Compile Include="Blocks\ObjectBlocks\ObjectBlock.cs" />
-    <Compile Include="Blocks\ObjectBlocks\ObjectBlockContext.cs" />
-    <Compile Include="Blocks\RangeBlocks\IDateRangeBlock.cs" />
-    <Compile Include="Blocks\RangeBlocks\INumericRangeBlock.cs" />
-    <Compile Include="Blocks\RangeBlocks\RangeBlock.cs" />
-    <Compile Include="Blocks\RangeBlocks\RangeBlockContext.cs" />
-    <Compile Include="Blocks\Requests\BlockRequest.cs" />
-    <Compile Include="Blocks\Requests\DateRangeBlockRequest.cs" />
-    <Compile Include="Blocks\Requests\ListBlockRequest.cs" />
-    <Compile Include="Blocks\Requests\NumericRangeBlockRequest.cs" />
-    <Compile Include="Blocks\Requests\ObjectBlockRequest.cs" />
-    <Compile Include="CleanUp\ICleanUpService.cs" />
-    <Compile Include="Configuration\ConfigElement.cs" />
-    <Compile Include="Configuration\IConfigurationReader.cs" />
-    <Compile Include="Configuration\ITasklingConfiguration.cs" />
-    <Compile Include="Configuration\TaskConfiguration.cs" />
-    <Compile Include="Configuration\TasklingConfiguration.cs" />
-    <Compile Include="ConnectionStore.cs" />
-    <Compile Include="Contexts\IBlockContext.cs" />
-    <Compile Include="Contexts\ICriticalSectionContext.cs" />
-    <Compile Include="Contexts\IDateRangeBlockContext.cs" />
-    <Compile Include="Contexts\IListBlockContext.cs" />
-    <Compile Include="Contexts\INumericRangeBlockContext.cs" />
-    <Compile Include="Contexts\IObjectBlockContext.cs" />
-    <Compile Include="Contexts\ITaskExecutionContext.cs" />
-    <Compile Include="CriticalSection\CriticalSectionContext.cs" />
-    <Compile Include="Events\EventType.cs" />
-    <Compile Include="Exceptions\CouldNotStartException.cs" />
-    <Compile Include="Exceptions\CriticalSectionException.cs" />
-    <Compile Include="Exceptions\ExecutionArgumentsException.cs" />
-    <Compile Include="Exceptions\ExecutionException.cs" />
-    <Compile Include="Exceptions\TaskConfigurationException.cs" />
-    <Compile Include="Exceptions\TransientException.cs" />
-    <Compile Include="CleanUp\CleanUpService.cs" />
-    <Compile Include="ExecutionContext\KeepAliveDaemon.cs" />
-    <Compile Include="ExecutionContext\TaskExecutionContext.cs" />
-    <Compile Include="ExecutionContext\TaskExecutionInstance.cs" />
-    <Compile Include="Fluent\FluentBlockSettingsDescriptor.cs" />
-    <Compile Include="Fluent\IComplete.cs" />
-    <Compile Include="Fluent\IFluentBlockSettingsDescriptor.cs" />
-    <Compile Include="Fluent\ListBlocks\FluentListBlockDescriptorBase.cs" />
-    <Compile Include="Fluent\ObjectBlocks\FluentObjectBlockDescriptorBase.cs" />
-    <Compile Include="Fluent\ObjectBlocks\FluentObjectBlockSettings.cs" />
-    <Compile Include="Fluent\RangeBlocks\FluentRangeBlockDescriptor.cs" />
-    <Compile Include="Fluent\RangeBlocks\IFluentDateRangeBlockDescriptor.cs" />
-    <Compile Include="Fluent\ListBlocks\IFluentListBlockDescriptorBase.cs" />
-    <Compile Include="Fluent\RangeBlocks\IFluentNumericRangeBlockDescriptor.cs" />
-    <Compile Include="Fluent\ObjectBlocks\IFluentObjectBlockDescriptorBase.cs" />
-    <Compile Include="Fluent\IOverrideConfigurationDescriptor.cs" />
-    <Compile Include="Fluent\IReprocessSettings.cs" />
-    <Compile Include="Fluent\IReprocessTaskDescriptor.cs" />
-    <Compile Include="Fluent\Settings\IBlockSettings.cs" />
-    <Compile Include="Fluent\Settings\IObjectBlockSettings.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\BlockRequestBase.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\CommonRequests\FindBlocksOfTaskRequest.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\CommonRequests\ForcedBlocks\DequeueForcedBlocksRequest.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\CommonRequests\ForcedBlocks\ForcedBlockQueueItem.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\CommonRequests\ForcedBlocks\ForcedListBlockQueueItem.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\CommonRequests\ForcedBlocks\ForcedObjectBlockQueueItem.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\CommonRequests\ForcedBlocks\ForcedRangeBlockQueueItem.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\CommonRequests\ForcedBlocks\QueuedForcedBlocksRequest.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\CommonRequests\FindDeadBlocksRequest.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\CommonRequests\FindFailedBlocksRequest.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\IBlockRepository.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\IListBlockRepository.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\IObjectBlockRepository.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\IRangeBlockRepository.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\ListBlocks\BatchUpdateRequest.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\ListBlocks\ListBlockCreateRequest.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\ListBlocks\ListBlockCreateResponse.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\CommonRequests\BlockExecutionChangeStatusRequest.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\ListBlocks\ProtoListBlock.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\ListBlocks\ProtoListBlockItem.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\ListBlocks\SingleUpdateRequest.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\LastBlockRequest.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\ObjectBlocks\ObjectBlockCreateRequest.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\ObjectBlocks\ObjectBlockCreateResponse.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\RangeBlocks\RangeBlockCreateRequest.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\RangeBlocks\RangeBlockCreateResponse.cs" />
-    <Compile Include="InfrastructureContracts\Blocks\CommonRequests\BlockExecutionCreateRequest.cs" />
-    <Compile Include="InfrastructureContracts\CleanUp\CleanUpRequest.cs" />
-    <Compile Include="InfrastructureContracts\CleanUp\ICleanUpRepository.cs" />
-    <Compile Include="InfrastructureContracts\CriticalSections\CompleteCriticalSectionRequest.cs" />
-    <Compile Include="InfrastructureContracts\CriticalSections\CompleteCriticalSectionResponse.cs" />
-    <Compile Include="InfrastructureContracts\CriticalSections\CriticalSectionType.cs" />
-    <Compile Include="InfrastructureContracts\CriticalSections\ICriticalSectionRepository.cs" />
-    <Compile Include="InfrastructureContracts\CriticalSections\StartCriticalSectionRequest.cs" />
-    <Compile Include="InfrastructureContracts\CriticalSections\StartCriticalSectionResponse.cs" />
-    <Compile Include="InfrastructureContracts\TaskExecution\GrantStatus.cs" />
-    <Compile Include="InfrastructureContracts\TaskExecution\ITaskExecutionRepository.cs" />
-    <Compile Include="InfrastructureContracts\TaskExecution\ITaskRepository.cs" />
-    <Compile Include="InfrastructureContracts\TaskExecution\RequestBase.cs" />
-    <Compile Include="InfrastructureContracts\TaskExecution\ResponseBase.cs" />
-    <Compile Include="InfrastructureContracts\TaskExecution\SendKeepAliveRequest.cs" />
-    <Compile Include="InfrastructureContracts\TaskExecution\TaskDefinition.cs" />
-    <Compile Include="InfrastructureContracts\TaskExecution\TaskExecutionCheckpointRequest.cs" />
-    <Compile Include="InfrastructureContracts\TaskExecution\TaskExecutionCompleteRequest.cs" />
-    <Compile Include="InfrastructureContracts\TaskExecution\TaskExecutionCompleteResponse.cs" />
-    <Compile Include="InfrastructureContracts\TaskExecution\TaskExecutionErrorRequest.cs" />
-    <Compile Include="InfrastructureContracts\TaskExecution\TaskExecutionMetaItem.cs" />
-    <Compile Include="InfrastructureContracts\TaskExecution\TaskExecutionMetaRequest.cs" />
-    <Compile Include="InfrastructureContracts\TaskExecution\TaskExecutionMetaResponse.cs" />
-    <Compile Include="InfrastructureContracts\TaskExecution\TaskExecutionStartRequest.cs" />
-    <Compile Include="InfrastructureContracts\TaskExecution\TaskExecutionStartResponse.cs" />
-    <Compile Include="InfrastructureContracts\TaskId.cs" />
-    <Compile Include="ITasklingClient.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Retries\RetryService.cs" />
-    <Compile Include="Serialization\JsonGenericSerializer.cs" />
-    <Compile Include="Tasks\ClientConnectionSettings.cs" />
-    <Compile Include="Tasks\ReprocessOption.cs" />
-    <Compile Include="Tasks\TaskDeathMode.cs" />
-    <Compile Include="Tasks\TaskExecutionMeta.cs" />
-    <Compile Include="Tasks\TaskExecutionOptions.cs" />
-    <Compile Include="Tasks\TaskExecutionStatus.cs" />
+    <Folder Include="Properties\" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
 </Project>
