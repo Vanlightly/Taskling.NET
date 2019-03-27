@@ -9,6 +9,8 @@ using Taskling.InfrastructureContracts.Blocks.CommonRequests;
 using Taskling.SqlServer.Blocks;
 using Taskling.SqlServer.Tests.Helpers;
 using Taskling.SqlServer.Tasks;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 {
@@ -28,7 +30,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
             _taskDefinitionId = _executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             _executionHelper.InsertAvailableExecutionToken(_taskDefinitionId);
         }
-
+        
         private BlockRepository CreateSut()
         {
             return new BlockRepository(new TaskRepository());
@@ -37,7 +39,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_FailedDateRangeBlocksExistInTargetPeriodAndNumberIsLessThanBlocksLimit_ThenReturnAllFailedBlocks()
+        public async Task When_FailedDateRangeBlocksExistInTargetPeriodAndNumberIsLessThanBlocksLimit_ThenReturnAllFailedBlocks()
         {
             // ARRANGE
             var now = DateTime.UtcNow;
@@ -57,7 +59,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var failedBlocks = sut.FindFailedRangeBlocks(request);
+            var failedBlocks = await sut.FindFailedRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(1, failedBlocks.Count);
@@ -67,7 +69,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_FailedDateRangeBlocksExistInTargetPeriodAndNumberIsGreaterThanBlocksLimit_ThenReturnOldestBlocksUpToCountLimit()
+        public async Task When_FailedDateRangeBlocksExistInTargetPeriodAndNumberIsGreaterThanBlocksLimit_ThenReturnOldestBlocksUpToCountLimit()
         {
             // ARRANGE
             var now = DateTime.UtcNow;
@@ -93,7 +95,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var failedBlocks = sut.FindFailedRangeBlocks(request);
+            var failedBlocks = await sut.FindFailedRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(blockCountLimit, failedBlocks.Count);
@@ -104,7 +106,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_FailedDateRangeBlocksExistOutsideTargetPeriod_ThenReturnNoBlocks()
+        public async Task When_FailedDateRangeBlocksExistOutsideTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
             var now = DateTime.UtcNow;
@@ -124,7 +126,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var failedBlocks = sut.FindFailedRangeBlocks(request);
+            var failedBlocks = await sut.FindFailedRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(0, failedBlocks.Count);
@@ -133,7 +135,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_FailedNumericRangeBlocksExistInTargetPeriodAndNumberIsLessThanBlocksLimit_ThenReturnAllFailedBlocks()
+        public async Task When_FailedNumericRangeBlocksExistInTargetPeriodAndNumberIsLessThanBlocksLimit_ThenReturnAllFailedBlocks()
         {
             // ARRANGE
             var now = DateTime.UtcNow;
@@ -153,7 +155,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var failedBlocks = sut.FindFailedRangeBlocks(request);
+            var failedBlocks = await sut.FindFailedRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(1, failedBlocks.Count);
@@ -163,7 +165,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_FailedNumericRangeBlocksExistInTargetPeriodAndNumberIsGreaterThanBlocksLimit_ThenReturnOldestBlocksUpToCountLimit()
+        public async Task When_FailedNumericRangeBlocksExistInTargetPeriodAndNumberIsGreaterThanBlocksLimit_ThenReturnOldestBlocksUpToCountLimit()
         {
             // ARRANGE
             var now = DateTime.UtcNow;
@@ -189,7 +191,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var failedBlocks = sut.FindFailedRangeBlocks(request);
+            var failedBlocks = await sut.FindFailedRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(blockCountLimit, failedBlocks.Count);
@@ -200,7 +202,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_FailedNumericRangeBlocksExistOutsideTargetPeriod_ThenReturnNoBlocks()
+        public async Task When_FailedNumericRangeBlocksExistOutsideTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
             var now = DateTime.UtcNow;
@@ -220,7 +222,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var failedBlocks = sut.FindFailedRangeBlocks(request);
+            var failedBlocks = await sut.FindFailedRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(0, failedBlocks.Count);
@@ -229,7 +231,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_FailedListBlocksExistInTargetPeriodAndNumberIsLessThanBlocksLimit_ThenReturnAllFailedBlocks()
+        public async Task When_FailedListBlocksExistInTargetPeriodAndNumberIsLessThanBlocksLimit_ThenReturnAllFailedBlocks()
         {
             // ARRANGE
             var now = DateTime.UtcNow;
@@ -249,7 +251,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var failedBlocks = sut.FindFailedListBlocks(request);
+            var failedBlocks = await sut.FindFailedListBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(1, failedBlocks.Count);
@@ -259,7 +261,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_FailedListBlocksExistInTargetPeriodAndNumberIsGreaterThanBlocksLimit_ThenReturnOldestBlocksUpToCountLimit()
+        public async Task When_FailedListBlocksExistInTargetPeriodAndNumberIsGreaterThanBlocksLimit_ThenReturnOldestBlocksUpToCountLimit()
         {
             // ARRANGE
             var now = DateTime.UtcNow;
@@ -285,7 +287,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var failedBlocks = sut.FindFailedListBlocks(request);
+            var failedBlocks = await sut.FindFailedListBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(blockCountLimit, failedBlocks.Count);
@@ -296,7 +298,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_FailedListBlocksExistOutsideTargetPeriod_ThenReturnNoBlocks()
+        public async Task When_FailedListBlocksExistOutsideTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
             var now = DateTime.UtcNow;
@@ -316,7 +318,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var failedBlocks = sut.FindFailedListBlocks(request);
+            var failedBlocks = await sut.FindFailedListBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(0, failedBlocks.Count);
@@ -326,7 +328,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_FailedObjectBlocksExistInTargetPeriodAndNumberIsLessThanBlocksLimit_ThenReturnAllFailedBlocks()
+        public async Task When_FailedObjectBlocksExistInTargetPeriodAndNumberIsLessThanBlocksLimit_ThenReturnAllFailedBlocks()
         {
             // ARRANGE
             var now = DateTime.UtcNow;
@@ -346,7 +348,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var failedBlocks = sut.FindFailedObjectBlocks<string>(request);
+            var failedBlocks = await sut.FindFailedObjectBlocksAsync<string>(request);
 
             // ASSERT
             Assert.Equal(1, failedBlocks.Count);
@@ -356,7 +358,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_FailedObjectBlocksExistInTargetPeriodAndNumberIsGreaterThanBlocksLimit_ThenReturnOldestBlocksUpToCountLimit()
+        public async Task When_FailedObjectBlocksExistInTargetPeriodAndNumberIsGreaterThanBlocksLimit_ThenReturnOldestBlocksUpToCountLimit()
         {
             // ARRANGE
             var now = DateTime.UtcNow;
@@ -382,7 +384,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var failedBlocks = sut.FindFailedObjectBlocks<string>(request);
+            var failedBlocks = await sut.FindFailedObjectBlocksAsync<string>(request);
 
             // ASSERT
             Assert.Equal(blockCountLimit, failedBlocks.Count);
@@ -393,7 +395,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_FailedObjectBlocksExistOutsideTargetPeriod_ThenReturnNoBlocks()
+        public async Task When_FailedObjectBlocksExistOutsideTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
             var now = DateTime.UtcNow;
@@ -413,7 +415,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var failedBlocks = sut.FindFailedObjectBlocks<string>(request);
+            var failedBlocks = await sut.FindFailedObjectBlocksAsync<string>(request);
 
             // ASSERT
             Assert.Equal(0, failedBlocks.Count);

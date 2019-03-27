@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Taskling.Exceptions;
 using Taskling.InfrastructureContracts;
 
@@ -13,12 +14,12 @@ namespace Taskling.SqlServer.AncilliaryServices
 {
     public class DbOperationsService
     {
-        protected SqlConnection CreateNewConnection(TaskId taskId)
+        protected async Task<SqlConnection> CreateNewConnectionAsync(TaskId taskId)
         {
             try
             {
                 var connection = new SqlConnection(ConnectionStore.Instance.GetConnection(taskId).ConnectionString);
-                connection.Open();
+                await connection.OpenAsync();
 
                 return connection;
             }
@@ -42,7 +43,7 @@ namespace Taskling.SqlServer.AncilliaryServices
             return inputStr;
         }
 
-        protected void BulkLoadInTransactionOperation(DataTable dataTable, string tableNameAndSchema, SqlConnection connection, SqlTransaction transaction)
+        protected async Task BulkLoadInTransactionOperationAsync(DataTable dataTable, string tableNameAndSchema, SqlConnection connection, SqlTransaction transaction)
         {
             using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction))
             {
@@ -53,7 +54,7 @@ namespace Taskling.SqlServer.AncilliaryServices
                 bulkCopy.BatchSize = 10000;
                 try
                 {
-                    bulkCopy.WriteToServer(dataTable);
+                    await bulkCopy.WriteToServerAsync(dataTable);
                 }
                 catch (SqlException ex)
                 {

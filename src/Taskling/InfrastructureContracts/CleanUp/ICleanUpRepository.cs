@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Taskling.InfrastructureContracts.CleanUp
 {
     public interface ICleanUpRepository
     {
-        void CleanOldData(CleanUpRequest cleanUpRequest);
+        Task CleanOldDataAsync(CleanUpRequest cleanUpRequest);
     }
 }

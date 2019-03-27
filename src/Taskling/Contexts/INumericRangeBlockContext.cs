@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Taskling.Blocks.RangeBlocks;
 
 namespace Taskling.Contexts
@@ -10,6 +11,6 @@ namespace Taskling.Contexts
     {
         INumericRangeBlock NumericRangeBlock { get; }
         string ForcedBlockQueueId { get; }
-        void Complete(int itemsProcessed);
+        Task CompleteAsync(int itemsProcessed);
     }
 }

@@ -2,14 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Taskling.Contexts
 {
     public interface IBlockContext
     {
-        void Start();
-        void Complete();
-        void Failed();
-        void Failed(string message);
+        Task StartAsync();
+        Task CompleteAsync();
+        Task FailedAsync();
+        Task FailedAsync(string message);
     }
 }

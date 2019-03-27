@@ -9,6 +9,8 @@ using Taskling.InfrastructureContracts.Blocks.CommonRequests;
 using Taskling.SqlServer.Blocks;
 using Taskling.SqlServer.Tests.Helpers;
 using Taskling.SqlServer.Tasks;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Taskling.SqlServer.Tests.Repositories.Given_ObjectBlockRepository
 {
@@ -34,7 +36,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_ObjectBlockRepository
 
             TaskRepository.ClearCache();
         }
-
+        
         private ObjectBlockRepository CreateSut()
         {
             return new ObjectBlockRepository(new TaskRepository());
@@ -52,7 +54,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_ObjectBlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_SetStatusOfObjectBlock_ThenItemsCountIsCorrect()
+        public async Task If_SetStatusOfObjectBlock_ThenItemsCountIsCorrect()
         {
             // ARRANGE
             InsertObjectBlock();
@@ -67,7 +69,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_ObjectBlockRepository
 
             // ACT
             var sut = CreateSut();
-            sut.ChangeStatus(request);
+            await sut.ChangeStatusAsync(request);
 
             var itemCount = new BlocksHelper().GetBlockExecutionItemCount(_blockExecutionId);
 

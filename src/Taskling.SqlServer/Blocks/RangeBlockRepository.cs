@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Taskling.Blocks.Common;
 using Taskling.Blocks.RangeBlocks;
 using Taskling.Exceptions;
@@ -23,24 +24,24 @@ namespace Taskling.SqlServer.Blocks
             _taskRepository = taskRepository;
         }
 
-        public void ChangeStatus(BlockExecutionChangeStatusRequest changeStatusRequest)
+        public async Task ChangeStatusAsync(BlockExecutionChangeStatusRequest changeStatusRequest)
         {
             switch (changeStatusRequest.BlockType)
             {
                 case BlockType.DateRange:
-                    ChangeStatusOfDateRangeExecution(changeStatusRequest);
+                    await ChangeStatusOfDateRangeExecutionAsync(changeStatusRequest);
                     break;
                 case BlockType.NumericRange:
-                    ChangeStatusOfNumericRangeExecution(changeStatusRequest);
+                    await ChangeStatusOfNumericRangeExecutionAsync(changeStatusRequest);
                     break;
                 default:
                     throw new NotSupportedException("This range type is not supported");
             }
         }
 
-        public RangeBlock GetLastRangeBlock(LastBlockRequest lastRangeBlockRequest)
+        public async Task<RangeBlock> GetLastRangeBlockAsync(LastBlockRequest lastRangeBlockRequest)
         {
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(lastRangeBlockRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(lastRangeBlockRequest.TaskId);
 
             var query = string.Empty;
             if (lastRangeBlockRequest.BlockType == BlockType.DateRange)
@@ -52,15 +53,15 @@ namespace Taskling.SqlServer.Blocks
 
             try
             {
-                using (var connection = CreateNewConnection(lastRangeBlockRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(lastRangeBlockRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandText = query;
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(lastRangeBlockRequest.TaskId).QueryTimeoutSeconds;
                     command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinition.TaskDefinitionId;
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        while (reader.Read())
+                        while (await reader.ReadAsync())
                         {
                             var rangeBlockId = reader["BlockId"].ToString();
                             long rangeBegin;
@@ -94,11 +95,11 @@ namespace Taskling.SqlServer.Blocks
         }
 
 
-        private void ChangeStatusOfDateRangeExecution(BlockExecutionChangeStatusRequest changeStatusRequest)
+        private async Task ChangeStatusOfDateRangeExecutionAsync(BlockExecutionChangeStatusRequest changeStatusRequest)
         {
             try
             {
-                using (var connection = CreateNewConnection(changeStatusRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(changeStatusRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(changeStatusRequest.TaskId).QueryTimeoutSeconds;
@@ -107,7 +108,7 @@ namespace Taskling.SqlServer.Blocks
                     command.Parameters.Add("@BlockExecutionStatus", SqlDbType.TinyInt).Value = (byte)changeStatusRequest.BlockExecutionStatus;
                     command.Parameters.Add("@ItemsCount", SqlDbType.Int).Value = changeStatusRequest.ItemsProcessed;
 
-                    command.ExecuteNonQuery();
+                    await command.ExecuteNonQueryAsync();
                 }
             }
             catch (SqlException sqlEx)
@@ -119,11 +120,11 @@ namespace Taskling.SqlServer.Blocks
             }
         }
 
-        private void ChangeStatusOfNumericRangeExecution(BlockExecutionChangeStatusRequest changeStatusRequest)
+        private async Task ChangeStatusOfNumericRangeExecutionAsync(BlockExecutionChangeStatusRequest changeStatusRequest)
         {
             try
             {
-                using (var connection = CreateNewConnection(changeStatusRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(changeStatusRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(changeStatusRequest.TaskId).QueryTimeoutSeconds;
@@ -131,7 +132,7 @@ namespace Taskling.SqlServer.Blocks
                     command.Parameters.Add("@BlockExecutionId", SqlDbType.BigInt).Value = long.Parse(changeStatusRequest.BlockExecutionId);
                     command.Parameters.Add("@BlockExecutionStatus", SqlDbType.TinyInt).Value = (byte)changeStatusRequest.BlockExecutionStatus;
                     command.Parameters.Add("@ItemsCount", SqlDbType.Int).Value = changeStatusRequest.ItemsProcessed;
-                    command.ExecuteNonQuery();
+                    await command.ExecuteNonQueryAsync();
                 }
             }
             catch (SqlException sqlEx)

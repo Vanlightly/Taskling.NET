@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Taskling.Blocks.ListBlocks
 {
@@ -14,8 +15,8 @@ namespace Taskling.Blocks.ListBlocks
         DateTime LastUpdated { get; }
         byte? Step { get; set; }
 
-        void Completed();
-        void Failed(string message);
-        void Discarded(string message);
+        Task CompletedAsync();
+        Task FailedAsync(string message);
+        Task DiscardedAsync(string message);
     }
 }

@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Taskling.Exceptions;
 using Taskling.InfrastructureContracts;
 using Taskling.InfrastructureContracts.CriticalSections;
@@ -25,11 +26,11 @@ namespace Taskling.SqlServer.Tokens.CriticalSections
             _commonTokenRepository = commonTokenRepository;
         }
 
-        public StartCriticalSectionResponse Start(StartCriticalSectionRequest startRequest)
+        public async Task<StartCriticalSectionResponse> StartAsync(StartCriticalSectionRequest startRequest)
         {
             ValidateStartRequest(startRequest);
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(startRequest.TaskId);
-            var granted = TryAcquireCriticalSection(startRequest.TaskId, taskDefinition.TaskDefinitionId, startRequest.TaskExecutionId, startRequest.Type);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(startRequest.TaskId);
+            var granted = await TryAcquireCriticalSectionAsync(startRequest.TaskId, taskDefinition.TaskDefinitionId, startRequest.TaskExecutionId, startRequest.Type);
 
             return new StartCriticalSectionResponse()
             {
@@ -37,10 +38,10 @@ namespace Taskling.SqlServer.Tokens.CriticalSections
             };
         }
 
-        public CompleteCriticalSectionResponse Complete(CompleteCriticalSectionRequest completeRequest)
+        public async Task<CompleteCriticalSectionResponse> CompleteAsync(CompleteCriticalSectionRequest completeRequest)
         {
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(completeRequest.TaskId);
-            return ReturnCriticalSectionToken(completeRequest.TaskId, taskDefinition.TaskDefinitionId, completeRequest.TaskExecutionId, completeRequest.Type);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(completeRequest.TaskId);
+            return await ReturnCriticalSectionTokenAsync(completeRequest.TaskId, taskDefinition.TaskDefinitionId, completeRequest.TaskExecutionId, completeRequest.Type);
         }
 
         private void ValidateStartRequest(StartCriticalSectionRequest startRequest)
@@ -57,11 +58,11 @@ namespace Taskling.SqlServer.Tokens.CriticalSections
             }
         }
 
-        private CompleteCriticalSectionResponse ReturnCriticalSectionToken(TaskId taskId, int taskDefinitionId, string taskExecutionId, CriticalSectionType criticalSectionType)
+        private async Task<CompleteCriticalSectionResponse> ReturnCriticalSectionTokenAsync(TaskId taskId, int taskDefinitionId, string taskExecutionId, CriticalSectionType criticalSectionType)
         {
             var response = new CompleteCriticalSectionResponse();
 
-            using (var connection = CreateNewConnection(taskId))
+            using (var connection = await CreateNewConnectionAsync(taskId))
             {
                 SqlTransaction transaction = connection.BeginTransaction(IsolationLevel.Serializable);
 
@@ -79,7 +80,7 @@ namespace Taskling.SqlServer.Tokens.CriticalSections
 
                 try
                 {
-                    command.ExecuteNonQuery();
+                    await command.ExecuteNonQueryAsync();
                     transaction.Commit();
                 }
                 catch (SqlException sqlEx)
@@ -95,11 +96,11 @@ namespace Taskling.SqlServer.Tokens.CriticalSections
             return response;
         }
 
-        private bool TryAcquireCriticalSection(TaskId taskId, int taskDefinitionId, string taskExecutionId, CriticalSectionType criticalSectionType)
+        private async Task<bool> TryAcquireCriticalSectionAsync(TaskId taskId, int taskDefinitionId, string taskExecutionId, CriticalSectionType criticalSectionType)
         {
             bool granted = false;
 
-            using (var connection = CreateNewConnection(taskId))
+            using (var connection = await CreateNewConnectionAsync(taskId))
             {
                 SqlTransaction transaction = connection.BeginTransaction(IsolationLevel.Serializable);
 
@@ -109,9 +110,9 @@ namespace Taskling.SqlServer.Tokens.CriticalSections
 
                 try
                 {
-                    AcquireRowLock(taskDefinitionId, taskExecutionId, command);
-                    var csState = GetCriticalSectionState(taskDefinitionId, criticalSectionType, command);
-                    CleanseOfExpiredExecutions(csState, command);
+                    await AcquireRowLockAsync(taskDefinitionId, taskExecutionId, command);
+                    var csState = await GetCriticalSectionStateAsync(taskDefinitionId, criticalSectionType, command);
+                    await CleanseOfExpiredExecutionsAsync(csState, command);
 
                     if (csState.IsGranted)
                     {
@@ -146,7 +147,7 @@ namespace Taskling.SqlServer.Tokens.CriticalSections
                     }
 
                     if (csState.HasBeenModified)
-                        UpdateCriticalSectionState(taskDefinitionId, csState, criticalSectionType, command);
+                        await UpdateCriticalSectionStateAsync(taskDefinitionId, csState, criticalSectionType, command);
 
                     transaction.Commit();
                 }
@@ -163,12 +164,12 @@ namespace Taskling.SqlServer.Tokens.CriticalSections
             return granted;
         }
 
-        private void AcquireRowLock(int taskDefinitionId, string taskExecutionId, SqlCommand command)
+        private async Task AcquireRowLockAsync(int taskDefinitionId, string taskExecutionId, SqlCommand command)
         {
-            _commonTokenRepository.AcquireRowLock(taskDefinitionId, taskExecutionId, command);
+            await _commonTokenRepository.AcquireRowLockAsync(taskDefinitionId, taskExecutionId, command);
         }
 
-        private CriticalSectionState GetCriticalSectionState(int taskDefinitionId, CriticalSectionType criticalSectionType, SqlCommand command)
+        private async Task<CriticalSectionState> GetCriticalSectionStateAsync(int taskDefinitionId, CriticalSectionType criticalSectionType, SqlCommand command)
         {
             command.Parameters.Clear();
             if (criticalSectionType == CriticalSectionType.User)
@@ -178,9 +179,9 @@ namespace Taskling.SqlServer.Tokens.CriticalSections
 
             command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
 
-            using (var reader = command.ExecuteReader())
+            using (var reader = await command.ExecuteReaderAsync())
             {
-                var readSuccess = reader.Read();
+                var readSuccess = await reader.ReadAsync();
                 if (readSuccess)
                 {
                     var csState = new CriticalSectionState();
@@ -209,13 +210,13 @@ namespace Taskling.SqlServer.Tokens.CriticalSections
             return taskExecutionIds;
         }
 
-        private void CleanseOfExpiredExecutions(CriticalSectionState csState, SqlCommand command)
+        private async Task CleanseOfExpiredExecutionsAsync(CriticalSectionState csState, SqlCommand command)
         {
             var csQueue = csState.GetQueue();
             var activeExecutionIds = GetActiveTaskExecutionIds(csState);
             if (activeExecutionIds.Any())
             {
-                var taskExecutionStates = GetTaskExecutionStates(activeExecutionIds, command);
+                var taskExecutionStates = await GetTaskExecutionStatesAsync(activeExecutionIds, command);
 
                 CleanseCurrentGranteeIfExpired(csState, taskExecutionStates);
                 CleanseQueueOfExpiredExecutions(csState, taskExecutionStates, csQueue);
@@ -263,7 +264,7 @@ namespace Taskling.SqlServer.Tokens.CriticalSections
             csState.GrantedToExecution = taskExecutionId;
         }
 
-        private void UpdateCriticalSectionState(int taskDefinitionId, CriticalSectionState csState, CriticalSectionType criticalSectionType, SqlCommand command)
+        private async Task UpdateCriticalSectionStateAsync(int taskDefinitionId, CriticalSectionState csState, CriticalSectionType criticalSectionType, SqlCommand command)
         {
             command.Parameters.Clear();
 
@@ -276,12 +277,12 @@ namespace Taskling.SqlServer.Tokens.CriticalSections
             command.Parameters.Add("@CsStatus", SqlDbType.Int).Value = csState.IsGranted ? 1 : 0;
             command.Parameters.Add("@CsTaskExecutionId", SqlDbType.Int).Value = csState.GrantedToExecution;
             command.Parameters.Add("@CsQueue", SqlDbType.VarChar, 8000).Value = csState.GetQueueString();
-            command.ExecuteNonQuery();
+            await command.ExecuteNonQueryAsync();
         }
 
-        private List<TaskExecutionState> GetTaskExecutionStates(List<string> taskExecutionIds, SqlCommand command)
+        private async Task<List<TaskExecutionState>> GetTaskExecutionStatesAsync(List<string> taskExecutionIds, SqlCommand command)
         {
-            return _commonTokenRepository.GetTaskExecutionStates(taskExecutionIds, command);
+            return await _commonTokenRepository.GetTaskExecutionStatesAsync(taskExecutionIds, command);
         }
 
         private bool HasCriticalSectionExpired(TaskExecutionState taskExecutionState)

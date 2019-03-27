@@ -25,7 +25,7 @@ namespace Taskling.SqlServer.Tests.Contexts.StressTest
             CreateTasksAndExecutionTokens();
             var tasks = new List<Task>();
             for (int i = 0; i < 10; i++)
-                tasks.Add(Task.Factory.StartNew(() => RunRandomTask(20)));
+                tasks.Add(Task.Factory.StartNew(async () => await RunRandomTaskAsync(20)));
 
             Task.WaitAll(tasks.ToArray());
         }
@@ -62,7 +62,7 @@ namespace Taskling.SqlServer.Tests.Contexts.StressTest
             }
         }
 
-        private void RunRandomTask(int repeatCount)
+        private async Task RunRandomTaskAsync(int repeatCount)
         {
             for (int i = 0; i < repeatCount; i++)
             {
@@ -70,56 +70,56 @@ namespace Taskling.SqlServer.Tests.Contexts.StressTest
                 switch (num)
                 {
                     case 0:
-                        RunKeepAliveDateRangeTask();
+                        await RunKeepAliveDateRangeTaskAsync();
                         break;
                     case 1:
-                        RunKeepAliveNumericRangeTask();
+                        await RunKeepAliveNumericRangeTaskAsync();
                         break;
                     case 2:
-                        RunKeepAliveListTaskWithSingleUnitCommit();
+                        await RunKeepAliveListTaskWithSingleUnitCommitAsync();
                         break;
                     case 3:
-                        RunKeepAliveListTaskWithPeriodicCommit();
+                        await RunKeepAliveListTaskWithPeriodicCommitAsync();
                         break;
                     case 4:
-                        RunKeepAliveListTaskWithBatchCommit();
+                        await RunKeepAliveListTaskWithBatchCommitAsync();
                         break;
                     case 5:
-                        RunOverrideDateRangeTask();
+                        await RunOverrideDateRangeTaskAsync();
                         break;
                     case 6:
-                        RunOverrideNumericRangeTask();
+                        await RunOverrideNumericRangeTaskAsync();
                         break;
                     case 7:
-                        RunOverrideListTaskWithSingleUnitCommit();
+                        await RunOverrideListTaskWithSingleUnitCommitAsync();
                         break;
                     case 8:
-                        RunOverrideListTaskWithPeriodicCommit();
+                        await RunOverrideListTaskWithPeriodicCommitAsync();
                         break;
                     case 9:
-                        RunOverrideListTaskWithBatchCommit();
+                        await RunOverrideListTaskWithBatchCommitAsync();
                         break;
                 }
             }
         }
 
-        private void RunKeepAliveDateRangeTask()
+        private async Task RunKeepAliveDateRangeTaskAsync()
         {
             var taskName = "DR_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = ClientHelper.GetExecutionContext(taskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     using (var cs = executionContext.CreateCriticalSection())
                     {
-                        cs.TryStart();
+                        await cs.TryStartAsync();
 
                     }
 
                     var blocks =
-                        executionContext.GetDateRangeBlocks(
+                        await executionContext.GetDateRangeBlocksAsync(
                             x => x.WithRange(DateTime.UtcNow.AddDays(-1), DateTime.UtcNow, new TimeSpan(0, 1, 0, 0))
                                 .OverrideConfiguration()
                                 .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), 3)
@@ -128,29 +128,29 @@ namespace Taskling.SqlServer.Tests.Contexts.StressTest
 
                     foreach (var block in blocks)
                     {
-                        block.Start();
-                        block.Complete();
+                        await block.StartAsync();
+                        await block.CompleteAsync();
                     }
                 }
             }
         }
 
-        private void RunKeepAliveNumericRangeTask()
+        private async Task RunKeepAliveNumericRangeTaskAsync()
         {
             var taskName = "NR_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = ClientHelper.GetExecutionContext(taskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     using (var cs = executionContext.CreateCriticalSection())
                     {
-                        cs.TryStart();
+                        await cs.TryStartAsync();
 
                     }
 
-                    var blocks = executionContext.GetNumericRangeBlocks(x => x.WithRange(1, 10000, 100)
+                    var blocks = await executionContext.GetNumericRangeBlocksAsync(x => x.WithRange(1, 10000, 100)
                         .OverrideConfiguration()
                         .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), 3)
                         .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0), 3)
@@ -158,30 +158,30 @@ namespace Taskling.SqlServer.Tests.Contexts.StressTest
 
                     foreach (var block in blocks)
                     {
-                        block.Start();
-                        block.Complete();
+                        await block.StartAsync();
+                        await block.CompleteAsync();
                     }
                 }
             }
         }
 
-        private void RunKeepAliveListTaskWithSingleUnitCommit()
+        private async Task RunKeepAliveListTaskWithSingleUnitCommitAsync()
         {
             var taskName = "LSUC_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = ClientHelper.GetExecutionContext(taskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     using (var cs = executionContext.CreateCriticalSection())
                     {
-                        cs.TryStart();
+                        await cs.TryStartAsync();
 
                     }
 
                     var values = GetList("SUC", 1000);
-                    var blocks = executionContext.GetListBlocks<PersonDto>(x => x.WithSingleUnitCommit(values, 50)
+                    var blocks = await executionContext.GetListBlocksAsync<PersonDto>(x => x.WithSingleUnitCommit(values, 50)
                         .OverrideConfiguration()
                         .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), 3)
                         .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0), 3)
@@ -189,30 +189,30 @@ namespace Taskling.SqlServer.Tests.Contexts.StressTest
 
                     foreach (var block in blocks)
                     {
-                        block.Start();
-                        block.Complete();
+                        await block.StartAsync();
+                        await block.CompleteAsync();
                     }
                 }
             }
         }
 
-        private void RunKeepAliveListTaskWithPeriodicCommit()
+        private async Task RunKeepAliveListTaskWithPeriodicCommitAsync()
         {
             var taskName = "LPC_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = ClientHelper.GetExecutionContext(taskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     using (var cs = executionContext.CreateCriticalSection())
                     {
-                        cs.TryStart();
+                        await cs.TryStartAsync();
 
                     }
 
                     var values = GetList("PC", 1000);
-                    var blocks = executionContext.GetListBlocks<PersonDto>(x => x.WithPeriodicCommit(values, 50, BatchSize.Hundred)
+                    var blocks = await executionContext.GetListBlocksAsync<PersonDto>(x => x.WithPeriodicCommit(values, 50, BatchSize.Hundred)
                         .OverrideConfiguration()
                         .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), 3)
                         .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0), 3)
@@ -220,30 +220,30 @@ namespace Taskling.SqlServer.Tests.Contexts.StressTest
 
                     foreach (var block in blocks)
                     {
-                        block.Start();
-                        block.Complete();
+                        await block.StartAsync();
+                        await block.CompleteAsync();
                     }
                 }
             }
         }
 
-        private void RunKeepAliveListTaskWithBatchCommit()
+        private async Task RunKeepAliveListTaskWithBatchCommitAsync()
         {
             var taskName = "LBC_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = ClientHelper.GetExecutionContext(taskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     using (var cs = executionContext.CreateCriticalSection())
                     {
-                        cs.TryStart();
+                        await cs.TryStartAsync();
 
                     }
 
                     var values = GetList("BC", 1000);
-                    var blocks = executionContext.GetListBlocks<PersonDto>(x => x.WithBatchCommitAtEnd(values, 50)
+                    var blocks = await executionContext.GetListBlocksAsync<PersonDto>(x => x.WithBatchCommitAtEnd(values, 50)
                         .OverrideConfiguration()
                         .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), 3)
                         .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0), 3)
@@ -251,31 +251,31 @@ namespace Taskling.SqlServer.Tests.Contexts.StressTest
 
                     foreach (var block in blocks)
                     {
-                        block.Start();
-                        block.Complete();
+                        await block.StartAsync();
+                        await block.CompleteAsync();
                     }
                 }
             }
         }
 
 
-        private void RunOverrideDateRangeTask()
+        private async Task RunOverrideDateRangeTaskAsync()
         {
             var taskName = "OV_DR_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = ClientHelper.GetExecutionContext(taskName, ClientHelper.GetDefaultTaskConfigurationWithTimePeriodOverrideAndReprocessing()))
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     using (var cs = executionContext.CreateCriticalSection())
                     {
-                        cs.TryStart();
+                        await cs.TryStartAsync();
 
                     }
 
                     var blocks =
-                        executionContext.GetDateRangeBlocks(
+                        await executionContext.GetDateRangeBlocksAsync(
                             x => x.WithRange(DateTime.UtcNow.AddDays(-1), DateTime.UtcNow, new TimeSpan(0, 1, 0, 0))
                                 .OverrideConfiguration()
                                 .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), 3)
@@ -284,29 +284,29 @@ namespace Taskling.SqlServer.Tests.Contexts.StressTest
 
                     foreach (var block in blocks)
                     {
-                        block.Start();
-                        block.Complete();
+                        await block.StartAsync();
+                        await block.CompleteAsync();
                     }
                 }
             }
         }
 
-        private void RunOverrideNumericRangeTask()
+        private async Task RunOverrideNumericRangeTaskAsync()
         {
             var taskName = "OV_NR_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = ClientHelper.GetExecutionContext(taskName, ClientHelper.GetDefaultTaskConfigurationWithTimePeriodOverrideAndReprocessing()))
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     using (var cs = executionContext.CreateCriticalSection())
                     {
-                        cs.TryStart();
+                        await cs.TryStartAsync();
 
                     }
 
-                    var blocks = executionContext.GetNumericRangeBlocks(x => x.WithRange(1, 10000, 100)
+                    var blocks = await executionContext.GetNumericRangeBlocksAsync(x => x.WithRange(1, 10000, 100)
                         .OverrideConfiguration()
                         .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), 3)
                         .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0), 3)
@@ -314,30 +314,30 @@ namespace Taskling.SqlServer.Tests.Contexts.StressTest
 
                     foreach (var block in blocks)
                     {
-                        block.Start();
-                        block.Complete();
+                        await block.StartAsync();
+                        await block.CompleteAsync();
                     }
                 }
             }
         }
 
-        private void RunOverrideListTaskWithSingleUnitCommit()
+        private async Task RunOverrideListTaskWithSingleUnitCommitAsync()
         {
             var taskName = "OV_LSUC_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = ClientHelper.GetExecutionContext(taskName, ClientHelper.GetDefaultTaskConfigurationWithTimePeriodOverrideAndReprocessing()))
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     using (var cs = executionContext.CreateCriticalSection())
                     {
-                        cs.TryStart();
+                        await cs.TryStartAsync();
 
                     }
 
                     var values = GetList("SUC", 1000);
-                    var blocks = executionContext.GetListBlocks<PersonDto>(x => x.WithSingleUnitCommit(values, 50)
+                    var blocks = await executionContext.GetListBlocksAsync<PersonDto>(x => x.WithSingleUnitCommit(values, 50)
                         .OverrideConfiguration()
                         .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), 3)
                         .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0), 3)
@@ -345,30 +345,29 @@ namespace Taskling.SqlServer.Tests.Contexts.StressTest
 
                     foreach (var block in blocks)
                     {
-                        block.Start();
-                        block.Complete();
+                        await block.StartAsync();
+                        await block.CompleteAsync();
                     }
                 }
             }
         }
 
-        private void RunOverrideListTaskWithPeriodicCommit()
+        private async Task RunOverrideListTaskWithPeriodicCommitAsync()
         {
             var taskName = "OV_LPC_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = ClientHelper.GetExecutionContext(taskName, ClientHelper.GetDefaultTaskConfigurationWithTimePeriodOverrideAndReprocessing()))
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     using (var cs = executionContext.CreateCriticalSection())
                     {
-                        cs.TryStart();
-
+                        await cs.TryStartAsync();
                     }
 
                     var values = GetList("PC", 1000);
-                    var blocks = executionContext.GetListBlocks<PersonDto>(x => x.WithPeriodicCommit(values, 50, BatchSize.Hundred)
+                    var blocks = await executionContext.GetListBlocksAsync<PersonDto>(x => x.WithPeriodicCommit(values, 50, BatchSize.Hundred)
                         .OverrideConfiguration()
                         .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), 3)
                         .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0), 3)
@@ -376,30 +375,30 @@ namespace Taskling.SqlServer.Tests.Contexts.StressTest
 
                     foreach (var block in blocks)
                     {
-                        block.Start();
-                        block.Complete();
+                        await block.StartAsync();
+                        await block.CompleteAsync();
                     }
                 }
             }
         }
 
-        private void RunOverrideListTaskWithBatchCommit()
+        private async Task RunOverrideListTaskWithBatchCommitAsync()
         {
             var taskName = "OV_LBC_" + _processes[_random.Next(25)];
             Console.WriteLine(taskName);
             using (var executionContext = ClientHelper.GetExecutionContext(taskName, ClientHelper.GetDefaultTaskConfigurationWithTimePeriodOverrideAndReprocessing()))
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     using (var cs = executionContext.CreateCriticalSection())
                     {
-                        cs.TryStart();
+                        await cs.TryStartAsync();
 
                     }
 
                     var values = GetList("BC", 1000);
-                    var blocks = executionContext.GetListBlocks<PersonDto>(x => x.WithBatchCommitAtEnd(values, 50)
+                    var blocks = await executionContext.GetListBlocksAsync<PersonDto>(x => x.WithBatchCommitAtEnd(values, 50)
                         .OverrideConfiguration()
                         .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), 3)
                         .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0), 3)
@@ -407,8 +406,8 @@ namespace Taskling.SqlServer.Tests.Contexts.StressTest
 
                     foreach (var block in blocks)
                     {
-                        block.Start();
-                        block.Complete();
+                        await block.StartAsync();
+                        await block.CompleteAsync();
                     }
                 }
             }

@@ -23,10 +23,10 @@ namespace Taskling.CleanUp
 
         public void CleanOldData(string applicationName, string taskName)
         {
-            Task.Run(() => StartCleanOldData(applicationName, taskName));
+            Task.Run(async () => await StartCleanOldDataAsync(applicationName, taskName));
         }
 
-        private void StartCleanOldData(string applicationName, string taskName)
+        private async Task StartCleanOldDataAsync(string applicationName, string taskName)
         {
             try
             {
@@ -38,7 +38,7 @@ namespace Taskling.CleanUp
                     ListItemDateThreshold = DateTime.UtcNow.AddDays(-1 * configuration.KeepListItemsForDays),
                     TimeSinceLastCleaningThreashold = new TimeSpan(configuration.MinimumCleanUpIntervalHours, 0, 0)
                 };
-                _cleanUpRepository.CleanOldData(request);
+                await _cleanUpRepository.CleanOldDataAsync(request);
             }
             catch (Exception ex)
             {

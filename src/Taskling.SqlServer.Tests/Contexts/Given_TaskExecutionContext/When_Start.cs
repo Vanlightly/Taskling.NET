@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Taskling.SqlServer.Tests.Helpers;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
 {
@@ -19,11 +21,11 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
 
             _taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
         }
-
+        
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "TaskExecutions")]
-        public void If_TryStart_ThenLogCorrectTasklingVersion()
+        public async Task If_TryStart_ThenLogCorrectTasklingVersion()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -33,10 +35,12 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
 
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 var sqlServerImplAssembly =
                     AppDomain.CurrentDomain.GetAssemblies()
-                        .First(x => x.FullName.Contains("Taskling.SqlServer"));
+                        .First(x => x.FullName.Contains("Taskling")
+                                && !x.FullName.Contains("Taskling.Sql")
+                                && !x.FullName.Contains("Tests"));
                 FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(sqlServerImplAssembly.Location);
                 string versionOfTaskling = fileVersionInfo.ProductVersion;
                 var executionVersion = executionHelper.GetLastExecutionVersion(_taskDefinitionId);
@@ -49,7 +53,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "TaskExecutions")]
-        public void If_TryStartWithHeader_ThenGetHeaderReturnsTheHeader()
+        public async Task If_TryStartWithHeader_ThenGetHeaderReturnsTheHeader()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -64,7 +68,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
 
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                startedOk = executionContext.TryStart<MyHeader>(myHeader);
+                startedOk = await executionContext.TryStartAsync<MyHeader>(myHeader);
 
                 var myHeaderBack = executionContext.GetHeader<MyHeader>();
                 Assert.Equal(myHeader.Name, myHeaderBack.Name);
@@ -77,7 +81,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "TaskExecutions")]
-        public void If_TryStartWithHeader_ThenHeaderWrittenToDatabase()
+        public async Task If_TryStartWithHeader_ThenHeaderWrittenToDatabase()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -92,7 +96,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
 
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                startedOk = executionContext.TryStart<MyHeader>(myHeader);
+                startedOk = await executionContext.TryStartAsync<MyHeader>(myHeader);
 
                 var myHeaderBack = executionContext.GetHeader<MyHeader>();
             }

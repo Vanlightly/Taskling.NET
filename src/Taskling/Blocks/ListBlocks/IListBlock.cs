@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Taskling.Blocks.ListBlocks
 {
@@ -9,14 +10,15 @@ namespace Taskling.Blocks.ListBlocks
     {
         string ListBlockId { get; }
         int Attempt { get; }
-        IList<IListBlockItem<TItem>> Items { get; }
+        Task<IList<IListBlockItem<TItem>>> GetItemsAsync();
     }
 
     public interface IListBlock<TItem, THeader>
     {
         string ListBlockId { get; }
         int Attempt { get; }
-        IList<IListBlockItem<TItem>> Items { get; }
         THeader Header { get; }
+
+        Task<IList<IListBlockItem<TItem>>> GetItemsAsync();
     }
 }

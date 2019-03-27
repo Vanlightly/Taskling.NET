@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Taskling.Blocks.Common;
 using Taskling.Blocks.ObjectBlocks;
 using Taskling.Exceptions;
@@ -25,26 +26,26 @@ namespace Taskling.SqlServer.Blocks
             _taskRepository = taskRepository;
         }
 
-        public void ChangeStatus(BlockExecutionChangeStatusRequest changeStatusRequest)
+        public async Task ChangeStatusAsync(BlockExecutionChangeStatusRequest changeStatusRequest)
         {
-            ChangeStatusOfExecution(changeStatusRequest);
+            await ChangeStatusOfExecutionAsync(changeStatusRequest);
         }
 
-        public ObjectBlock<T> GetLastObjectBlock<T>(LastBlockRequest lastRangeBlockRequest)
+        public async Task<ObjectBlock<T>> GetLastObjectBlockAsync<T>(LastBlockRequest lastRangeBlockRequest)
         {
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(lastRangeBlockRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(lastRangeBlockRequest.TaskId);
 
             try
             {
-                using (var connection = CreateNewConnection(lastRangeBlockRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(lastRangeBlockRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandText = ObjectBlockQueryBuilder.GetLastObjectBlock;
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(lastRangeBlockRequest.TaskId).QueryTimeoutSeconds;
                     command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinition.TaskDefinitionId;
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        while (reader.Read())
+                        while (await reader.ReadAsync())
                         {
                             var blockId = reader["BlockId"].ToString();
                             var objectDataXml = reader["ObjectData"].ToString();
@@ -71,11 +72,11 @@ namespace Taskling.SqlServer.Blocks
         }
 
 
-        private void ChangeStatusOfExecution(BlockExecutionChangeStatusRequest changeStatusRequest)
+        private async Task ChangeStatusOfExecutionAsync(BlockExecutionChangeStatusRequest changeStatusRequest)
         {
             try
             {
-                using (var connection = CreateNewConnection(changeStatusRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(changeStatusRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(changeStatusRequest.TaskId).QueryTimeoutSeconds;
@@ -84,7 +85,7 @@ namespace Taskling.SqlServer.Blocks
                     command.Parameters.Add("@BlockExecutionStatus", SqlDbType.TinyInt).Value = (byte)changeStatusRequest.BlockExecutionStatus;
                     command.Parameters.Add("@ItemsCount", SqlDbType.Int).Value = changeStatusRequest.ItemsProcessed;
 
-                    command.ExecuteNonQuery();
+                    await command.ExecuteNonQueryAsync();
                 }
             }
             catch (SqlException sqlEx)

@@ -8,6 +8,8 @@ using Taskling.Blocks.ObjectBlocks;
 using Taskling.Contexts;
 using Taskling.Events;
 using Taskling.SqlServer.Tests.Helpers;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
 {
@@ -27,23 +29,23 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
             _taskDefinitionId = _executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             _executionHelper.InsertAvailableExecutionToken(_taskDefinitionId);
         }
-
+        
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_NumberOfBlocksAndStatusesOfBlockExecutionsCorrectAtEveryStep()
+        public async Task If_NumberOfBlocksAndStatusesOfBlockExecutionsCorrectAtEveryStep()
         {
             // ARRANGE
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
 
-                    var blocks = executionContext.GetObjectBlocks<string>(x => x.WithObject("Testing1"));
+                    var blocks = await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("Testing1"));
                     Assert.Equal(1, _blocksHelper.GetBlockCount(TestConstants.ApplicationName, TestConstants.TaskName));
                     int expectedNotStartedCount = 1;
                     int expectedCompletedCount = 0;
@@ -53,7 +55,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
 
                     foreach (var block in blocks)
                     {
-                        block.Start();
+                        await block.StartAsync();
                         expectedNotStartedCount--;
                         Assert.Equal(expectedNotStartedCount, _blocksHelper.GetBlockExecutionCountByStatus(TestConstants.ApplicationName, TestConstants.TaskName, BlockExecutionStatus.NotStarted));
                         Assert.Equal(1, _blocksHelper.GetBlockExecutionCountByStatus(TestConstants.ApplicationName, TestConstants.TaskName, BlockExecutionStatus.Started));
@@ -61,7 +63,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
 
 
                         // processing here
-                        block.Complete();
+                        await block.CompleteAsync();
                         expectedCompletedCount++;
                         Assert.Equal(expectedCompletedCount, _blocksHelper.GetBlockExecutionCountByStatus(TestConstants.ApplicationName, TestConstants.TaskName, BlockExecutionStatus.Completed));
                     }
@@ -72,18 +74,18 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_NoBlockNeeded_ThenEmptyListAndEventPersisted()
+        public async Task If_NoBlockNeeded_ThenEmptyListAndEventPersisted()
         {
             // ARRANGE
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
-                    var rangeBlocks = executionContext.GetObjectBlocks<string>(x => x.WithNoNewBlocks());
+                    var rangeBlocks = await executionContext.GetObjectBlocksAsync<string>(x => x.WithNoNewBlocks());
                     Assert.Equal(0, _blocksHelper.GetBlockCount(TestConstants.ApplicationName, TestConstants.TaskName));
 
                     var lastEvent = _executionHelper.GetLastEvent(_taskDefinitionId);
@@ -96,14 +98,14 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_ComplexObjectStored_ThenRetrievedOk()
+        public async Task If_ComplexObjectStored_ThenRetrievedOk()
         {
             // ARRANGE
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
@@ -119,7 +121,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
                         }
                     };
 
-                    var block = executionContext.GetObjectBlocks<MyComplexClass>(x => x.WithObject(myObject)).First();
+                    var block = (await executionContext.GetObjectBlocksAsync<MyComplexClass>(x => x.WithObject(myObject))).First();
                     Assert.Equal(myObject.Id, block.Block.Object.Id);
                     Assert.Equal(myObject.Name, block.Block.Object.Name);
                     Assert.Equal(myObject.DateOfBirth, block.Block.Object.DateOfBirth);
@@ -134,7 +136,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_LargeComplexObjectStored_ThenRetrievedOk()
+        public async Task If_LargeComplexObjectStored_ThenRetrievedOk()
         {
             var longList = GetLargeListOfStrings();
 
@@ -143,7 +145,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
@@ -159,7 +161,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
                         }
                     };
 
-                    var block = executionContext.GetObjectBlocks<MyComplexClass>(x => x.WithObject(myObject)).First();
+                    var block = (await executionContext.GetObjectBlocksAsync<MyComplexClass>(x => x.WithObject(myObject))).First();
                     Assert.Equal(myObject.Id, block.Block.Object.Id);
                     Assert.Equal(myObject.Name, block.Block.Object.Name);
                     Assert.Equal(myObject.DateOfBirth, block.Block.Object.DateOfBirth);
@@ -187,21 +189,21 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_PreviousBlock_ThenLastBlockHasCorrectObjectValue()
+        public async Task If_PreviousBlock_ThenLastBlockHasCorrectObjectValue()
         {
             // ARRANGE
             // Create previous blocks
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    var blocks = executionContext.GetObjectBlocks<string>(x => x.WithObject("Testing123"));
+                    var blocks = await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("Testing123"));
 
                     foreach (var block in blocks)
                     {
-                        block.Start();
-                        block.Complete();
+                        await block.StartAsync();
+                        await block.CompleteAsync();
                     }
                 }
             }
@@ -215,10 +217,10 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
             IObjectBlock<string> lastBlock = null;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    lastBlock = executionContext.GetLastObjectBlock<string>();
+                    lastBlock = await executionContext.GetLastObjectBlockAsync<string>();
                 }
             }
 
@@ -229,7 +231,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_NoPreviousBlock_ThenLastBlockIsNull()
+        public async Task If_NoPreviousBlock_ThenLastBlockIsNull()
         {
             // ARRANGE
             // all previous blocks were deleted in TestInitialize
@@ -238,10 +240,10 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
             IObjectBlock<string> lastBlock = null;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    lastBlock = executionContext.GetLastObjectBlock<string>();
+                    lastBlock = await executionContext.GetLastObjectBlockAsync<string>();
                 }
             }
 
@@ -252,21 +254,21 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_PreviousBlockIsPhantom_ThenLastBlockIsNotThePhantom()
+        public async Task If_PreviousBlockIsPhantom_ThenLastBlockIsNotThePhantom()
         {
             // ARRANGE
             // Create previous blocks
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    var blocks = executionContext.GetObjectBlocks<string>(x => x.WithObject("Testing987"));
+                    var blocks = await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("Testing987"));
 
                     foreach (var block in blocks)
                     {
-                        block.Start();
-                        block.Complete();
+                        await block.StartAsync();
+                        await block.CompleteAsync();
                     }
                 }
             }
@@ -277,10 +279,10 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
             IObjectBlock<string> lastBlock = null;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    lastBlock = executionContext.GetLastObjectBlock<string>();
+                    lastBlock = await executionContext.GetLastObjectBlockAsync<string>();
                 }
             }
 
@@ -291,7 +293,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_PreviousExecutionHadOneFailedBlockAndMultipleOkOnes_ThenBringBackTheFailedBlockWhenRequested()
+        public async Task If_PreviousExecutionHadOneFailedBlockAndMultipleOkOnes_ThenBringBackTheFailedBlockWhenRequested()
         {
             // ARRANGE
             var referenceValue = Guid.NewGuid().ToString();
@@ -300,7 +302,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
             bool startedOk;
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                startedOk = executionContext.TryStart(referenceValue);
+                startedOk = await executionContext.TryStartAsync(referenceValue);
                 Assert.True(startedOk);
                 if (startedOk)
                 {
@@ -309,32 +311,32 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
                     var maxBlockRange = new TimeSpan(0, 30, 0);
 
                     var blocks = new List<IObjectBlockContext<string>>();
-                    blocks.AddRange(executionContext.GetObjectBlocks<string>(x => x.WithObject("My object1")));
-                    blocks.AddRange(executionContext.GetObjectBlocks<string>(x => x.WithObject("My object2")));
-                    blocks.AddRange(executionContext.GetObjectBlocks<string>(x => x.WithObject("My object3")));
-                    blocks.AddRange(executionContext.GetObjectBlocks<string>(x => x.WithObject("My object4")));
-                    blocks.AddRange(executionContext.GetObjectBlocks<string>(x => x.WithObject("My object5")));
+                    blocks.AddRange(await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("My object1")));
+                    blocks.AddRange(await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("My object2")));
+                    blocks.AddRange(await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("My object3")));
+                    blocks.AddRange(await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("My object4")));
+                    blocks.AddRange(await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("My object5")));
 
-                    blocks[0].Start();
-                    blocks[0].Complete(); // completed
-                    blocks[1].Start();
-                    blocks[1].Failed("Something bad happened"); // failed
+                    await blocks[0].StartAsync();
+                    await blocks[0].CompleteAsync(); // completed
+                    await blocks[1].StartAsync();
+                    await blocks[1].FailedAsync("Something bad happened"); // failed
                     // 2 not started
-                    blocks[3].Start(); // started
-                    blocks[4].Start();
-                    blocks[4].Complete(); // completed
+                    await blocks[3].StartAsync(); // started
+                    await blocks[4].StartAsync();
+                    await blocks[4].CompleteAsync(); // completed
                 }
             }
 
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
-                    var blocks = executionContext.GetObjectBlocks<string>(x => x.Reprocess()
+                    var blocks = await executionContext.GetObjectBlocksAsync<string>(x => x.Reprocess()
                                                         .PendingAndFailedBlocks()
-                                                        .OfExecutionWith(referenceValue)).ToList();
+                                                        .OfExecutionWith(referenceValue));
 
                     Assert.Equal(3, blocks.Count);
                 }
@@ -344,7 +346,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_PreviousExecutionHadOneFailedBlockAndMultipleOkOnes_ThenBringBackAllBlocksWhenRequested()
+        public async Task If_PreviousExecutionHadOneFailedBlockAndMultipleOkOnes_ThenBringBackAllBlocksWhenRequested()
         {
             // ARRANGE
             var referenceValue = Guid.NewGuid().ToString();
@@ -353,7 +355,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
             bool startedOk;
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                startedOk = executionContext.TryStart(referenceValue);
+                startedOk = await executionContext.TryStartAsync(referenceValue);
                 Assert.True(startedOk);
                 if (startedOk)
                 {
@@ -362,32 +364,32 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
                     var maxBlockRange = new TimeSpan(0, 30, 0);
 
                     var blocks = new List<IObjectBlockContext<string>>();
-                    blocks.AddRange(executionContext.GetObjectBlocks<string>(x => x.WithObject("My object1")));
-                    blocks.AddRange(executionContext.GetObjectBlocks<string>(x => x.WithObject("My object2")));
-                    blocks.AddRange(executionContext.GetObjectBlocks<string>(x => x.WithObject("My object3")));
-                    blocks.AddRange(executionContext.GetObjectBlocks<string>(x => x.WithObject("My object4")));
-                    blocks.AddRange(executionContext.GetObjectBlocks<string>(x => x.WithObject("My object5")));
+                    blocks.AddRange(await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("My object1")));
+                    blocks.AddRange(await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("My object2")));
+                    blocks.AddRange(await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("My object3")));
+                    blocks.AddRange(await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("My object4")));
+                    blocks.AddRange(await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("My object5")));
 
-                    blocks[0].Start();
-                    blocks[0].Complete(); // completed
-                    blocks[1].Start();
-                    blocks[1].Failed("Something bad happened"); // failed
+                    await blocks[0].StartAsync();
+                    await blocks[0].CompleteAsync(); // completed
+                    await blocks[1].StartAsync();
+                    await blocks[1].FailedAsync("Something bad happened"); // failed
                     // 2 not started
-                    blocks[3].Start(); // started
-                    blocks[4].Start();
-                    blocks[4].Complete(); // completed
+                    await blocks[3].StartAsync(); // started
+                    await blocks[4].StartAsync();
+                    await blocks[4].CompleteAsync(); // completed
                 }
             }
 
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
-                    var blocks = executionContext.GetObjectBlocks<string>(x => x.Reprocess()
+                    var blocks = await executionContext.GetObjectBlocksAsync<string>(x => x.Reprocess()
                                                         .AllBlocks()
-                                                        .OfExecutionWith(referenceValue)).ToList();
+                                                        .OfExecutionWith(referenceValue));
 
                     Assert.Equal(5, blocks.Count);
                 }
@@ -397,21 +399,21 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_WithPreviousDeadBlocks_ThenReprocessOk()
+        public async Task If_WithPreviousDeadBlocks_ThenReprocessOk()
         {
             // ARRANGE
-            CreateFailedObjectBlockTask();
-            CreateDeadObjectBlockTask();
+            await CreateFailedObjectBlockTaskAsync();
+            await CreateDeadObjectBlockTaskAsync();
 
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContextWithNoReprocessing())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
-                    var blocks = executionContext.GetObjectBlocks<string>(x => x.WithObject("TestingDFG")
+                    var blocks = await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("TestingDFG")
                         .OverrideConfiguration()
                         .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), 3)
                         .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0), 3)
@@ -420,9 +422,9 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
                     int counter = 0;
                     foreach (var block in blocks)
                     {
-                        block.Start();
+                        await block.StartAsync();
 
-                        block.Complete();
+                        await block.CompleteAsync();
 
                         counter++;
                         Assert.Equal(counter, _blocksHelper.GetBlockExecutionCountByStatus(TestConstants.ApplicationName, TestConstants.TaskName, BlockExecutionStatus.Completed));
@@ -436,21 +438,21 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsDateRangeWithOverridenConfiguration_ThenOverridenValuesAreUsed()
+        public async Task If_AsDateRangeWithOverridenConfiguration_ThenOverridenValuesAreUsed()
         {
             // ARRANGE
-            CreateFailedObjectBlockTask();
-            CreateDeadObjectBlockTask();
+            await CreateFailedObjectBlockTaskAsync();
+            await CreateDeadObjectBlockTaskAsync();
 
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContextWithNoReprocessing())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
-                    var blocks = executionContext.GetObjectBlocks<string>(x => x.WithObject("TestingYHN")
+                    var blocks = await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("TestingYHN")
                         .OverrideConfiguration()
                         .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), 3)
                         .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0), 3)
@@ -468,21 +470,21 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_WithNoOverridenConfiguration_ThenConfigurationValuesAreUsed()
+        public async Task If_WithNoOverridenConfiguration_ThenConfigurationValuesAreUsed()
         {
             // ARRANGE
-            CreateFailedObjectBlockTask();
-            CreateDeadObjectBlockTask();
+            await CreateFailedObjectBlockTaskAsync();
+            await CreateDeadObjectBlockTaskAsync();
 
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContextWithNoReprocessing())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
-                    var blocks = executionContext.GetObjectBlocks<string>(x => x.WithObject("Testing YUI"));
+                    var blocks = await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("Testing YUI"));
                     Assert.Single(blocks);
                     Assert.True(blocks.First().Block.Object == "Testing YUI");
                 }
@@ -492,7 +494,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_ForceBlock_ThenBlockGetsReprocessedAndDequeued()
+        public async Task If_ForceBlock_ThenBlockGetsReprocessedAndDequeued()
         {
             // ARRANGE
             var fromDate = DateTime.UtcNow.AddHours(-12);
@@ -502,14 +504,14 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    var blocks = executionContext.GetObjectBlocks<string>(x => x.WithObject("Testing Hello"));
+                    var blocks = await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("Testing Hello"));
                     foreach (var block in blocks)
                     {
-                        block.Start();
-                        block.Complete();
+                        await block.StartAsync();
+                        await block.CompleteAsync();
                     }
                 }
             }
@@ -521,17 +523,17 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
             // ACT - reprocess the forced block
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    var blocks = executionContext.GetObjectBlocks<string>(x => x.WithObject("Testing Goodbye"));
+                    var blocks = await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("Testing Goodbye"));
                     Assert.Equal(2, blocks.Count);
                     Assert.Equal("Testing Hello", blocks[0].Block.Object);
                     Assert.Equal("Testing Goodbye", blocks[1].Block.Object);
                     foreach (var block in blocks)
                     {
-                        block.Start();
-                        block.Complete();
+                        await block.StartAsync();
+                        await block.CompleteAsync();
                     }
                 }
             }
@@ -539,10 +541,10 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
             // The forced block will have been dequeued so it should not be processed again
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    var blocks = executionContext.GetObjectBlocks<string>(x => x.WithNoNewBlocks());
+                    var blocks = await executionContext.GetObjectBlocksAsync<string>(x => x.WithNoNewBlocks());
                     Assert.Equal(0, blocks.Count);
                 }
             }
@@ -558,39 +560,39 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ObjectBlockContext
             return ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndNoReprocessing());
         }
 
-        private void CreateFailedObjectBlockTask()
+        private async Task CreateFailedObjectBlockTaskAsync()
         {
             using (var executionContext = CreateTaskExecutionContextWithNoReprocessing())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    var blocks = executionContext.GetObjectBlocks<string>(x => x.WithObject("Failed Task"));
+                    var blocks = await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("Failed Task"));
 
                     foreach (var block in blocks)
                     {
-                        block.Start();
-                        block.Failed();
+                        await block.StartAsync();
+                        await block.FailedAsync();
                     }
                 }
             }
         }
 
-        private void CreateDeadObjectBlockTask()
+        private async Task CreateDeadObjectBlockTaskAsync()
         {
             using (var executionContext = CreateTaskExecutionContextWithNoReprocessing())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var from = new DateTime(2016, 1, 4);
                     var to = new DateTime(2016, 1, 7);
                     var maxBlockSize = new TimeSpan(1, 0, 0, 0);
-                    var blocks = executionContext.GetObjectBlocks<string>(x => x.WithObject("Dead Task"));
+                    var blocks = await executionContext.GetObjectBlocksAsync<string>(x => x.WithObject("Dead Task"));
 
                     foreach (var block in blocks)
                     {
-                        block.Start();
+                        await block.StartAsync();
                     }
                 }
             }

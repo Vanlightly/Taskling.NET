@@ -10,6 +10,8 @@ using Taskling.SqlServer.Blocks;
 using Taskling.SqlServer.Tests.Helpers;
 using Taskling.SqlServer.Tasks;
 using Taskling.Tasks;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 {
@@ -42,7 +44,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             TaskRepository.ClearCache();
         }
-
+        
         private void InsertDateRangeTestData(TaskDeathMode taskDeathMode)
         {
             var now = DateTime.UtcNow;
@@ -157,7 +159,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_OverrideModeAndDateRange_DeadTasksInTargetPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
+        public async Task When_OverrideModeAndDateRange_DeadTasksInTargetPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
         {
             // ARRANGE
             InsertDateRangeTestData(TaskDeathMode.Override);
@@ -166,7 +168,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadRangeBlocks(request);
+            var deadBlocks = await sut.FindDeadRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(3, deadBlocks.Count);
@@ -178,7 +180,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_OverrideModeAndDateRange_DeadTasksOutsideTargetPeriod_ThenReturnNoBlocks()
+        public async Task When_OverrideModeAndDateRange_DeadTasksOutsideTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
             InsertDateRangeTestData(TaskDeathMode.Override);
@@ -187,7 +189,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadRangeBlocks(request);
+            var deadBlocks = await sut.FindDeadRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(0, deadBlocks.Count);
@@ -196,7 +198,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_OverrideModeAndDateRange_DeadTasksInTargetPeriodAndMoreThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
+        public async Task When_OverrideModeAndDateRange_DeadTasksInTargetPeriodAndMoreThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
         {
             // ARRANGE
             InsertDateRangeTestData(TaskDeathMode.Override);
@@ -205,7 +207,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadRangeBlocks(request);
+            var deadBlocks = await sut.FindDeadRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(1, deadBlocks.Count);
@@ -215,7 +217,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_OverrideModeAndDateRange_SomeDeadTasksHaveReachedRetryLimit_ThenReturnOnlyDeadBlocksNotAtLimit()
+        public async Task When_OverrideModeAndDateRange_SomeDeadTasksHaveReachedRetryLimit_ThenReturnOnlyDeadBlocksNotAtLimit()
         {
             // ARRANGE
             InsertDateRangeTestData(TaskDeathMode.Override);
@@ -225,7 +227,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadRangeBlocks(request);
+            var deadBlocks = await sut.FindDeadRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(2, deadBlocks.Count);
@@ -236,7 +238,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_KeepAliveModeAndDateRange_DeadTasksPassedKeepAliveLimitPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
+        public async Task When_KeepAliveModeAndDateRange_DeadTasksPassedKeepAliveLimitPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
         {
             // ARRANGE
             InsertDateRangeTestData(TaskDeathMode.KeepAlive);
@@ -247,7 +249,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadRangeBlocks(request);
+            var deadBlocks = await sut.FindDeadRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(3, deadBlocks.Count);
@@ -259,7 +261,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_KeepAliveModeAndDateRange_DeadTasksPassedKeepAliveLimitAndGreaterThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
+        public async Task When_KeepAliveModeAndDateRange_DeadTasksPassedKeepAliveLimitAndGreaterThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
         {
             // ARRANGE
             InsertDateRangeTestData(TaskDeathMode.KeepAlive);
@@ -270,7 +272,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadRangeBlocks(request);
+            var deadBlocks = await sut.FindDeadRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(2, deadBlocks.Count);
@@ -281,7 +283,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_KeepAliveModeAndDateRange_DeadTasksNotPassedKeepAliveLimitInTargetPeriod_ThenReturnNoBlocks()
+        public async Task When_KeepAliveModeAndDateRange_DeadTasksNotPassedKeepAliveLimitInTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
             InsertDateRangeTestData(TaskDeathMode.KeepAlive);
@@ -292,7 +294,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadRangeBlocks(request);
+            var deadBlocks = await sut.FindDeadRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(0, deadBlocks.Count);
@@ -301,7 +303,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_KeepAliveModeAndDateRange_DeadTasksPassedKeepAliveLimitButAreOutsideTargetPeriod_ThenReturnNoBlocks()
+        public async Task When_KeepAliveModeAndDateRange_DeadTasksPassedKeepAliveLimitButAreOutsideTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
             InsertDateRangeTestData(TaskDeathMode.KeepAlive);
@@ -312,7 +314,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadRangeBlocks(request);
+            var deadBlocks = await sut.FindDeadRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(0, deadBlocks.Count);
@@ -325,7 +327,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_OverrideModeAndNumericRange_DeadTasksInTargetPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
+        public async Task When_OverrideModeAndNumericRange_DeadTasksInTargetPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
         {
             // ARRANGE
             InsertNumericRangeTestData(TaskDeathMode.Override);
@@ -334,7 +336,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadRangeBlocks(request);
+            var deadBlocks = await sut.FindDeadRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(3, deadBlocks.Count);
@@ -346,7 +348,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_OverrideModeAndNumericRange_DeadTasksOutsideTargetPeriod_ThenReturnNoBlocks()
+        public async Task When_OverrideModeAndNumericRange_DeadTasksOutsideTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
             InsertNumericRangeTestData(TaskDeathMode.Override);
@@ -355,7 +357,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadRangeBlocks(request);
+            var deadBlocks = await sut.FindDeadRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(0, deadBlocks.Count);
@@ -364,7 +366,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_OverrideModeAndNumericRange_DeadTasksInTargetPeriodAndMoreThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
+        public async Task When_OverrideModeAndNumericRange_DeadTasksInTargetPeriodAndMoreThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
         {
             // ARRANGE
             InsertNumericRangeTestData(TaskDeathMode.Override);
@@ -373,7 +375,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadRangeBlocks(request);
+            var deadBlocks = await sut.FindDeadRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(1, deadBlocks.Count);
@@ -383,7 +385,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_OverrideModeAndNumericRange_SomeDeadTasksHaveReachedRetryLimit_ThenReturnOnlyDeadBlocksNotAtLimit()
+        public async Task When_OverrideModeAndNumericRange_SomeDeadTasksHaveReachedRetryLimit_ThenReturnOnlyDeadBlocksNotAtLimit()
         {
             // ARRANGE
             InsertNumericRangeTestData(TaskDeathMode.Override);
@@ -393,7 +395,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadRangeBlocks(request);
+            var deadBlocks = await sut.FindDeadRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(2, deadBlocks.Count);
@@ -404,7 +406,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_KeepAliveModeAndNumericRange_DeadTasksPassedKeepAliveLimitPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
+        public async Task When_KeepAliveModeAndNumericRange_DeadTasksPassedKeepAliveLimitPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
         {
             // ARRANGE
             InsertNumericRangeTestData(TaskDeathMode.KeepAlive);
@@ -415,7 +417,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadRangeBlocks(request);
+            var deadBlocks = await sut.FindDeadRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(3, deadBlocks.Count);
@@ -427,7 +429,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_KeepAliveModeAndNumericRange_DeadTasksPassedKeepAliveLimitAndGreaterThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
+        public async Task When_KeepAliveModeAndNumericRange_DeadTasksPassedKeepAliveLimitAndGreaterThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
         {
             // ARRANGE
             InsertNumericRangeTestData(TaskDeathMode.KeepAlive);
@@ -438,7 +440,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadRangeBlocks(request);
+            var deadBlocks = await sut.FindDeadRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(2, deadBlocks.Count);
@@ -449,7 +451,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_KeepAliveModeAndNumericRange_DeadTasksNotPassedKeepAliveLimitInTargetPeriod_ThenReturnNoBlocks()
+        public async Task When_KeepAliveModeAndNumericRange_DeadTasksNotPassedKeepAliveLimitInTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
             InsertNumericRangeTestData(TaskDeathMode.KeepAlive);
@@ -460,7 +462,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadRangeBlocks(request);
+            var deadBlocks = await sut.FindDeadRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(0, deadBlocks.Count);
@@ -469,7 +471,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_KeepAliveModeAndNumericRange_DeadTasksPassedKeepAliveLimitButAreOutsideTargetPeriod_ThenReturnNoBlocks()
+        public async Task When_KeepAliveModeAndNumericRange_DeadTasksPassedKeepAliveLimitButAreOutsideTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
             InsertNumericRangeTestData(TaskDeathMode.KeepAlive);
@@ -480,7 +482,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadRangeBlocks(request);
+            var deadBlocks = await sut.FindDeadRangeBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(0, deadBlocks.Count);
@@ -493,7 +495,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_OverrideModeAndList_DeadTasksInTargetPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
+        public async Task When_OverrideModeAndList_DeadTasksInTargetPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
         {
             // ARRANGE
             InsertListTestData(TaskDeathMode.Override);
@@ -502,7 +504,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadListBlocks(request);
+            var deadBlocks = await sut.FindDeadListBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(3, deadBlocks.Count);
@@ -514,7 +516,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_OverrideModeAndList_DeadTasksOutsideTargetPeriod_ThenReturnNoBlocks()
+        public async Task When_OverrideModeAndList_DeadTasksOutsideTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
             InsertListTestData(TaskDeathMode.Override);
@@ -523,7 +525,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadListBlocks(request);
+            var deadBlocks = await sut.FindDeadListBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(0, deadBlocks.Count);
@@ -532,7 +534,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_OverrideModeAndList_DeadTasksInTargetPeriodAndMoreThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
+        public async Task When_OverrideModeAndList_DeadTasksInTargetPeriodAndMoreThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
         {
             // ARRANGE
             InsertListTestData(TaskDeathMode.Override);
@@ -541,7 +543,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadListBlocks(request);
+            var deadBlocks = await sut.FindDeadListBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(1, deadBlocks.Count);
@@ -551,7 +553,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_OverrideModeAndList_SomeDeadTasksHaveReachedRetryLimit_ThenReturnOnlyDeadBlocksNotAtLimit()
+        public async Task When_OverrideModeAndList_SomeDeadTasksHaveReachedRetryLimit_ThenReturnOnlyDeadBlocksNotAtLimit()
         {
             // ARRANGE
             InsertListTestData(TaskDeathMode.Override);
@@ -561,7 +563,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadListBlocks(request);
+            var deadBlocks = await sut.FindDeadListBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(2, deadBlocks.Count);
@@ -572,7 +574,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_KeepAliveModeAndList_DeadTasksPassedKeepAliveLimitPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
+        public async Task When_KeepAliveModeAndList_DeadTasksPassedKeepAliveLimitPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
         {
             // ARRANGE
             InsertListTestData(TaskDeathMode.KeepAlive);
@@ -583,7 +585,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadListBlocks(request);
+            var deadBlocks = await sut.FindDeadListBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(3, deadBlocks.Count);
@@ -595,7 +597,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_KeepAliveModeAndList_DeadTasksPassedKeepAliveLimitAndGreaterThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
+        public async Task When_KeepAliveModeAndList_DeadTasksPassedKeepAliveLimitAndGreaterThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
         {
             // ARRANGE
             InsertListTestData(TaskDeathMode.KeepAlive);
@@ -606,7 +608,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadListBlocks(request);
+            var deadBlocks = await sut.FindDeadListBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(2, deadBlocks.Count);
@@ -617,7 +619,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_KeepAliveModeAndList_DeadTasksNotPassedKeepAliveLimitInTargetPeriod_ThenReturnNoBlocks()
+        public async Task When_KeepAliveModeAndList_DeadTasksNotPassedKeepAliveLimitInTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
             InsertListTestData(TaskDeathMode.KeepAlive);
@@ -628,7 +630,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadListBlocks(request);
+            var deadBlocks = await sut.FindDeadListBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(0, deadBlocks.Count);
@@ -637,7 +639,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_KeepAliveModeAndList_DeadTasksPassedKeepAliveLimitButAreOutsideTargetPeriod_ThenReturnNoBlocks()
+        public async Task When_KeepAliveModeAndList_DeadTasksPassedKeepAliveLimitButAreOutsideTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
             InsertListTestData(TaskDeathMode.KeepAlive);
@@ -648,7 +650,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadListBlocks(request);
+            var deadBlocks = await sut.FindDeadListBlocksAsync(request);
 
             // ASSERT
             Assert.Equal(0, deadBlocks.Count);
@@ -661,7 +663,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_OverrideModeAndObject_DeadTasksInTargetPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
+        public async Task When_OverrideModeAndObject_DeadTasksInTargetPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
         {
             // ARRANGE
             InsertObjectTestData(TaskDeathMode.Override);
@@ -670,7 +672,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadObjectBlocks<string>(request);
+            var deadBlocks = await sut.FindDeadObjectBlocksAsync<string>(request);
 
             // ASSERT
             Assert.Equal(3, deadBlocks.Count);
@@ -682,7 +684,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_OverrideModeAndObject_DeadTasksOutsideTargetPeriod_ThenReturnNoBlocks()
+        public async Task When_OverrideModeAndObject_DeadTasksOutsideTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
             InsertObjectTestData(TaskDeathMode.Override);
@@ -691,7 +693,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadObjectBlocks<string>(request);
+            var deadBlocks = await sut.FindDeadObjectBlocksAsync<string>(request);
 
             // ASSERT
             Assert.Equal(0, deadBlocks.Count);
@@ -700,7 +702,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_OverrideModeAndObject_DeadTasksInTargetPeriodAndMoreThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
+        public async Task When_OverrideModeAndObject_DeadTasksInTargetPeriodAndMoreThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
         {
             // ARRANGE
             InsertObjectTestData(TaskDeathMode.Override);
@@ -709,7 +711,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadObjectBlocks<string>(request);
+            var deadBlocks = await sut.FindDeadObjectBlocksAsync<string>(request);
 
             // ASSERT
             Assert.Equal(1, deadBlocks.Count);
@@ -719,7 +721,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_OverrideModeAndObject_SomeDeadTasksHaveReachedRetryLimit_ThenReturnOnlyDeadBlocksNotAtLimit()
+        public async Task When_OverrideModeAndObject_SomeDeadTasksHaveReachedRetryLimit_ThenReturnOnlyDeadBlocksNotAtLimit()
         {
             // ARRANGE
             InsertObjectTestData(TaskDeathMode.Override);
@@ -729,7 +731,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadObjectBlocks<string>(request);
+            var deadBlocks = await sut.FindDeadObjectBlocksAsync<string>(request);
 
             // ASSERT
             Assert.Equal(2, deadBlocks.Count);
@@ -740,7 +742,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_KeepAliveModeAndObject_DeadTasksPassedKeepAliveLimitPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
+        public async Task When_KeepAliveModeAndObject_DeadTasksPassedKeepAliveLimitPeriodAndLessThanBlockCountLimit_ThenReturnAllDeadBlocks()
         {
             // ARRANGE
             InsertObjectTestData(TaskDeathMode.KeepAlive);
@@ -751,7 +753,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadObjectBlocks<string>(request);
+            var deadBlocks = await sut.FindDeadObjectBlocksAsync<string>(request);
 
             // ASSERT
             Assert.Equal(3, deadBlocks.Count);
@@ -763,7 +765,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_KeepAliveModeAndObject_DeadTasksPassedKeepAliveLimitAndGreaterThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
+        public async Task When_KeepAliveModeAndObject_DeadTasksPassedKeepAliveLimitAndGreaterThanBlockCountLimit_ThenReturnOldestDeadBlocksUpToLimit()
         {
             // ARRANGE
             InsertObjectTestData(TaskDeathMode.KeepAlive);
@@ -774,7 +776,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadObjectBlocks<string>(request);
+            var deadBlocks = await sut.FindDeadObjectBlocksAsync<string>(request);
 
             // ASSERT
             Assert.Equal(2, deadBlocks.Count);
@@ -785,7 +787,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_KeepAliveModeAndObject_DeadTasksNotPassedKeepAliveLimitInTargetPeriod_ThenReturnNoBlocks()
+        public async Task When_KeepAliveModeAndObject_DeadTasksNotPassedKeepAliveLimitInTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
             InsertObjectTestData(TaskDeathMode.KeepAlive);
@@ -796,7 +798,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadObjectBlocks<string>(request);
+            var deadBlocks = await sut.FindDeadObjectBlocksAsync<string>(request);
 
             // ASSERT
             Assert.Equal(0, deadBlocks.Count);
@@ -805,7 +807,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void When_KeepAliveModeAndObject_DeadTasksPassedKeepAliveLimitButAreOutsideTargetPeriod_ThenReturnNoBlocks()
+        public async Task When_KeepAliveModeAndObject_DeadTasksPassedKeepAliveLimitButAreOutsideTargetPeriod_ThenReturnNoBlocks()
         {
             // ARRANGE
             InsertObjectTestData(TaskDeathMode.KeepAlive);
@@ -816,7 +818,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_BlockRepository
 
             // ACT
             var sut = CreateSut();
-            var deadBlocks = sut.FindDeadObjectBlocks<string>(request);
+            var deadBlocks = await sut.FindDeadObjectBlocksAsync<string>(request);
 
             // ASSERT
             Assert.Equal(0, deadBlocks.Count);

@@ -2,18 +2,19 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Taskling.Blocks.ListBlocks
 {
     public class ListBlockItem<T> : IListBlockItem<T>
     {
-        private ItemCompleteDelegate<T> _itemComplete;
-        private ItemFailedDelegate<T> _itemFailed;
-        private DiscardItemDelegate<T> _discardItem;
+        private Func<IListBlockItem<T>, Task> _itemComplete;
+        private Func<IListBlockItem<T>,string, byte?, Task> _itemFailed;
+        private Func<IListBlockItem<T>, string, byte?, Task> _discardItem;
 
-        internal void SetParentContext(ItemCompleteDelegate<T> itemComplete,
-            ItemFailedDelegate<T> itemFailed,
-            DiscardItemDelegate<T> discardItem)
+        internal void SetParentContext(Func<IListBlockItem<T>, Task> itemComplete,
+            Func<IListBlockItem<T>, string, byte?, Task> itemFailed,
+            Func<IListBlockItem<T>, string, byte?, Task> discardItem)
         {
             _itemComplete = itemComplete;
             _itemFailed = itemFailed;
@@ -27,18 +28,18 @@ namespace Taskling.Blocks.ListBlocks
         public DateTime LastUpdated { get; set; }
         public byte? Step { get; set; }
 
-        public void Completed()
+        public async Task CompletedAsync()
         {
-            _itemComplete(this);
+            await _itemComplete(this);
         }
-        public void Failed(string message)
+        public async Task FailedAsync(string message)
         {
-            _itemFailed(this, message);
+            await _itemFailed(this, message, null);
         }
 
-        public void Discarded(string message)
+        public async Task DiscardedAsync(string message)
         {
-            _discardItem(this, message);
+            await _discardItem(this, message, null);
         }
     }
 }

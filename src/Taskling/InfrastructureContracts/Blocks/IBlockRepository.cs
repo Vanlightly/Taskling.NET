@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Taskling.Blocks.ObjectBlocks;
 using Taskling.Blocks.RangeBlocks;
 using Taskling.InfrastructureContracts.Blocks.CommonRequests;
@@ -14,28 +15,28 @@ namespace Taskling.InfrastructureContracts.Blocks
 {
     public interface IBlockRepository
     {
-        IList<ForcedRangeBlockQueueItem> GetQueuedForcedRangeBlocks(QueuedForcedBlocksRequest queuedForcedBlocksRequest);
-        IList<ForcedListBlockQueueItem> GetQueuedForcedListBlocks(QueuedForcedBlocksRequest queuedForcedBlocksRequest);
-        IList<ForcedObjectBlockQueueItem<T>> GetQueuedForcedObjectBlocks<T>(QueuedForcedBlocksRequest queuedForcedBlocksRequest);
-        void DequeueForcedBlocks(DequeueForcedBlocksRequest dequeueForcedBlocksRequest);
+        Task<IList<ForcedRangeBlockQueueItem>> GetQueuedForcedRangeBlocksAsync(QueuedForcedBlocksRequest queuedForcedBlocksRequest);
+        Task<IList<ForcedListBlockQueueItem>> GetQueuedForcedListBlocksAsync(QueuedForcedBlocksRequest queuedForcedBlocksRequest);
+        Task<IList<ForcedObjectBlockQueueItem<T>>> GetQueuedForcedObjectBlocksAsync<T>(QueuedForcedBlocksRequest queuedForcedBlocksRequest);
+        Task DequeueForcedBlocksAsync(DequeueForcedBlocksRequest dequeueForcedBlocksRequest);
 
-        IList<RangeBlock> FindFailedRangeBlocks(FindFailedBlocksRequest failedBlocksRequest);
-        IList<RangeBlock> FindDeadRangeBlocks(FindDeadBlocksRequest deadBlocksRequest);
-        IList<RangeBlock> FindRangeBlocksOfTask(FindBlocksOfTaskRequest blocksOfTaskRequest);
-        RangeBlockCreateResponse AddRangeBlock(RangeBlockCreateRequest rangeBlockCreateRequest);
-        string AddRangeBlockExecution(BlockExecutionCreateRequest executionCreateRequest);
+        Task<IList<RangeBlock>> FindFailedRangeBlocksAsync(FindFailedBlocksRequest failedBlocksRequest);
+        Task<IList<RangeBlock>> FindDeadRangeBlocksAsync(FindDeadBlocksRequest deadBlocksRequest);
+        Task<IList<RangeBlock>> FindRangeBlocksOfTaskAsync(FindBlocksOfTaskRequest blocksOfTaskRequest);
+        Task<RangeBlockCreateResponse> AddRangeBlockAsync(RangeBlockCreateRequest rangeBlockCreateRequest);
+        Task<string> AddRangeBlockExecutionAsync(BlockExecutionCreateRequest executionCreateRequest);
+        
+        Task<IList<ProtoListBlock>> FindFailedListBlocksAsync(FindFailedBlocksRequest failedBlocksRequest);
+        Task<IList<ProtoListBlock>> FindDeadListBlocksAsync(FindDeadBlocksRequest deadBlocksRequest);
+        Task<IList<ProtoListBlock>> FindListBlocksOfTaskAsync(FindBlocksOfTaskRequest blocksOfTaskRequest);
+        Task<ListBlockCreateResponse> AddListBlockAsync(ListBlockCreateRequest createRequest);
+        Task<string> AddListBlockExecutionAsync(BlockExecutionCreateRequest executionCreateRequest);
 
-        IList<ProtoListBlock> FindFailedListBlocks(FindFailedBlocksRequest failedBlocksRequest);
-        IList<ProtoListBlock> FindDeadListBlocks(FindDeadBlocksRequest deadBlocksRequest);
-        IList<ProtoListBlock> FindListBlocksOfTask(FindBlocksOfTaskRequest blocksOfTaskRequest);
-        ListBlockCreateResponse AddListBlock(ListBlockCreateRequest createRequest);
-        string AddListBlockExecution(BlockExecutionCreateRequest executionCreateRequest);
-
-        IList<ObjectBlock<T>> FindObjectBlocksOfTask<T>(FindBlocksOfTaskRequest blocksOfTaskRequest);
-        IList<ObjectBlock<T>> FindFailedObjectBlocks<T>(FindFailedBlocksRequest failedBlocksRequest);
-        IList<ObjectBlock<T>> FindDeadObjectBlocks<T>(FindDeadBlocksRequest deadBlocksRequest);
-        string AddObjectBlockExecution(BlockExecutionCreateRequest executionCreateRequest);
-        ObjectBlockCreateResponse<T> AddObjectBlock<T>(ObjectBlockCreateRequest<T> createRequest);
+        Task<IList<ObjectBlock<T>>> FindObjectBlocksOfTaskAsync<T>(FindBlocksOfTaskRequest blocksOfTaskRequest);
+        Task<IList<ObjectBlock<T>>> FindFailedObjectBlocksAsync<T>(FindFailedBlocksRequest failedBlocksRequest);
+        Task<IList<ObjectBlock<T>>> FindDeadObjectBlocksAsync<T>(FindDeadBlocksRequest deadBlocksRequest);
+        Task<string> AddObjectBlockExecutionAsync(BlockExecutionCreateRequest executionCreateRequest);
+        Task<ObjectBlockCreateResponse<T>> AddObjectBlockAsync<T>(ObjectBlockCreateRequest<T> createRequest);
 
     }
 }

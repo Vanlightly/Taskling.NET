@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Taskling.Blocks.Common;
 using Taskling.Blocks.ListBlocks;
 using Taskling.Blocks.ObjectBlocks;
@@ -47,40 +48,40 @@ namespace Taskling.SqlServer.Blocks
 
         #region .: Force Block Queue :.
 
-        public IList<ForcedRangeBlockQueueItem> GetQueuedForcedRangeBlocks(QueuedForcedBlocksRequest queuedForcedBlocksRequest)
+        public async Task<IList<ForcedRangeBlockQueueItem>> GetQueuedForcedRangeBlocksAsync(QueuedForcedBlocksRequest queuedForcedBlocksRequest)
         {
             string query = string.Empty;
             switch (queuedForcedBlocksRequest.BlockType)
             {
                 case BlockType.DateRange:
-                    return GetForcedDateRangeBlocks(queuedForcedBlocksRequest);
+                    return await GetForcedDateRangeBlocksAsync(queuedForcedBlocksRequest);
                 case BlockType.NumericRange:
-                    return GetForcedNumericRangeBlocks(queuedForcedBlocksRequest);
+                    return await GetForcedNumericRangeBlocksAsync(queuedForcedBlocksRequest);
                 default:
                     throw new NotSupportedException("This range type is not supported");
             }
         }
 
-        public IList<ForcedListBlockQueueItem> GetQueuedForcedListBlocks(QueuedForcedBlocksRequest queuedForcedBlocksRequest)
+        public async Task<IList<ForcedListBlockQueueItem>> GetQueuedForcedListBlocksAsync(QueuedForcedBlocksRequest queuedForcedBlocksRequest)
         {
-            return GetForcedListBlocks(queuedForcedBlocksRequest);
+            return await GetForcedListBlocksAsync(queuedForcedBlocksRequest);
         }
 
-        public IList<ForcedObjectBlockQueueItem<T>> GetQueuedForcedObjectBlocks<T>(QueuedForcedBlocksRequest queuedForcedBlocksRequest)
+        public async Task<IList<ForcedObjectBlockQueueItem<T>>> GetQueuedForcedObjectBlocksAsync<T>(QueuedForcedBlocksRequest queuedForcedBlocksRequest)
         {
-            return GetForcedObjectBlocks<T>(queuedForcedBlocksRequest);
+            return await GetForcedObjectBlocksAsync<T>(queuedForcedBlocksRequest);
         }
 
-        public void DequeueForcedBlocks(DequeueForcedBlocksRequest dequeueForcedBlocksRequest)
+        public async Task DequeueForcedBlocksAsync(DequeueForcedBlocksRequest dequeueForcedBlocksRequest)
         {
-            UpdateForcedBlocks(dequeueForcedBlocksRequest);
+            await UpdateForcedBlocksAsync(dequeueForcedBlocksRequest);
         }
 
         #endregion .: Force Block Queue :.
 
         #region .: Range Blocks :.
 
-        public IList<RangeBlock> FindFailedRangeBlocks(FindFailedBlocksRequest failedBlocksRequest)
+        public async Task<IList<RangeBlock>> FindFailedRangeBlocksAsync(FindFailedBlocksRequest failedBlocksRequest)
         {
             string query = string.Empty;
             switch (failedBlocksRequest.BlockType)
@@ -95,10 +96,10 @@ namespace Taskling.SqlServer.Blocks
                     throw new NotSupportedException("This range type is not supported");
             }
 
-            return FindFailedDateRangeBlocks(failedBlocksRequest, query);
+            return await FindFailedDateRangeBlocksAsync(failedBlocksRequest, query);
         }
 
-        public IList<RangeBlock> FindDeadRangeBlocks(FindDeadBlocksRequest deadBlocksRequest)
+        public async Task<IList<RangeBlock>> FindDeadRangeBlocksAsync(FindDeadBlocksRequest deadBlocksRequest)
         {
             string query = string.Empty;
             switch (deadBlocksRequest.BlockType)
@@ -119,10 +120,10 @@ namespace Taskling.SqlServer.Blocks
                     throw new NotSupportedException("This range type is not supported");
             }
 
-            return FindDeadDateRangeBlocks(deadBlocksRequest, query);
+            return await FindDeadDateRangeBlocksAsync(deadBlocksRequest, query);
         }
 
-        public IList<RangeBlock> FindRangeBlocksOfTask(FindBlocksOfTaskRequest blocksOfTaskRequest)
+        public async Task<IList<RangeBlock>> FindRangeBlocksOfTaskAsync(FindBlocksOfTaskRequest blocksOfTaskRequest)
         {
             string query = string.Empty;
             switch (blocksOfTaskRequest.BlockType)
@@ -137,21 +138,21 @@ namespace Taskling.SqlServer.Blocks
                     throw new NotSupportedException("This range type is not supported");
             }
 
-            return FindRangeBlocksOfTask(blocksOfTaskRequest, query);
+            return await FindRangeBlocksOfTaskAsync(blocksOfTaskRequest, query);
         }
 
-        public RangeBlockCreateResponse AddRangeBlock(RangeBlockCreateRequest rangeBlockCreateRequest)
+        public async Task<RangeBlockCreateResponse> AddRangeBlockAsync(RangeBlockCreateRequest rangeBlockCreateRequest)
         {
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(rangeBlockCreateRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(rangeBlockCreateRequest.TaskId);
 
             var response = new RangeBlockCreateResponse();
             switch (rangeBlockCreateRequest.BlockType)
             {
                 case BlockType.DateRange:
-                    response.Block = AddDateRangeRangeBlock(rangeBlockCreateRequest, taskDefinition.TaskDefinitionId);
+                    response.Block = await AddDateRangeRangeBlockAsync(rangeBlockCreateRequest, taskDefinition.TaskDefinitionId);
                     break;
                 case BlockType.NumericRange:
-                    response.Block = AddNumericRangeRangeBlock(rangeBlockCreateRequest, taskDefinition.TaskDefinitionId);
+                    response.Block = await AddNumericRangeRangeBlockAsync(rangeBlockCreateRequest, taskDefinition.TaskDefinitionId);
                     break;
                 default:
                     throw new NotSupportedException(UnexpectedBlockTypeMessage);
@@ -160,27 +161,27 @@ namespace Taskling.SqlServer.Blocks
             return response;
         }
 
-        public string AddRangeBlockExecution(BlockExecutionCreateRequest executionCreateRequest)
+        public async Task<string> AddRangeBlockExecutionAsync(BlockExecutionCreateRequest executionCreateRequest)
         {
-            return AddBlockExecution(executionCreateRequest);
+            return await AddBlockExecutionAsync(executionCreateRequest);
         }
 
         #endregion .: Range Blocks :.
 
         #region .: List Blocks :.
 
-        public IList<ProtoListBlock> FindFailedListBlocks(FindFailedBlocksRequest failedBlocksRequest)
+        public async Task<IList<ProtoListBlock>> FindFailedListBlocksAsync(FindFailedBlocksRequest failedBlocksRequest)
         {
             if (failedBlocksRequest.BlockType == BlockType.List)
             {
                 var query = FailedBlocksQueryBuilder.GetFindFailedListBlocksQuery(failedBlocksRequest.BlockCountLimit);
-                return FindFailedListBlocks(failedBlocksRequest, query);
+                return await FindFailedListBlocksAsync(failedBlocksRequest, query);
             }
 
             throw new NotSupportedException(UnexpectedBlockTypeMessage);
         }
 
-        public IList<ProtoListBlock> FindDeadListBlocks(FindDeadBlocksRequest deadBlocksRequest)
+        public async Task<IList<ProtoListBlock>> FindDeadListBlocksAsync(FindDeadBlocksRequest deadBlocksRequest)
         {
             if (deadBlocksRequest.BlockType == BlockType.List)
             {
@@ -190,32 +191,32 @@ namespace Taskling.SqlServer.Blocks
                 else
                     query = DeadBlocksQueryBuilder.GetFindDeadListBlocksQuery(deadBlocksRequest.BlockCountLimit);
 
-                return FindDeadListBlocks(deadBlocksRequest, query);
+                return await FindDeadListBlocksAsync(deadBlocksRequest, query);
             }
 
             throw new NotSupportedException(UnexpectedBlockTypeMessage);
         }
 
-        public IList<ProtoListBlock> FindListBlocksOfTask(FindBlocksOfTaskRequest blocksOfTaskRequest)
+        public async Task<IList<ProtoListBlock>> FindListBlocksOfTaskAsync(FindBlocksOfTaskRequest blocksOfTaskRequest)
         {
             if (blocksOfTaskRequest.BlockType == BlockType.List)
             {
                 string query = BlocksOfTaskQueryBuilder.GetFindListBlocksOfTaskQuery(blocksOfTaskRequest.ReprocessOption);
-                return FindListBlocksOfTask(blocksOfTaskRequest, query, blocksOfTaskRequest.ReprocessOption);
+                return await FindListBlocksOfTaskAsync(blocksOfTaskRequest, query, blocksOfTaskRequest.ReprocessOption);
             }
 
             throw new NotSupportedException(UnexpectedBlockTypeMessage);
         }
 
-        public ListBlockCreateResponse AddListBlock(ListBlockCreateRequest createRequest)
+        public async Task<ListBlockCreateResponse> AddListBlockAsync(ListBlockCreateRequest createRequest)
         {
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(createRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(createRequest.TaskId);
 
             var response = new ListBlockCreateResponse();
             if (createRequest.BlockType == BlockType.List)
             {
-                var blockId = AddNewListBlock(createRequest.TaskId, taskDefinition.TaskDefinitionId, createRequest.SerializedHeader, createRequest.CompressionThreshold);
-                AddListBlockItems(blockId, createRequest);
+                var blockId = await AddNewListBlockAsync(createRequest.TaskId, taskDefinition.TaskDefinitionId, createRequest.SerializedHeader, createRequest.CompressionThreshold);
+                await AddListBlockItemsAsync(blockId, createRequest);
 
                 // we do not populate the items here, they are lazy loaded
                 response.Block = new ProtoListBlock()
@@ -230,38 +231,38 @@ namespace Taskling.SqlServer.Blocks
             throw new NotSupportedException(UnexpectedBlockTypeMessage);
         }
 
-        public string AddListBlockExecution(BlockExecutionCreateRequest executionCreateRequest)
+        public async Task<string> AddListBlockExecutionAsync(BlockExecutionCreateRequest executionCreateRequest)
         {
-            return AddBlockExecution(executionCreateRequest);
+            return await AddBlockExecutionAsync(executionCreateRequest);
         }
 
         #endregion .: List Blocks :.
 
         #region .: Object Blocks :.
 
-        public IList<ObjectBlock<T>> FindObjectBlocksOfTask<T>(FindBlocksOfTaskRequest blocksOfTaskRequest)
+        public async Task<IList<ObjectBlock<T>>> FindObjectBlocksOfTaskAsync<T>(FindBlocksOfTaskRequest blocksOfTaskRequest)
         {
             if (blocksOfTaskRequest.BlockType == BlockType.Object)
             {
                 string query = BlocksOfTaskQueryBuilder.GetFindObjectBlocksOfTaskQuery(blocksOfTaskRequest.ReprocessOption);
-                return FindObjectBlocksOfTask<T>(blocksOfTaskRequest, query, blocksOfTaskRequest.ReprocessOption);
+                return await FindObjectBlocksOfTaskAsync<T>(blocksOfTaskRequest, query, blocksOfTaskRequest.ReprocessOption);
             }
 
             throw new NotSupportedException(UnexpectedBlockTypeMessage);
         }
 
-        public IList<ObjectBlock<T>> FindFailedObjectBlocks<T>(FindFailedBlocksRequest failedBlocksRequest)
+        public async Task<IList<ObjectBlock<T>>> FindFailedObjectBlocksAsync<T>(FindFailedBlocksRequest failedBlocksRequest)
         {
             if (failedBlocksRequest.BlockType == BlockType.Object)
             {
                 var query = FailedBlocksQueryBuilder.GetFindFailedObjectBlocksQuery(failedBlocksRequest.BlockCountLimit);
-                return FindFailedObjectBlocks<T>(failedBlocksRequest, query);
+                return await FindFailedObjectBlocksAsync<T>(failedBlocksRequest, query);
             }
 
             throw new NotSupportedException(UnexpectedBlockTypeMessage);
         }
 
-        public IList<ObjectBlock<T>> FindDeadObjectBlocks<T>(FindDeadBlocksRequest deadBlocksRequest)
+        public async Task<IList<ObjectBlock<T>>> FindDeadObjectBlocksAsync<T>(FindDeadBlocksRequest deadBlocksRequest)
         {
             if (deadBlocksRequest.BlockType == BlockType.Object)
             {
@@ -271,25 +272,25 @@ namespace Taskling.SqlServer.Blocks
                 else
                     query = DeadBlocksQueryBuilder.GetFindDeadObjectBlocksQuery(deadBlocksRequest.BlockCountLimit);
 
-                return FindDeadObjectBlocks<T>(deadBlocksRequest, query);
+                return await FindDeadObjectBlocksAsync<T>(deadBlocksRequest, query);
             }
 
             throw new NotSupportedException(UnexpectedBlockTypeMessage);
         }
 
-        public string AddObjectBlockExecution(BlockExecutionCreateRequest executionCreateRequest)
+        public async Task<string> AddObjectBlockExecutionAsync(BlockExecutionCreateRequest executionCreateRequest)
         {
-            return AddBlockExecution(executionCreateRequest);
+            return await AddBlockExecutionAsync(executionCreateRequest);
         }
 
-        public ObjectBlockCreateResponse<T> AddObjectBlock<T>(ObjectBlockCreateRequest<T> createRequest)
+        public async Task<ObjectBlockCreateResponse<T>> AddObjectBlockAsync<T>(ObjectBlockCreateRequest<T> createRequest)
         {
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(createRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(createRequest.TaskId);
 
             var response = new ObjectBlockCreateResponse<T>();
             if (createRequest.BlockType == BlockType.Object)
             {
-                var blockId = AddNewObjectBlock(createRequest.TaskId, taskDefinition.TaskDefinitionId, createRequest.Object, createRequest.CompressionThreshold);
+                var blockId = await AddNewObjectBlockAsync(createRequest.TaskId, taskDefinition.TaskDefinitionId, createRequest.Object, createRequest.CompressionThreshold);
                 response.Block = new ObjectBlock<T>()
                 {
                     ObjectBlockId = blockId.ToString(),
@@ -310,14 +311,14 @@ namespace Taskling.SqlServer.Blocks
 
         #region .: Range Blocks :.
 
-        private IList<RangeBlock> FindFailedDateRangeBlocks(FindFailedBlocksRequest failedBlocksRequest, string query)
+        private async Task<IList<RangeBlock>> FindFailedDateRangeBlocksAsync(FindFailedBlocksRequest failedBlocksRequest, string query)
         {
             var results = new List<RangeBlock>();
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(failedBlocksRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(failedBlocksRequest.TaskId);
 
             try
             {
-                using (var connection = CreateNewConnection(failedBlocksRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(failedBlocksRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandText = query;
@@ -326,9 +327,9 @@ namespace Taskling.SqlServer.Blocks
                     command.Parameters.Add("@SearchPeriodBegin", SqlDbType.DateTime).Value = failedBlocksRequest.SearchPeriodBegin;
                     command.Parameters.Add("@SearchPeriodEnd", SqlDbType.DateTime).Value = failedBlocksRequest.SearchPeriodEnd;
                     command.Parameters.Add("@AttemptLimit", SqlDbType.Int).Value = failedBlocksRequest.RetryLimit + 1; // RetryLimit + 1st attempt
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        while (reader.Read())
+                        while (await reader.ReadAsync())
                         {
                             var blockType = (BlockType)int.Parse(reader["BlockType"].ToString());
                             if (blockType == failedBlocksRequest.BlockType)
@@ -367,14 +368,14 @@ namespace Taskling.SqlServer.Blocks
             return results;
         }
 
-        private IList<RangeBlock> FindDeadDateRangeBlocks(FindDeadBlocksRequest deadBlocksRequest, string query)
+        private async Task<IList<RangeBlock>> FindDeadDateRangeBlocksAsync(FindDeadBlocksRequest deadBlocksRequest, string query)
         {
             var results = new List<RangeBlock>();
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(deadBlocksRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(deadBlocksRequest.TaskId);
 
             try
             {
-                using (var connection = CreateNewConnection(deadBlocksRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(deadBlocksRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandText = query;
@@ -384,7 +385,7 @@ namespace Taskling.SqlServer.Blocks
                     command.Parameters.Add("@SearchPeriodEnd", SqlDbType.DateTime).Value = deadBlocksRequest.SearchPeriodEnd;
                     command.Parameters.Add("@AttemptLimit", SqlDbType.Int).Value = deadBlocksRequest.RetryLimit + 1; // RetryLimit + 1st attempt
 
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
                         while (reader.Read())
                         {
@@ -424,14 +425,14 @@ namespace Taskling.SqlServer.Blocks
             return results;
         }
 
-        private IList<RangeBlock> FindRangeBlocksOfTask(FindBlocksOfTaskRequest blocksOfTaskRequest, string query)
+        private async Task<IList<RangeBlock>> FindRangeBlocksOfTaskAsync(FindBlocksOfTaskRequest blocksOfTaskRequest, string query)
         {
             var results = new List<RangeBlock>();
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(blocksOfTaskRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(blocksOfTaskRequest.TaskId);
 
             try
             {
-                using (var connection = CreateNewConnection(blocksOfTaskRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(blocksOfTaskRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandText = query;
@@ -439,9 +440,9 @@ namespace Taskling.SqlServer.Blocks
                     command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinition.TaskDefinitionId;
                     command.Parameters.Add("@ReferenceValue", SqlDbType.NVarChar, 200).Value = blocksOfTaskRequest.ReferenceValueOfTask;
 
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        while (reader.Read())
+                        while (await reader.ReadAsync())
                         {
                             var blockType = (BlockType)int.Parse(reader["BlockType"].ToString());
                             if (blockType != blocksOfTaskRequest.BlockType)
@@ -478,11 +479,11 @@ namespace Taskling.SqlServer.Blocks
             return results;
         }
 
-        private RangeBlock AddDateRangeRangeBlock(RangeBlockCreateRequest dateRangeBlockCreateRequest, int taskDefinitionId)
+        private async Task<RangeBlock> AddDateRangeRangeBlockAsync(RangeBlockCreateRequest dateRangeBlockCreateRequest, int taskDefinitionId)
         {
             try
             {
-                using (var connection = CreateNewConnection(dateRangeBlockCreateRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(dateRangeBlockCreateRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(dateRangeBlockCreateRequest.TaskId).QueryTimeoutSeconds;
@@ -491,7 +492,7 @@ namespace Taskling.SqlServer.Blocks
                     command.Parameters.Add("@FromDate", SqlDbType.DateTime).Value = new DateTime(dateRangeBlockCreateRequest.From);
                     command.Parameters.Add("@ToDate", SqlDbType.DateTime).Value = new DateTime(dateRangeBlockCreateRequest.To);
                     command.Parameters.Add("@BlockType", SqlDbType.TinyInt).Value = (byte)BlockType.DateRange;
-                    var id = command.ExecuteScalar().ToString();
+                    var id = (await command.ExecuteScalarAsync()).ToString();
 
                     return new RangeBlock(id,
                         0,
@@ -509,11 +510,11 @@ namespace Taskling.SqlServer.Blocks
             }
         }
 
-        private RangeBlock AddNumericRangeRangeBlock(RangeBlockCreateRequest dateRangeBlockCreateRequest, int taskDefinitionId)
+        private async Task<RangeBlock> AddNumericRangeRangeBlockAsync(RangeBlockCreateRequest dateRangeBlockCreateRequest, int taskDefinitionId)
         {
             try
             {
-                using (var connection = CreateNewConnection(dateRangeBlockCreateRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(dateRangeBlockCreateRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(dateRangeBlockCreateRequest.TaskId).QueryTimeoutSeconds;
@@ -522,7 +523,7 @@ namespace Taskling.SqlServer.Blocks
                     command.Parameters.Add("@FromNumber", SqlDbType.BigInt).Value = dateRangeBlockCreateRequest.From;
                     command.Parameters.Add("@ToNumber", SqlDbType.BigInt).Value = dateRangeBlockCreateRequest.To;
                     command.Parameters.Add("@BlockType", SqlDbType.TinyInt).Value = (byte)BlockType.NumericRange;
-                    var id = command.ExecuteScalar().ToString();
+                    var id = (await command.ExecuteScalarAsync()).ToString();
 
                     return new RangeBlock(id, 0, dateRangeBlockCreateRequest.From, dateRangeBlockCreateRequest.To, dateRangeBlockCreateRequest.BlockType);
                 }
@@ -540,14 +541,14 @@ namespace Taskling.SqlServer.Blocks
 
         #region .: List Blocks :.
 
-        private IList<ProtoListBlock> FindFailedListBlocks(FindFailedBlocksRequest failedBlocksRequest, string query)
+        private async Task<IList<ProtoListBlock>> FindFailedListBlocksAsync(FindFailedBlocksRequest failedBlocksRequest, string query)
         {
             var results = new List<ProtoListBlock>();
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(failedBlocksRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(failedBlocksRequest.TaskId);
 
             try
             {
-                using (var connection = CreateNewConnection(failedBlocksRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(failedBlocksRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandText = query;
@@ -556,9 +557,9 @@ namespace Taskling.SqlServer.Blocks
                     command.Parameters.Add("@SearchPeriodBegin", SqlDbType.DateTime).Value = failedBlocksRequest.SearchPeriodBegin;
                     command.Parameters.Add("@SearchPeriodEnd", SqlDbType.DateTime).Value = failedBlocksRequest.SearchPeriodEnd;
                     command.Parameters.Add("@AttemptLimit", SqlDbType.Int).Value = failedBlocksRequest.RetryLimit + 1; // RetryLimit + 1st attempt
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        while (reader.Read())
+                        while (await reader.ReadAsync())
                         {
                             var blockType = (BlockType)int.Parse(reader["BlockType"].ToString());
                             if (blockType == failedBlocksRequest.BlockType)
@@ -585,14 +586,14 @@ namespace Taskling.SqlServer.Blocks
             return results;
         }
 
-        private IList<ProtoListBlock> FindDeadListBlocks(FindDeadBlocksRequest deadBlocksRequest, string query)
+        private async Task<IList<ProtoListBlock>> FindDeadListBlocksAsync(FindDeadBlocksRequest deadBlocksRequest, string query)
         {
             var results = new List<ProtoListBlock>();
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(deadBlocksRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(deadBlocksRequest.TaskId);
 
             try
             {
-                using (var connection = CreateNewConnection(deadBlocksRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(deadBlocksRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandText = query;
@@ -602,9 +603,9 @@ namespace Taskling.SqlServer.Blocks
                     command.Parameters.Add("@SearchPeriodEnd", SqlDbType.DateTime).Value = deadBlocksRequest.SearchPeriodEnd;
                     command.Parameters.Add("@AttemptLimit", SqlDbType.Int).Value = deadBlocksRequest.RetryLimit + 1; // RetryLimit + 1st attempt
 
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        while (reader.Read())
+                        while (await reader.ReadAsync())
                         {
                             var blockType = (BlockType)int.Parse(reader["BlockType"].ToString());
                             if (blockType == deadBlocksRequest.BlockType)
@@ -632,14 +633,14 @@ namespace Taskling.SqlServer.Blocks
             return results;
         }
 
-        private IList<ProtoListBlock> FindListBlocksOfTask(FindBlocksOfTaskRequest blocksOfTaskRequest, string query, ReprocessOption reprocessOption)
+        private async Task<IList<ProtoListBlock>> FindListBlocksOfTaskAsync(FindBlocksOfTaskRequest blocksOfTaskRequest, string query, ReprocessOption reprocessOption)
         {
             var results = new List<ProtoListBlock>();
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(blocksOfTaskRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(blocksOfTaskRequest.TaskId);
 
             try
             {
-                using (var connection = CreateNewConnection(blocksOfTaskRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(blocksOfTaskRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandText = query;
@@ -654,9 +655,9 @@ namespace Taskling.SqlServer.Blocks
                         command.Parameters.Add("@Failed", SqlDbType.TinyInt).Value = (byte)BlockExecutionStatus.Failed;
                     }
 
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        while (reader.Read())
+                        while (await reader.ReadAsync())
                         {
                             var blockType = (BlockType)int.Parse(reader["BlockType"].ToString());
                             if (blockType != blocksOfTaskRequest.BlockType)
@@ -683,7 +684,7 @@ namespace Taskling.SqlServer.Blocks
             return results;
         }
 
-        private long AddNewListBlock(TaskId taskId, int taskDefinitionId, string header, int compressionThreshold)
+        private async Task<long> AddNewListBlockAsync(TaskId taskId, int taskDefinitionId, string header, int compressionThreshold)
         {
             if (header == null)
                 header = string.Empty;
@@ -698,7 +699,7 @@ namespace Taskling.SqlServer.Blocks
 
             try
             {
-                using (var connection = CreateNewConnection(taskId))
+                using (var connection = await CreateNewConnectionAsync(taskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(taskId).QueryTimeoutSeconds;
@@ -717,7 +718,7 @@ namespace Taskling.SqlServer.Blocks
                         command.Parameters.Add("@CompressedObjectData", SqlDbType.VarBinary, -1).Value = DBNull.Value;
                     }
 
-                    return (long)command.ExecuteScalar();
+                    return (long)await command.ExecuteScalarAsync();
                 }
             }
             catch (SqlException sqlEx)
@@ -729,9 +730,9 @@ namespace Taskling.SqlServer.Blocks
             }
         }
 
-        private void AddListBlockItems(long blockId, ListBlockCreateRequest createRequest)
+        private async Task AddListBlockItemsAsync(long blockId, ListBlockCreateRequest createRequest)
         {
-            using (var connection = CreateNewConnection(createRequest.TaskId))
+            using (var connection = await CreateNewConnectionAsync(createRequest.TaskId))
             {
                 var command = connection.CreateCommand();
                 var transaction = connection.BeginTransaction();
@@ -742,7 +743,7 @@ namespace Taskling.SqlServer.Blocks
                 try
                 {
                     DataTable dt = GenerateDataTable(blockId, createRequest.SerializedValues, createRequest.CompressionThreshold);
-                    BulkLoadInTransactionOperation(dt, "Taskling.ListBlockItem", connection, transaction);
+                    await BulkLoadInTransactionOperationAsync(dt, "Taskling.ListBlockItem", connection, transaction);
 
                     transaction.Commit();
                 }
@@ -761,7 +762,7 @@ namespace Taskling.SqlServer.Blocks
 
         #region .: Object Blocks :.
 
-        private long AddNewObjectBlock<T>(TaskId taskId, int taskDefinitionId, T objectData, int compressionThreshold)
+        private async Task<long> AddNewObjectBlockAsync<T>(TaskId taskId, int taskDefinitionId, T objectData, int compressionThreshold)
         {
             bool isLargeTextValue = false;
             var jsonValue = JsonGenericSerializer.Serialize<T>(objectData);
@@ -774,7 +775,7 @@ namespace Taskling.SqlServer.Blocks
 
             try
             {
-                using (var connection = CreateNewConnection(taskId))
+                using (var connection = await CreateNewConnectionAsync(taskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(taskId).QueryTimeoutSeconds;
@@ -793,7 +794,7 @@ namespace Taskling.SqlServer.Blocks
                     }
 
                     command.Parameters.Add("@BlockType", SqlDbType.TinyInt).Value = (byte)BlockType.Object;
-                    return (long)command.ExecuteScalar();
+                    return (long)await command.ExecuteScalarAsync();
                 }
             }
             catch (SqlException sqlEx)
@@ -805,14 +806,14 @@ namespace Taskling.SqlServer.Blocks
             }
         }
 
-        private IList<ObjectBlock<T>> FindFailedObjectBlocks<T>(FindFailedBlocksRequest failedBlocksRequest, string query)
+        private async Task<IList<ObjectBlock<T>>> FindFailedObjectBlocksAsync<T>(FindFailedBlocksRequest failedBlocksRequest, string query)
         {
             var results = new List<ObjectBlock<T>>();
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(failedBlocksRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(failedBlocksRequest.TaskId);
 
             try
             {
-                using (var connection = CreateNewConnection(failedBlocksRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(failedBlocksRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandText = query;
@@ -821,9 +822,9 @@ namespace Taskling.SqlServer.Blocks
                     command.Parameters.Add("@SearchPeriodBegin", SqlDbType.DateTime).Value = failedBlocksRequest.SearchPeriodBegin;
                     command.Parameters.Add("@SearchPeriodEnd", SqlDbType.DateTime).Value = failedBlocksRequest.SearchPeriodEnd;
                     command.Parameters.Add("@AttemptLimit", SqlDbType.Int).Value = failedBlocksRequest.RetryLimit + 1; // RetryLimit + 1st attempt
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        while (reader.Read())
+                        while (await reader.ReadAsync())
                         {
                             var blockType = (BlockType)int.Parse(reader["BlockType"].ToString());
                             if (blockType == failedBlocksRequest.BlockType)
@@ -854,14 +855,14 @@ namespace Taskling.SqlServer.Blocks
             return results;
         }
 
-        private IList<ObjectBlock<T>> FindDeadObjectBlocks<T>(FindDeadBlocksRequest deadBlocksRequest, string query)
+        private async Task<IList<ObjectBlock<T>>> FindDeadObjectBlocksAsync<T>(FindDeadBlocksRequest deadBlocksRequest, string query)
         {
             var results = new List<ObjectBlock<T>>();
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(deadBlocksRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(deadBlocksRequest.TaskId);
 
             try
             {
-                using (var connection = CreateNewConnection(deadBlocksRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(deadBlocksRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandText = query;
@@ -871,9 +872,9 @@ namespace Taskling.SqlServer.Blocks
                     command.Parameters.Add("@SearchPeriodEnd", SqlDbType.DateTime).Value = deadBlocksRequest.SearchPeriodEnd;
                     command.Parameters.Add("@AttemptLimit", SqlDbType.Int).Value = deadBlocksRequest.RetryLimit + 1; // RetryLimit + 1st attempt
 
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        while (reader.Read())
+                        while (await reader.ReadAsync())
                         {
                             var blockType = (BlockType)int.Parse(reader["BlockType"].ToString());
                             if (blockType == deadBlocksRequest.BlockType)
@@ -904,14 +905,14 @@ namespace Taskling.SqlServer.Blocks
             return results;
         }
 
-        private IList<ObjectBlock<T>> FindObjectBlocksOfTask<T>(FindBlocksOfTaskRequest blocksOfTaskRequest, string query, ReprocessOption reprocessOption)
+        private async Task<IList<ObjectBlock<T>>> FindObjectBlocksOfTaskAsync<T>(FindBlocksOfTaskRequest blocksOfTaskRequest, string query, ReprocessOption reprocessOption)
         {
             var results = new List<ObjectBlock<T>>();
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(blocksOfTaskRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(blocksOfTaskRequest.TaskId);
 
             try
             {
-                using (var connection = CreateNewConnection(blocksOfTaskRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(blocksOfTaskRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandText = query;
@@ -926,9 +927,9 @@ namespace Taskling.SqlServer.Blocks
                         command.Parameters.Add("@Failed", SqlDbType.TinyInt).Value = (byte)BlockExecutionStatus.Failed;
                     }
 
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        while (reader.Read())
+                        while (await reader.ReadAsync())
                         {
                             var blockType = (BlockType)int.Parse(reader["BlockType"].ToString());
                             if (blockType != blocksOfTaskRequest.BlockType)
@@ -959,34 +960,34 @@ namespace Taskling.SqlServer.Blocks
 
         #region .: Force Block Queue :.
 
-        private IList<ForcedRangeBlockQueueItem> GetForcedDateRangeBlocks(QueuedForcedBlocksRequest queuedForcedBlocksRequest)
+        private async Task<IList<ForcedRangeBlockQueueItem>> GetForcedDateRangeBlocksAsync(QueuedForcedBlocksRequest queuedForcedBlocksRequest)
         {
             var query = ForcedBlockQueueQueryBuilder.GetDateRangeBlocksQuery();
-            return GetForcedRangeBlocks(queuedForcedBlocksRequest, query);
+            return await GetForcedRangeBlocksAsync(queuedForcedBlocksRequest, query);
         }
 
-        private IList<ForcedRangeBlockQueueItem> GetForcedNumericRangeBlocks(QueuedForcedBlocksRequest queuedForcedBlocksRequest)
+        private async Task<IList<ForcedRangeBlockQueueItem>> GetForcedNumericRangeBlocksAsync(QueuedForcedBlocksRequest queuedForcedBlocksRequest)
         {
             var query = ForcedBlockQueueQueryBuilder.GetNumericRangeBlocksQuery();
-            return GetForcedRangeBlocks(queuedForcedBlocksRequest, query);
+            return await GetForcedRangeBlocksAsync(queuedForcedBlocksRequest, query);
         }
 
-        private IList<ForcedRangeBlockQueueItem> GetForcedRangeBlocks(QueuedForcedBlocksRequest queuedForcedBlocksRequest, string query)
+        private async Task<IList<ForcedRangeBlockQueueItem>> GetForcedRangeBlocksAsync(QueuedForcedBlocksRequest queuedForcedBlocksRequest, string query)
         {
             var results = new List<ForcedRangeBlockQueueItem>();
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(queuedForcedBlocksRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(queuedForcedBlocksRequest.TaskId);
 
             try
             {
-                using (var connection = CreateNewConnection(queuedForcedBlocksRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(queuedForcedBlocksRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandText = query;
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(queuedForcedBlocksRequest.TaskId).QueryTimeoutSeconds;
                     command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinition.TaskDefinitionId;
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        while (reader.Read())
+                        while (await reader.ReadAsync())
                         {
                             var blockType = (BlockType)int.Parse(reader["BlockType"].ToString());
                             if (blockType == queuedForcedBlocksRequest.BlockType)
@@ -1043,22 +1044,22 @@ This could occur if the block type of the process has been changed during a new 
             return results;
         }
 
-        private IList<ForcedListBlockQueueItem> GetForcedListBlocks(QueuedForcedBlocksRequest queuedForcedBlocksRequest)
+        private async Task<IList<ForcedListBlockQueueItem>> GetForcedListBlocksAsync(QueuedForcedBlocksRequest queuedForcedBlocksRequest)
         {
             var results = new List<ForcedListBlockQueueItem>();
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(queuedForcedBlocksRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(queuedForcedBlocksRequest.TaskId);
 
             try
             {
-                using (var connection = CreateNewConnection(queuedForcedBlocksRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(queuedForcedBlocksRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandText = ForcedBlockQueueQueryBuilder.GetListBlocksQuery(); ;
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(queuedForcedBlocksRequest.TaskId).QueryTimeoutSeconds;
                     command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinition.TaskDefinitionId;
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        while (reader.Read())
+                        while (await reader.ReadAsync())
                         {
                             var blockType = (BlockType)int.Parse(reader["BlockType"].ToString());
                             if (blockType == queuedForcedBlocksRequest.BlockType)
@@ -1103,22 +1104,22 @@ This could occur if the block type of the process has been changed during a new 
             return results;
         }
 
-        private IList<ForcedObjectBlockQueueItem<T>> GetForcedObjectBlocks<T>(QueuedForcedBlocksRequest queuedForcedBlocksRequest)
+        private async Task<IList<ForcedObjectBlockQueueItem<T>>> GetForcedObjectBlocksAsync<T>(QueuedForcedBlocksRequest queuedForcedBlocksRequest)
         {
             var results = new List<ForcedObjectBlockQueueItem<T>>();
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(queuedForcedBlocksRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(queuedForcedBlocksRequest.TaskId);
 
             try
             {
-                using (var connection = CreateNewConnection(queuedForcedBlocksRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(queuedForcedBlocksRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandText = ForcedBlockQueueQueryBuilder.GetObjectBlocksQuery();
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(queuedForcedBlocksRequest.TaskId).QueryTimeoutSeconds;
                     command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinition.TaskDefinitionId;
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        while (reader.Read())
+                        while (await reader.ReadAsync())
                         {
                             var blockType = (BlockType)int.Parse(reader["BlockType"].ToString());
                             if (blockType == queuedForcedBlocksRequest.BlockType)
@@ -1164,13 +1165,13 @@ This could occur if the block type of the process has been changed during a new 
             return results;
         }
 
-        private void UpdateForcedBlocks(DequeueForcedBlocksRequest dequeueForcedBlocksRequest)
+        private async Task UpdateForcedBlocksAsync(DequeueForcedBlocksRequest dequeueForcedBlocksRequest)
         {
             int blockCount = dequeueForcedBlocksRequest.ForcedBlockQueueIds.Count;
 
             try
             {
-                using (var connection = CreateNewConnection(dequeueForcedBlocksRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(dequeueForcedBlocksRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandText = ForcedBlockQueueQueryBuilder.GetUpdateQuery(blockCount);
@@ -1181,7 +1182,7 @@ This could occur if the block type of the process has been changed during a new 
                         command.Parameters.Add("@P" + i, SqlDbType.Int).Value = int.Parse(dequeueForcedBlocksRequest.ForcedBlockQueueIds[i]);
                     }
 
-                    command.ExecuteNonQuery();
+                    await command.ExecuteNonQueryAsync();
                 }
             }
             catch (SqlException sqlEx)
@@ -1243,12 +1244,12 @@ This could occur if the block type of the process has been changed during a new 
             return dateTime;
         }
 
-        private string AddBlockExecution(BlockExecutionCreateRequest executionCreateRequest)
+        private async Task<string> AddBlockExecutionAsync(BlockExecutionCreateRequest executionCreateRequest)
         {
             string blockExecutionId = string.Empty;
             try
             {
-                using (var connection = CreateNewConnection(executionCreateRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(executionCreateRequest.TaskId))
                 {
                     var command = connection.CreateCommand();
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(executionCreateRequest.TaskId).QueryTimeoutSeconds;
@@ -1257,7 +1258,7 @@ This could occur if the block type of the process has been changed during a new 
                     command.Parameters.Add("@BlockId", SqlDbType.BigInt).Value = long.Parse(executionCreateRequest.BlockId);
                     command.Parameters.Add("@Attempt", SqlDbType.Int).Value = executionCreateRequest.Attempt;
                     command.Parameters.Add("@Status", SqlDbType.TinyInt).Value = (byte)BlockExecutionStatus.NotStarted;
-                    blockExecutionId = command.ExecuteScalar().ToString();
+                    blockExecutionId = (await command.ExecuteScalarAsync()).ToString();
                 }
             }
             catch (SqlException sqlEx)

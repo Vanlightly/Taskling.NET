@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Taskling.Blocks.ListBlocks;
 using Taskling.Blocks.Requests;
 using Taskling.Contexts;
@@ -11,13 +12,13 @@ namespace Taskling.Blocks.Factories
 {
     public interface IBlockFactory
     {
-        IList<IDateRangeBlockContext> GenerateDateRangeBlocks(DateRangeBlockRequest blockRequest);
-        IList<INumericRangeBlockContext> GenerateNumericRangeBlocks(NumericRangeBlockRequest blockRequest);
-        IList<IListBlockContext<T>> GenerateListBlocks<T>(ListBlockRequest blockRequest);
-        IList<IListBlockContext<TItem, THeader>> GenerateListBlocks<TItem, THeader>(ListBlockRequest blockRequest);
-        IList<IObjectBlockContext<T>> GenerateObjectBlocks<T>(ObjectBlockRequest<T> blockRequest);
-
-        IListBlock<T> GetLastListBlock<T>(LastBlockRequest lastBlockRequest);
-        IListBlock<TItem, THeader> GetLastListBlock<TItem, THeader>(LastBlockRequest lastBlockRequest);
+        Task<IList<IDateRangeBlockContext>> GenerateDateRangeBlocksAsync(DateRangeBlockRequest blockRequest);
+        Task<IList<INumericRangeBlockContext>> GenerateNumericRangeBlocksAsync(NumericRangeBlockRequest blockRequest);
+        Task<IList<IListBlockContext<T>>> GenerateListBlocksAsync<T>(ListBlockRequest blockRequest);
+        Task<IList<IListBlockContext<TItem, THeader>>> GenerateListBlocksAsync<TItem, THeader>(ListBlockRequest blockRequest);
+        Task<IList<IObjectBlockContext<T>>> GenerateObjectBlocksAsync<T>(ObjectBlockRequest<T> blockRequest);
+        
+        Task<IListBlock<T>> GetLastListBlockAsync<T>(LastBlockRequest lastBlockRequest);
+        Task<IListBlock<TItem, THeader>> GetLastListBlockAsync<TItem, THeader>(LastBlockRequest lastBlockRequest);
     }
 }

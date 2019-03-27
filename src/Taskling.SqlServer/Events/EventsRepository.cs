@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Taskling.Events;
 using Taskling.InfrastructureContracts;
 using Taskling.SqlServer.AncilliaryServices;
@@ -13,9 +14,9 @@ namespace Taskling.SqlServer.Events
 {
     public class EventsRepository : DbOperationsService, IEventsRepository
     {
-        public void LogEvent(TaskId taskId, string taskExecutionId, EventType eventType, string message)
+        public async Task LogEventAsync(TaskId taskId, string taskExecutionId, EventType eventType, string message)
         {
-            using (var connection = CreateNewConnection(taskId))
+            using (var connection = await CreateNewConnectionAsync(taskId))
             {
                 using (var command = new SqlCommand(EventsQueryBuilder.InsertTaskExecutionEventQuery, connection))
                 {
@@ -33,7 +34,7 @@ namespace Taskling.SqlServer.Events
                     }
 
                     command.Parameters.Add(new SqlParameter("@EventDateTime", SqlDbType.DateTime)).Value = DateTime.UtcNow;
-                    command.ExecuteNonQuery();
+                    await command.ExecuteNonQueryAsync();
                 }
             }
         }

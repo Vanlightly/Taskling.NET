@@ -27,13 +27,13 @@ namespace Taskling.ExecutionContext
 
         public void Run(SendKeepAliveRequest sendKeepAliveRequest, TimeSpan keepAliveInterval)
         {
-            Task.Run(() => StartKeepAlive(sendKeepAliveRequest, keepAliveInterval));
+            Task.Run(async () => await StartKeepAliveAsync(sendKeepAliveRequest, keepAliveInterval));
         }
 
-        private void StartKeepAlive(SendKeepAliveRequest sendKeepAliveRequest, TimeSpan keepAliveInterval)
+        private async Task StartKeepAliveAsync(SendKeepAliveRequest sendKeepAliveRequest, TimeSpan keepAliveInterval)
         {
             DateTime lastKeepAlive = DateTime.UtcNow;
-            _taskExecutionRepository.SendKeepAlive(sendKeepAliveRequest);
+            await _taskExecutionRepository.SendKeepAliveAsync(sendKeepAliveRequest);
 
             while (!_completeCalled && _owner.IsAlive)
             {
@@ -41,9 +41,9 @@ namespace Taskling.ExecutionContext
                 if (timespanSinceLastKeepAlive > keepAliveInterval)
                 {
                     lastKeepAlive = DateTime.UtcNow;
-                    _taskExecutionRepository.SendKeepAlive(sendKeepAliveRequest);
+                    await _taskExecutionRepository.SendKeepAliveAsync(sendKeepAliveRequest);
                 }
-                Thread.Sleep(1000);
+                await Task.Delay(1000);
             }
         }
     }

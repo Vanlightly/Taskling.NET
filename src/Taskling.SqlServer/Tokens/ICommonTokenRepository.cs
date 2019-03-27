@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Taskling.SqlServer.Tokens
 {
     public interface ICommonTokenRepository
     {
-        void AcquireRowLock(int taskDefinitionId, string taskExecutionId, SqlCommand command);
-        List<TaskExecutionState> GetTaskExecutionStates(List<string> taskExecutionIds, SqlCommand command);
+        Task AcquireRowLockAsync(int taskDefinitionId, string taskExecutionId, SqlCommand command);
+        Task<List<TaskExecutionState>> GetTaskExecutionStatesAsync(List<string> taskExecutionIds, SqlCommand command);
         bool HasExpired(TaskExecutionState taskExecutionState);
     }
 }

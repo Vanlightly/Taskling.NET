@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Taskling.SqlServer.Tests.Helpers;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
 {
@@ -18,11 +20,11 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
 
             _taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
         }
-
+                
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "TaskExecutions")]
-        public void If_TryStartOverTheConcurrencyLimit_ThenMarkExecutionAsBlocked()
+        public async Task If_TryStartOverTheConcurrencyLimit_ThenMarkExecutionAsBlocked()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -34,10 +36,10 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
 
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 using (var executionContextBlocked = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
                 {
-                    startedOkBlockedExec = executionContextBlocked.TryStart();
+                    startedOkBlockedExec = await executionContextBlocked.TryStartAsync();
                 }
                 isBlocked = executionHelper.GetBlockedStatusOfLastExecution(_taskDefinitionId);
             }

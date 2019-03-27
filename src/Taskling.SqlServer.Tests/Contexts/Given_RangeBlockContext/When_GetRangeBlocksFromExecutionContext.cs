@@ -8,6 +8,8 @@ using Taskling.Blocks.RangeBlocks;
 using Taskling.Contexts;
 using Taskling.Events;
 using Taskling.SqlServer.Tests.Helpers;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
 {
@@ -27,11 +29,11 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             _taskDefinitionId = _executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
             _executionHelper.InsertAvailableExecutionToken(_taskDefinitionId);
         }
-
+        
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsDateRange_NumberOfBlocksAndStatusesOfBlockExecutionsCorrectAtEveryStep()
+        public async Task If_AsDateRange_NumberOfBlocksAndStatusesOfBlockExecutionsCorrectAtEveryStep()
         {
             // ARRANGE
             int blockCountLimit = 10;
@@ -40,14 +42,14 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContext(blockCountLimit))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     var fromDate = DateTime.UtcNow.AddHours(-12);
                     var toDate = DateTime.UtcNow;
                     var maxBlockRange = new TimeSpan(0, 30, 0);
-                    var rangeBlocks = executionContext.GetDateRangeBlocks(x => x.WithRange(fromDate, toDate, maxBlockRange));
+                    var rangeBlocks = await executionContext.GetDateRangeBlocksAsync(x => x.WithRange(fromDate, toDate, maxBlockRange));
                     Assert.Equal(10, _blocksHelper.GetBlockCount(TestConstants.ApplicationName, TestConstants.TaskName));
                     int expectedNotStartedCount = blockCountLimit;
                     int expectedCompletedCount = 0;
@@ -57,7 +59,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
 
                     foreach (var rangeBlock in rangeBlocks)
                     {
-                        rangeBlock.Start();
+                        await rangeBlock.StartAsync();
                         expectedNotStartedCount--;
                         Assert.Equal(expectedNotStartedCount, _blocksHelper.GetBlockExecutionCountByStatus(TestConstants.ApplicationName, TestConstants.TaskName, BlockExecutionStatus.NotStarted));
                         Assert.Equal(1, _blocksHelper.GetBlockExecutionCountByStatus(TestConstants.ApplicationName, TestConstants.TaskName, BlockExecutionStatus.Started));
@@ -65,7 +67,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
 
 
                         // processing here
-                        rangeBlock.Complete();
+                        await rangeBlock.CompleteAsync();
                         expectedCompletedCount++;
                         Assert.Equal(expectedCompletedCount, _blocksHelper.GetBlockExecutionCountByStatus(TestConstants.ApplicationName, TestConstants.TaskName, BlockExecutionStatus.Completed));
                     }
@@ -76,21 +78,21 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsDateRangeNoBlockNeeded_ThenEmptyListAndEventPersisted()
+        public async Task If_AsDateRangeNoBlockNeeded_ThenEmptyListAndEventPersisted()
         {
             // ARRANGE
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     var fromDate = DateTime.UtcNow;
                     var toDate = DateTime.UtcNow.AddHours(-12);
                     var maxBlockRange = new TimeSpan(0, 30, 0);
-                    var rangeBlocks = executionContext.GetDateRangeBlocks(x => x.WithRange(fromDate, toDate, maxBlockRange));
+                    var rangeBlocks = await executionContext.GetDateRangeBlocksAsync(x => x.WithRange(fromDate, toDate, maxBlockRange));
                     Assert.Equal(0, _blocksHelper.GetBlockCount(TestConstants.ApplicationName, TestConstants.TaskName));
 
                     var lastEvent = _executionHelper.GetLastEvent(_taskDefinitionId);
@@ -103,21 +105,21 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsNumericRangeNoBlockNeeded_ThenEmptyListAndEventPersisted()
+        public async Task If_AsNumericRangeNoBlockNeeded_ThenEmptyListAndEventPersisted()
         {
             // ARRANGE
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     var fromNumber = 1000;
                     var toNumber = 800;
                     var maxBlockRange = 100;
-                    var rangeBlocks = executionContext.GetNumericRangeBlocks(x => x.WithRange(fromNumber, toNumber, maxBlockRange));
+                    var rangeBlocks = await executionContext.GetNumericRangeBlocksAsync(x => x.WithRange(fromNumber, toNumber, maxBlockRange));
                     Assert.Equal(0, _blocksHelper.GetBlockCount(TestConstants.ApplicationName, TestConstants.TaskName));
 
                     var lastEvent = _executionHelper.GetLastEvent(_taskDefinitionId);
@@ -130,7 +132,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsNumericRange_NumberOfBlocksAndStatusesOfBlockExecutionsCorrectAtEveryStep()
+        public async Task If_AsNumericRange_NumberOfBlocksAndStatusesOfBlockExecutionsCorrectAtEveryStep()
         {
             // ARRANGE
             int blockCountLimit = 10;
@@ -139,14 +141,14 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContext(blockCountLimit))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     var fromNumber = 1000;
                     var toNumber = 3000;
                     var maxBlockRange = 100;
-                    var blocks = executionContext.GetNumericRangeBlocks(x => x.WithRange(fromNumber, toNumber, maxBlockRange));
+                    var blocks = await executionContext.GetNumericRangeBlocksAsync(x => x.WithRange(fromNumber, toNumber, maxBlockRange));
                     Assert.Equal(10, _blocksHelper.GetBlockCount(TestConstants.ApplicationName, TestConstants.TaskName));
                     int expectedNotStartedCount = blockCountLimit;
                     int expectedCompletedCount = 0;
@@ -156,7 +158,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
 
                     foreach (var block in blocks)
                     {
-                        block.Start();
+                        await block.StartAsync();
                         expectedNotStartedCount--;
                         Assert.Equal(expectedNotStartedCount, _blocksHelper.GetBlockExecutionCountByStatus(TestConstants.ApplicationName, TestConstants.TaskName, BlockExecutionStatus.NotStarted));
                         Assert.Equal(1, _blocksHelper.GetBlockExecutionCountByStatus(TestConstants.ApplicationName, TestConstants.TaskName, BlockExecutionStatus.Started));
@@ -164,7 +166,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
                         // processing here
 
 
-                        block.Complete();
+                        await block.CompleteAsync();
                         expectedCompletedCount++;
                         Assert.Equal(expectedCompletedCount, _blocksHelper.GetBlockExecutionCountByStatus(TestConstants.ApplicationName, TestConstants.TaskName, BlockExecutionStatus.Completed));
                     }
@@ -175,21 +177,21 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsNumericRange_BlocksDoNotShareIds()
+        public async Task If_AsNumericRange_BlocksDoNotShareIds()
         {
             // ARRANGE
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     var fromNumber = 0;
                     var toNumber = 100;
                     var maxBlockRange = 10;
-                    var blocks = executionContext.GetNumericRangeBlocks(x => x.WithRange(fromNumber, toNumber, maxBlockRange));
+                    var blocks = await executionContext.GetNumericRangeBlocksAsync(x => x.WithRange(fromNumber, toNumber, maxBlockRange));
 
                     int counter = 0;
                     INumericRangeBlockContext lastBlock = null;
@@ -208,23 +210,23 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsDateRange_PreviousBlock_ThenLastBlockContainsDates()
+        public async Task If_AsDateRange_PreviousBlock_ThenLastBlockContainsDates()
         {
             // ARRANGE
             // Create previous blocks
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    var rangeBlocks = executionContext.GetDateRangeBlocks(x => x.WithRange(new DateTime(2016, 1, 1), new DateTime(2016, 1, 31, 23, 59, 59, 999).AddMilliseconds(-1), new TimeSpan(1, 0, 0, 0))
+                    var rangeBlocks = await executionContext.GetDateRangeBlocksAsync(x => x.WithRange(new DateTime(2016, 1, 1), new DateTime(2016, 1, 31, 23, 59, 59, 999).AddMilliseconds(-1), new TimeSpan(1, 0, 0, 0))
                         .OverrideConfiguration()
                         .MaximumBlocksToGenerate(50));
 
                     foreach (var rangeBlock in rangeBlocks)
                     {
-                        rangeBlock.Start();
-                        rangeBlock.Complete();
+                        await rangeBlock.StartAsync();
+                        await rangeBlock.CompleteAsync();
                     }
                 }
             }
@@ -235,10 +237,10 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             IDateRangeBlock lastBlock = null;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    lastBlock = executionContext.GetLastDateRangeBlock(LastBlockOrder.LastCreated);
+                    lastBlock = await executionContext.GetLastDateRangeBlockAsync(LastBlockOrder.LastCreated);
                 }
             }
 
@@ -250,7 +252,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsDateRange_NoPreviousBlock_ThenLastBlockIsNull()
+        public async Task If_AsDateRange_NoPreviousBlock_ThenLastBlockIsNull()
         {
             // ARRANGE
             // all previous blocks were deleted in TestInitialize
@@ -259,10 +261,10 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             IDateRangeBlock lastBlock = null;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    lastBlock = executionContext.GetLastDateRangeBlock(LastBlockOrder.LastCreated);
+                    lastBlock = await executionContext.GetLastDateRangeBlockAsync(LastBlockOrder.LastCreated);
                 }
             }
 
@@ -273,23 +275,23 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsDateRange_PreviousBlockIsPhantom_ThenLastBlockIsNotThePhantom()
+        public async Task If_AsDateRange_PreviousBlockIsPhantom_ThenLastBlockIsNotThePhantom()
         {
             // ARRANGE
             // Create previous blocks
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    var rangeBlocks = executionContext.GetDateRangeBlocks(x => x.WithRange(new DateTime(2016, 1, 1), new DateTime(2016, 1, 2), new TimeSpan(2, 0, 0, 0))
+                    var rangeBlocks = await executionContext.GetDateRangeBlocksAsync(x => x.WithRange(new DateTime(2016, 1, 1), new DateTime(2016, 1, 2), new TimeSpan(2, 0, 0, 0))
                         .OverrideConfiguration()
                         .MaximumBlocksToGenerate(50));
 
                     foreach (var rangeBlock in rangeBlocks)
                     {
-                        rangeBlock.Start();
-                        rangeBlock.Complete();
+                        await rangeBlock.StartAsync();
+                        await rangeBlock.CompleteAsync();
                     }
                 }
             }
@@ -300,10 +302,10 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             IDateRangeBlock lastBlock = null;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    lastBlock = executionContext.GetLastDateRangeBlock(LastBlockOrder.LastCreated);
+                    lastBlock = await executionContext.GetLastDateRangeBlockAsync(LastBlockOrder.LastCreated);
                 }
             }
 
@@ -315,21 +317,21 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsNumericRange_PreviousBlock_ThenLastBlockContainsDates()
+        public async Task If_AsNumericRange_PreviousBlock_ThenLastBlockContainsDates()
         {
             // ARRANGE
             // Create previous blocks
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    var rangeBlocks = executionContext.GetNumericRangeBlocks(x => x.WithRange(1, 1000, 100));
+                    var rangeBlocks = await executionContext.GetNumericRangeBlocksAsync(x => x.WithRange(1, 1000, 100));
 
                     foreach (var rangeBlock in rangeBlocks)
                     {
-                        rangeBlock.Start();
-                        rangeBlock.Complete();
+                        await rangeBlock.StartAsync();
+                        await rangeBlock.CompleteAsync();
                     }
                 }
             }
@@ -340,10 +342,10 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             INumericRangeBlock lastBlock = null;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    lastBlock = executionContext.GetLastNumericRangeBlock(LastBlockOrder.MaxRangeStartValue);
+                    lastBlock = await executionContext.GetLastNumericRangeBlockAsync(LastBlockOrder.MaxRangeStartValue);
                 }
             }
 
@@ -355,7 +357,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsNumericRange_NoPreviousBlock_ThenLastBlockIsNull()
+        public async Task If_AsNumericRange_NoPreviousBlock_ThenLastBlockIsNull()
         {
             // ARRANGE
             // all previous blocks were deleted in TestInitialize
@@ -364,10 +366,10 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             INumericRangeBlock lastBlock = null;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    lastBlock = executionContext.GetLastNumericRangeBlock(LastBlockOrder.LastCreated);
+                    lastBlock = await executionContext.GetLastNumericRangeBlockAsync(LastBlockOrder.LastCreated);
                 }
             }
 
@@ -378,21 +380,21 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsNumericRange_PreviousBlockIsPhantom_ThenLastBlockIsNotThePhantom()
+        public async Task If_AsNumericRange_PreviousBlockIsPhantom_ThenLastBlockIsNotThePhantom()
         {
             // ARRANGE
             // Create previous blocks
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    var rangeBlocks = executionContext.GetNumericRangeBlocks(x => x.WithRange(1000, 2000, 2000));
+                    var rangeBlocks = await executionContext.GetNumericRangeBlocksAsync(x => x.WithRange(1000, 2000, 2000));
 
                     foreach (var rangeBlock in rangeBlocks)
                     {
-                        rangeBlock.Start();
-                        rangeBlock.Complete();
+                        await rangeBlock.StartAsync();
+                        await rangeBlock.CompleteAsync();
                     }
                 }
             }
@@ -403,10 +405,10 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             INumericRangeBlock lastBlock = null;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    lastBlock = executionContext.GetLastNumericRangeBlock(LastBlockOrder.LastCreated);
+                    lastBlock = await executionContext.GetLastNumericRangeBlockAsync(LastBlockOrder.LastCreated);
                 }
             }
 
@@ -418,7 +420,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsDateRange_PreviousExecutionHadOneFailedBlockAndMultipleOkOnes_ThenBringBackTheFailedBlockWhenRequested()
+        public async Task If_AsDateRange_PreviousExecutionHadOneFailedBlockAndMultipleOkOnes_ThenBringBackTheFailedBlockWhenRequested()
         {
             // ARRANGE
             var referenceValue = Guid.NewGuid().ToString();
@@ -427,37 +429,37 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             bool startedOk;
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                startedOk = executionContext.TryStart(referenceValue);
+                startedOk = await executionContext.TryStartAsync(referenceValue);
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     var fromDate = DateTime.UtcNow.AddHours(-12);
                     var toDate = DateTime.UtcNow;
                     var maxBlockRange = new TimeSpan(0, 30, 0);
-                    var rangeBlocks = executionContext.GetDateRangeBlocks(x => x.WithRange(fromDate, toDate, maxBlockRange)
+                    var rangeBlocks = await executionContext.GetDateRangeBlocksAsync(x => x.WithRange(fromDate, toDate, maxBlockRange)
                                                                 .OverrideConfiguration()
                                                                 .MaximumBlocksToGenerate(5));
 
-                    rangeBlocks[0].Start();
-                    rangeBlocks[0].Complete(); // completed
-                    rangeBlocks[1].Start();
-                    rangeBlocks[1].Failed("Something bad happened"); // failed
+                    await rangeBlocks[0].StartAsync();
+                    await rangeBlocks[0].CompleteAsync(); // completed
+                    await rangeBlocks[1].StartAsync();
+                    await rangeBlocks[1].FailedAsync("Something bad happened"); // failed
                     // 2 not started
-                    rangeBlocks[3].Start(); // started
-                    rangeBlocks[4].Start();
-                    rangeBlocks[4].Complete(); // completed
+                    await rangeBlocks[3].StartAsync(); // started
+                    await rangeBlocks[4].StartAsync();
+                    await rangeBlocks[4].CompleteAsync(); // completed
                 }
             }
 
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
-                    var rangeBlocks = executionContext.GetDateRangeBlocks(x => x.ReprocessDateRange()
+                    var rangeBlocks = await executionContext.GetDateRangeBlocksAsync(x => x.ReprocessDateRange()
                                                         .PendingAndFailedBlocks()
-                                                        .OfExecutionWith(referenceValue)).ToList();
+                                                        .OfExecutionWith(referenceValue));
 
                     Assert.Equal(3, rangeBlocks.Count);
                 }
@@ -467,7 +469,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsDateRange_PreviousExecutionHadOneFailedBlockAndMultipleOkOnes_ThenBringBackAllBlocksWhenRequested()
+        public async Task If_AsDateRange_PreviousExecutionHadOneFailedBlockAndMultipleOkOnes_ThenBringBackAllBlocksWhenRequested()
         {
             // ARRANGE
             var referenceValue = Guid.NewGuid().ToString();
@@ -476,37 +478,37 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             bool startedOk;
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                startedOk = executionContext.TryStart(referenceValue);
+                startedOk = await executionContext.TryStartAsync(referenceValue);
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     var fromDate = DateTime.UtcNow.AddHours(-12);
                     var toDate = DateTime.UtcNow;
                     var maxBlockRange = new TimeSpan(0, 30, 0);
-                    var rangeBlocks = executionContext.GetDateRangeBlocks(x => x.WithRange(fromDate, toDate, maxBlockRange)
+                    var rangeBlocks = await executionContext.GetDateRangeBlocksAsync(x => x.WithRange(fromDate, toDate, maxBlockRange)
                                                                 .OverrideConfiguration()
                                                                 .MaximumBlocksToGenerate(5));
 
-                    rangeBlocks[0].Start();
-                    rangeBlocks[0].Complete(); // completed
-                    rangeBlocks[1].Start();
-                    rangeBlocks[1].Failed(); // failed
+                    await rangeBlocks[0].StartAsync();
+                    await rangeBlocks[0].CompleteAsync(); // completed
+                    await rangeBlocks[1].StartAsync();
+                    await rangeBlocks[1].FailedAsync(); // failed
                     // 2 not started
-                    rangeBlocks[3].Start(); // started
-                    rangeBlocks[4].Start();
-                    rangeBlocks[4].Complete(); // completed
+                    await rangeBlocks[3].StartAsync(); // started
+                    await rangeBlocks[4].StartAsync();
+                    await rangeBlocks[4].CompleteAsync(); // completed
                 }
             }
 
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
-                    var rangeBlocks = executionContext.GetDateRangeBlocks(x => x.ReprocessDateRange()
+                    var rangeBlocks = await executionContext.GetDateRangeBlocksAsync(x => x.ReprocessDateRange()
                                                         .AllBlocks()
-                                                        .OfExecutionWith(referenceValue)).ToList();
+                                                        .OfExecutionWith(referenceValue));
 
                     Assert.Equal(5, rangeBlocks.Count);
                 }
@@ -516,7 +518,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsNumericRange_PreviousExecutionHadOneFailedBlockAndMultipleOkOnes_ThenBringBackTheFailedBlockWhenRequested()
+        public async Task If_AsNumericRange_PreviousExecutionHadOneFailedBlockAndMultipleOkOnes_ThenBringBackTheFailedBlockWhenRequested()
         {
             // ARRANGE
             var referenceValue = Guid.NewGuid().ToString();
@@ -525,37 +527,37 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             bool startedOk;
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                startedOk = executionContext.TryStart(referenceValue);
+                startedOk = await executionContext.TryStartAsync(referenceValue);
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     var fromNumber = 1000;
                     var toNumber = 3000;
                     var maxBlockRange = 100;
-                    var blocks = executionContext.GetNumericRangeBlocks(x => x.WithRange(fromNumber, toNumber, maxBlockRange)
+                    var blocks = await executionContext.GetNumericRangeBlocksAsync(x => x.WithRange(fromNumber, toNumber, maxBlockRange)
                                                                 .OverrideConfiguration()
                                                                 .MaximumBlocksToGenerate(5));
 
-                    blocks[0].Start();
-                    blocks[0].Complete(); // completed
-                    blocks[1].Start();
-                    blocks[1].Failed(); // failed
+                    await blocks[0].StartAsync();
+                    await blocks[0].CompleteAsync(); // completed
+                    await blocks[1].StartAsync();
+                    await blocks[1].FailedAsync(); // failed
                     // 2 not started
-                    blocks[3].Start(); // started
-                    blocks[4].Start();
-                    blocks[4].Complete(); // completed
+                    await blocks[3].StartAsync(); // started
+                    await blocks[4].StartAsync();
+                    await blocks[4].CompleteAsync(); // completed
                 }
             }
 
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
-                    var rangeBlocks = executionContext.GetNumericRangeBlocks(x => x.ReprocessNumericRange()
+                    var rangeBlocks = await executionContext.GetNumericRangeBlocksAsync(x => x.ReprocessNumericRange()
                                                         .PendingAndFailedBlocks()
-                                                        .OfExecutionWith(referenceValue)).ToList();
+                                                        .OfExecutionWith(referenceValue));
 
                     Assert.Equal(3, rangeBlocks.Count);
                 }
@@ -566,7 +568,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsNumericRange_PreviousExecutionHadOneFailedBlockAndMultipleOkOnes_ThenBringBackAllBlocksWhenRequested()
+        public async Task If_AsNumericRange_PreviousExecutionHadOneFailedBlockAndMultipleOkOnes_ThenBringBackAllBlocksWhenRequested()
         {
             // ARRANGE
             var referenceValue = Guid.NewGuid().ToString();
@@ -575,37 +577,37 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             bool startedOk;
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                startedOk = executionContext.TryStart(referenceValue);
+                startedOk = await executionContext.TryStartAsync(referenceValue);
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     var fromNumber = 1000;
                     var toNumber = 3000;
                     var maxBlockRange = 100;
-                    var blocks = executionContext.GetNumericRangeBlocks(x => x.WithRange(fromNumber, toNumber, maxBlockRange)
+                    var blocks = await executionContext.GetNumericRangeBlocksAsync(x => x.WithRange(fromNumber, toNumber, maxBlockRange)
                                                                 .OverrideConfiguration()
                                                                 .MaximumBlocksToGenerate(5));
 
-                    blocks[0].Start();
-                    blocks[0].Complete(); // completed
-                    blocks[1].Start();
-                    blocks[1].Failed(); // failed
+                    await blocks[0].StartAsync();
+                    await blocks[0].CompleteAsync(); // completed
+                    await blocks[1].StartAsync();
+                    await blocks[1].FailedAsync(); // failed
                     // 2 not started
-                    blocks[3].Start(); // started
-                    blocks[4].Start();
-                    blocks[4].Complete(); // completed
+                    await blocks[3].StartAsync(); // started
+                    await blocks[4].StartAsync();
+                    await blocks[4].CompleteAsync(); // completed
                 }
             }
 
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
-                    var rangeBlocks = executionContext.GetNumericRangeBlocks(x => x.ReprocessNumericRange()
+                    var rangeBlocks = await executionContext.GetNumericRangeBlocksAsync(x => x.ReprocessNumericRange()
                                                         .AllBlocks()
-                                                        .OfExecutionWith(referenceValue)).ToList();
+                                                        .OfExecutionWith(referenceValue));
 
                     Assert.Equal(5, rangeBlocks.Count);
                 }
@@ -615,24 +617,24 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsDateRangeWithPreviousDeadBlocks_ThenReprocessOk()
+        public async Task If_AsDateRangeWithPreviousDeadBlocks_ThenReprocessOk()
         {
             // ARRANGE
-            CreateFailedDateTask();
-            CreateDeadDateTask();
+            await CreateFailedDateTaskAsync();
+            await CreateDeadDateTaskAsync();
 
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContextWithNoReprocessing())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     var from = new DateTime(2016, 1, 7);
                     var to = new DateTime(2016, 1, 7);
                     var maxBlockSize = new TimeSpan(1, 0, 0, 0);
-                    var dateBlocks = executionContext.GetDateRangeBlocks(x => x.WithRange(from, to, maxBlockSize)
+                    var dateBlocks = await executionContext.GetDateRangeBlocksAsync(x => x.WithRange(from, to, maxBlockSize)
                         .OverrideConfiguration()
                         .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), 3)
                         .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0), 3)
@@ -641,9 +643,9 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
                     int counter = 0;
                     foreach (var block in dateBlocks)
                     {
-                        block.Start();
+                        await block.StartAsync();
 
-                        block.Complete();
+                        await block.CompleteAsync();
 
                         counter++;
                         Assert.Equal(counter, _blocksHelper.GetBlockExecutionCountByStatus(TestConstants.ApplicationName, TestConstants.TaskName, BlockExecutionStatus.Completed));
@@ -657,24 +659,24 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsDateRangeWithOverridenConfiguration_ThenOverridenValuesAreUsed()
+        public async Task If_AsDateRangeWithOverridenConfiguration_ThenOverridenValuesAreUsed()
         {
             // ARRANGE
-            CreateFailedDateTask();
-            CreateDeadDateTask();
+            await CreateFailedDateTaskAsync();
+            await CreateDeadDateTaskAsync();
 
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContextWithNoReprocessing())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     var from = new DateTime(2016, 1, 7);
                     var to = new DateTime(2016, 1, 31);
                     var maxBlockSize = new TimeSpan(1, 0, 0, 0);
-                    var dateBlocks = executionContext.GetDateRangeBlocks(x => x.WithRange(from, to, maxBlockSize)
+                    var dateBlocks = await executionContext.GetDateRangeBlocksAsync(x => x.WithRange(from, to, maxBlockSize)
                         .OverrideConfiguration()
                         .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), 3)
                         .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0), 3)
@@ -696,25 +698,25 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsDateRangeWithNoOverridenConfiguration_ThenConfigurationValuesAreUsed()
+        public async Task If_AsDateRangeWithNoOverridenConfiguration_ThenConfigurationValuesAreUsed()
         {
             // ARRANGE
             int blockCountLimit = 10;
-            CreateFailedDateTask();
-            CreateDeadDateTask();
+            await CreateFailedDateTaskAsync();
+            await CreateDeadDateTaskAsync();
 
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContextWithNoReprocessing(blockCountLimit))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     var from = new DateTime(2016, 1, 7);
                     var to = new DateTime(2016, 1, 31);
                     var maxBlockSize = new TimeSpan(1, 0, 0, 0);
-                    var numericBlocks = executionContext.GetDateRangeBlocks(x => x.WithRange(from, to, maxBlockSize));
+                    var numericBlocks = await executionContext.GetDateRangeBlocksAsync(x => x.WithRange(from, to, maxBlockSize));
                     Assert.Equal(10, numericBlocks.Count());
                     Assert.True(numericBlocks.All(x => x.DateRangeBlock.StartDate >= from));
                 }
@@ -724,24 +726,24 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsNumericRangeWithOverridenConfiguration_ThenOverridenValuesAreUsed()
+        public async Task If_AsNumericRangeWithOverridenConfiguration_ThenOverridenValuesAreUsed()
         {
             // ARRANGE
-            CreateFailedNumericTask();
-            CreateDeadNumericTask();
+            await CreateFailedNumericTaskAsync();
+            await CreateDeadNumericTaskAsync();
 
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContextWithNoReprocessing())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     long from = 61;
                     long to = 200;
                     short maxBlockSize = 10;
-                    var numericBlocks = executionContext.GetNumericRangeBlocks(x => x.WithRange(from, to, maxBlockSize)
+                    var numericBlocks = await executionContext.GetNumericRangeBlocksAsync(x => x.WithRange(from, to, maxBlockSize)
                         .OverrideConfiguration()
                         .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), 3)
                         .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0), 3)
@@ -763,25 +765,25 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsNumericRangeWithNoOverridenConfiguration_ThenConfigurationValuesAreUsed()
+        public async Task If_AsNumericRangeWithNoOverridenConfiguration_ThenConfigurationValuesAreUsed()
         {
             // ARRANGE
             int blockCountLimit = 10;
-            CreateFailedNumericTask();
-            CreateDeadNumericTask();
+            await CreateFailedNumericTaskAsync();
+            await CreateDeadNumericTaskAsync();
 
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContextWithNoReprocessing(blockCountLimit))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     long from = 61;
                     long to = 200;
                     short maxBlockSize = 10;
-                    var numericBlocks = executionContext.GetNumericRangeBlocks(x => x.WithRange(from, to, maxBlockSize));
+                    var numericBlocks = await executionContext.GetNumericRangeBlocksAsync(x => x.WithRange(from, to, maxBlockSize));
                     Assert.Equal(10, numericBlocks.Count());
                     Assert.True(numericBlocks.All(x => (int)x.NumericRangeBlock.StartNumber >= 61));
                 }
@@ -791,7 +793,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsDateRange_ForceBlock_ThenBlockGetsReprocessedAndDequeued()
+        public async Task If_AsDateRange_ForceBlock_ThenBlockGetsReprocessedAndDequeued()
         {
             // ARRANGE
             var fromDate = DateTime.UtcNow.AddHours(-12);
@@ -801,15 +803,15 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var maxBlockRange = new TimeSpan(24, 0, 0);
-                    var rangeBlocks = executionContext.GetDateRangeBlocks(x => x.WithRange(fromDate, toDate, maxBlockRange));
+                    var rangeBlocks = await executionContext.GetDateRangeBlocksAsync(x => x.WithRange(fromDate, toDate, maxBlockRange));
                     foreach (var rangeBlock in rangeBlocks)
                     {
-                        rangeBlock.Start();
-                        rangeBlock.Complete();
+                        await rangeBlock.StartAsync();
+                        await rangeBlock.CompleteAsync();
                     }
                 }
             }
@@ -821,17 +823,17 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             // ACT - reprocess the forced block
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    var rangeBlocks = executionContext.GetDateRangeBlocks(x => x.OnlyOldDateBlocks());
+                    var rangeBlocks = await executionContext.GetDateRangeBlocksAsync(x => x.OnlyOldDateBlocks());
                     Assert.Equal(1, rangeBlocks.Count);
                     Assert.Equal(fromDate.ToString("yyyyMMdd HH:mm:ss"), rangeBlocks[0].DateRangeBlock.StartDate.ToString("yyyyMMdd HH:mm:ss"));
                     Assert.Equal(toDate.ToString("yyyyMMdd HH:mm:ss"), rangeBlocks[0].DateRangeBlock.EndDate.ToString("yyyyMMdd HH:mm:ss"));
                     foreach (var rangeBlock in rangeBlocks)
                     {
-                        rangeBlock.Start();
-                        rangeBlock.Complete();
+                        await rangeBlock.StartAsync();
+                        await rangeBlock.CompleteAsync();
                     }
                 }
             }
@@ -839,10 +841,10 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             // The forced block will have been dequeued so it should not be processed again
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    var rangeBlocks = executionContext.GetDateRangeBlocks(x => x.OnlyOldDateBlocks());
+                    var rangeBlocks = await executionContext.GetDateRangeBlocksAsync(x => x.OnlyOldDateBlocks());
                     Assert.Equal(0, rangeBlocks.Count);
                 }
             }
@@ -851,7 +853,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsNumericRange_ForceBlock_ThenBlockGetsReprocessedAndDequeued()
+        public async Task If_AsNumericRange_ForceBlock_ThenBlockGetsReprocessedAndDequeued()
         {
             // ARRANGE
             long fromNumber = 1000;
@@ -861,15 +863,15 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var maxBlockRange = 2000;
-                    var rangeBlocks = executionContext.GetNumericRangeBlocks(x => x.WithRange(fromNumber, toNumber, maxBlockRange));
+                    var rangeBlocks = await executionContext.GetNumericRangeBlocksAsync(x => x.WithRange(fromNumber, toNumber, maxBlockRange));
                     foreach (var rangeBlock in rangeBlocks)
                     {
-                        rangeBlock.Start();
-                        rangeBlock.Complete();
+                        await rangeBlock.StartAsync();
+                        await rangeBlock.CompleteAsync();
                     }
                 }
             }
@@ -881,17 +883,17 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             // ACT - reprocess the forced block
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    var rangeBlocks = executionContext.GetNumericRangeBlocks(x => x.OnlyOldNumericBlocks());
+                    var rangeBlocks = await executionContext.GetNumericRangeBlocksAsync(x => x.OnlyOldNumericBlocks());
                     Assert.Equal(1, rangeBlocks.Count);
                     Assert.Equal(fromNumber, rangeBlocks[0].NumericRangeBlock.StartNumber);
                     Assert.Equal(toNumber, rangeBlocks[0].NumericRangeBlock.EndNumber);
                     foreach (var rangeBlock in rangeBlocks)
                     {
-                        rangeBlock.Start();
-                        rangeBlock.Complete();
+                        await rangeBlock.StartAsync();
+                        await rangeBlock.CompleteAsync();
                     }
                 }
             }
@@ -899,10 +901,10 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             // The forced block will have been dequeued so it should not be processed again
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    var rangeBlocks = executionContext.GetNumericRangeBlocks(x => x.OnlyOldNumericBlocks());
+                    var rangeBlocks = await executionContext.GetNumericRangeBlocksAsync(x => x.OnlyOldNumericBlocks());
                     Assert.Equal(0, rangeBlocks.Count);
                 }
             }
@@ -918,42 +920,42 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             return ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndNoReprocessing(maxBlocksToCreate));
         }
 
-        private void CreateFailedDateTask()
+        private async Task CreateFailedDateTaskAsync()
         {
             using (var executionContext = CreateTaskExecutionContextWithNoReprocessing())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var from = new DateTime(2016, 1, 1);
                     var to = new DateTime(2016, 1, 4);
                     var maxBlockSize = new TimeSpan(1, 0, 0, 0);
-                    var dateBlocks = executionContext.GetDateRangeBlocks(x => x.WithRange(from, to, maxBlockSize));
+                    var dateBlocks = await executionContext.GetDateRangeBlocksAsync(x => x.WithRange(from, to, maxBlockSize));
 
                     foreach (var block in dateBlocks)
                     {
-                        block.Start();
-                        block.Failed();
+                        await block.StartAsync();
+                        await block.FailedAsync();
                     }
                 }
             }
         }
 
-        private void CreateDeadDateTask()
+        private async Task CreateDeadDateTaskAsync()
         {
             using (var executionContext = CreateTaskExecutionContextWithNoReprocessing())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var from = new DateTime(2016, 1, 4);
                     var to = new DateTime(2016, 1, 7);
                     var maxBlockSize = new TimeSpan(1, 0, 0, 0);
-                    var dateBlocks = executionContext.GetDateRangeBlocks(x => x.WithRange(from, to, maxBlockSize));
+                    var dateBlocks = await executionContext.GetDateRangeBlocksAsync(x => x.WithRange(from, to, maxBlockSize));
 
                     foreach (var block in dateBlocks)
                     {
-                        block.Start();
+                        await block.StartAsync();
                     }
                 }
             }
@@ -962,42 +964,42 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_RangeBlockContext
             executionHelper.SetLastExecutionAsDead(_taskDefinitionId);
         }
 
-        private void CreateFailedNumericTask()
+        private async Task CreateFailedNumericTaskAsync()
         {
             using (var executionContext = CreateTaskExecutionContextWithNoReprocessing())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     long from = 1;
                     long to = 30;
                     short maxBlockSize = 10;
-                    var numericBlocks = executionContext.GetNumericRangeBlocks(x => x.WithRange(from, to, maxBlockSize));
+                    var numericBlocks = await executionContext.GetNumericRangeBlocksAsync(x => x.WithRange(from, to, maxBlockSize));
 
                     foreach (var block in numericBlocks)
                     {
-                        block.Start();
-                        block.Failed();
+                        await block.StartAsync();
+                        await block.FailedAsync();
                     }
                 }
             }
         }
 
-        private void CreateDeadNumericTask()
+        private async Task CreateDeadNumericTaskAsync()
         {
             using (var executionContext = CreateTaskExecutionContextWithNoReprocessing())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     long from = 31;
                     long to = 60;
                     short maxBlockSize = 10;
-                    var numericBlocks = executionContext.GetNumericRangeBlocks(x => x.WithRange(from, to, maxBlockSize));
+                    var numericBlocks = await executionContext.GetNumericRangeBlocksAsync(x => x.WithRange(from, to, maxBlockSize));
 
                     foreach (var block in numericBlocks)
                     {
-                        block.Start();
+                        await block.StartAsync();
                     }
                 }
             }

@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Taskling.InfrastructureContracts.CriticalSections
 {
     public interface ICriticalSectionRepository
     {
-        StartCriticalSectionResponse Start(StartCriticalSectionRequest startRequest);
-        CompleteCriticalSectionResponse Complete(CompleteCriticalSectionRequest completeCriticalSectionRequest);
+        Task<StartCriticalSectionResponse> StartAsync(StartCriticalSectionRequest startRequest);
+        Task<CompleteCriticalSectionResponse> CompleteAsync(CompleteCriticalSectionRequest completeCriticalSectionRequest);
     }
 }

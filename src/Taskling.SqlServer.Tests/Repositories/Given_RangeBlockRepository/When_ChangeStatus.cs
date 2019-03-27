@@ -9,6 +9,8 @@ using Taskling.InfrastructureContracts.Blocks.CommonRequests;
 using Taskling.SqlServer.Blocks;
 using Taskling.SqlServer.Tests.Helpers;
 using Taskling.SqlServer.Tasks;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Taskling.SqlServer.Tests.Repositories.Given_RangeBlockRepository
 {
@@ -34,7 +36,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_RangeBlockRepository
 
             TaskRepository.ClearCache();
         }
-
+        
         private RangeBlockRepository CreateSut()
         {
             return new RangeBlockRepository(new TaskRepository());
@@ -61,7 +63,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_RangeBlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_SetStatusOfDateRangeBlock_ThenItemsCountIsCorrect()
+        public async Task If_SetStatusOfDateRangeBlock_ThenItemsCountIsCorrect()
         {
             // ARRANGE
             InsertDateRangeBlock();
@@ -76,7 +78,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_RangeBlockRepository
 
             // ACT
             var sut = CreateSut();
-            sut.ChangeStatus(request);
+            await sut.ChangeStatusAsync(request);
 
             var itemCount = new BlocksHelper().GetBlockExecutionItemCount(_blockExecutionId);
 
@@ -87,7 +89,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_RangeBlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_SetStatusOfNumericRangeBlock_ThenItemsCountIsCorrect()
+        public async Task If_SetStatusOfNumericRangeBlock_ThenItemsCountIsCorrect()
         {
             // ARRANGE
             InsertNumericRangeBlock();
@@ -102,7 +104,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_RangeBlockRepository
 
             // ACT
             var sut = CreateSut();
-            sut.ChangeStatus(request);
+            await sut.ChangeStatusAsync(request);
 
             var itemCount = new BlocksHelper().GetBlockExecutionItemCount(_blockExecutionId);
 

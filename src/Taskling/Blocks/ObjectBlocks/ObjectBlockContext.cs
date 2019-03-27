@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Taskling.Blocks.Common;
 using Taskling.Contexts;
 using Taskling.InfrastructureContracts;
@@ -43,7 +44,7 @@ namespace Taskling.Blocks.ObjectBlocks
         public string BlockExecutionId { get; private set; }
         public string ForcedBlockQueueId { get; private set; }
 
-        public void Start()
+        public async Task StartAsync()
         {
             var request = new BlockExecutionChangeStatusRequest(new TaskId(_applicationName, _taskName),
                 _taskExecutionId,
@@ -51,16 +52,16 @@ namespace Taskling.Blocks.ObjectBlocks
                 BlockExecutionId,
                 BlockExecutionStatus.Started);
 
-            Action<BlockExecutionChangeStatusRequest> actionRequest = _objectBlockRepository.ChangeStatus;
-            RetryService.InvokeWithRetry(actionRequest, request);
+            Func<BlockExecutionChangeStatusRequest, Task> actionRequest = _objectBlockRepository.ChangeStatusAsync;
+            await RetryService.InvokeWithRetryAsync(actionRequest, request);
         }
 
-        public void Complete()
+        public async Task CompleteAsync()
         {
-            Complete(-1);
+            await CompleteAsync(-1);
         }
 
-        public void Complete(int itemsProcessed)
+        public async Task CompleteAsync(int itemsProcessed)
         {
             var request = new BlockExecutionChangeStatusRequest(new TaskId(_applicationName, _taskName),
                 _taskExecutionId,
@@ -69,11 +70,11 @@ namespace Taskling.Blocks.ObjectBlocks
                 BlockExecutionStatus.Completed);
             request.ItemsProcessed = itemsProcessed;
 
-            Action<BlockExecutionChangeStatusRequest> actionRequest = _objectBlockRepository.ChangeStatus;
-            RetryService.InvokeWithRetry(actionRequest, request);
+            Func<BlockExecutionChangeStatusRequest, Task> actionRequest = _objectBlockRepository.ChangeStatusAsync;
+            await RetryService.InvokeWithRetryAsync(actionRequest, request);
         }
 
-        public void Failed()
+        public async Task FailedAsync()
         {
             var request = new BlockExecutionChangeStatusRequest(new TaskId(_applicationName, _taskName),
                 _taskExecutionId,
@@ -81,13 +82,13 @@ namespace Taskling.Blocks.ObjectBlocks
                 BlockExecutionId,
                 BlockExecutionStatus.Failed);
 
-            Action<BlockExecutionChangeStatusRequest> actionRequest = _objectBlockRepository.ChangeStatus;
-            RetryService.InvokeWithRetry(actionRequest, request);
+            Func<BlockExecutionChangeStatusRequest, Task> actionRequest = _objectBlockRepository.ChangeStatusAsync;
+            await RetryService.InvokeWithRetryAsync(actionRequest, request);
         }
 
-        public void Failed(string message)
+        public async Task FailedAsync(string message)
         {
-            Failed();
+            await FailedAsync();
 
             string errorMessage = errorMessage = string.Format("BlockId {0} Error: {1}",
                     Block.ObjectBlockId,
@@ -100,7 +101,7 @@ namespace Taskling.Blocks.ObjectBlocks
                 TreatTaskAsFailed = false,
                 Error = errorMessage
             };
-            _taskExecutionRepository.Error(errorRequest);
+            await _taskExecutionRepository.ErrorAsync(errorRequest);
         }
     }
 }

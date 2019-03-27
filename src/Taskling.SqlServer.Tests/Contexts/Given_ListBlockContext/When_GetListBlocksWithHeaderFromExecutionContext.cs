@@ -8,6 +8,8 @@ using Taskling.Blocks.ListBlocks;
 using Taskling.Contexts;
 using Taskling.Events;
 using Taskling.SqlServer.Tests.Helpers;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
 {
@@ -31,7 +33,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsListWithHeaderWithSingleUnitCommit_NumberOfBlocksAndStatusesOfBlockExecutionsCorrectAtEveryStep()
+        public async Task If_AsListWithHeaderWithSingleUnitCommit_NumberOfBlocksAndStatusesOfBlockExecutionsCorrectAtEveryStep()
         {
             // ARRANGE
 
@@ -39,14 +41,14 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     var testHeader = GetTestHeader();
                     var values = GetPersonList(9);
                     short maxBlockSize = 4;
-                    var listBlocks = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, testHeader, maxBlockSize));
+                    var listBlocks = await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, testHeader, maxBlockSize));
                     // There should be 3 blocks - 4, 4, 1
                     Assert.Equal(3, _blocksHelper.GetBlockCount(TestConstants.ApplicationName, TestConstants.TaskName));
                     int expectedNotStartedCount = 3;
@@ -59,7 +61,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
 
                     foreach (var listBlock in listBlocks)
                     {
-                        listBlock.Start();
+                        await listBlock.StartAsync();
                         expectedNotStartedCount--;
 
                         Assert.Equal(testHeader.PurchaseCode, listBlock.Block.Header.PurchaseCode);
@@ -71,22 +73,22 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
                         Assert.Equal(1, _blocksHelper.GetBlockExecutionCountByStatus(TestConstants.ApplicationName, TestConstants.TaskName, BlockExecutionStatus.Started));
 
                         int expectedCompletedItems = 0;
-                        int expectedPendingItems = listBlock.GetItems(ItemStatus.Pending).Count();
+                        int expectedPendingItems = (await listBlock.GetItemsAsync(ItemStatus.Pending)).Count();
                         // All items should be Pending and 0 Completed
                         Assert.Equal(expectedPendingItems, _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ItemStatus.Pending));
                         Assert.Equal(expectedCompletedItems, _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ItemStatus.Completed));
-                        foreach (var itemToProcess in listBlock.GetItems(ItemStatus.Pending))
+                        foreach (var itemToProcess in await listBlock.GetItemsAsync(ItemStatus.Pending))
                         {
                             // do the processing
 
-                            itemToProcess.Completed();
+                            await itemToProcess.CompletedAsync();
 
                             // More more should be Completed
                             expectedCompletedItems++;
                             Assert.Equal(expectedCompletedItems, _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ItemStatus.Completed));
                         }
 
-                        listBlock.Complete();
+                        await listBlock.CompleteAsync();
 
                         // One more block should be completed
                         expectedCompletedCount++;
@@ -99,7 +101,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsListWithHeaderWithSingleUnitCommitAndFailsWithReason_ThenReasonIsPersisted()
+        public async Task If_AsListWithHeaderWithSingleUnitCommitAndFailsWithReason_ThenReasonIsPersisted()
         {
             // ARRANGE
 
@@ -108,25 +110,25 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             string listBlockId = string.Empty;
             using (var executionContext = CreateTaskExecutionContext(1))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var testHeader = GetTestHeader();
                     var values = GetPersonList(9);
                     short maxBlockSize = 4;
-                    var listBlock = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, testHeader, maxBlockSize)).First();
+                    var listBlock = (await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, testHeader, maxBlockSize))).First();
                     listBlockId = listBlock.Block.ListBlockId;
-                    listBlock.Start();
+                    await listBlock.StartAsync();
 
                     int counter = 0;
-                    foreach (var itemToProcess in listBlock.GetItems(ItemStatus.Pending))
+                    foreach (var itemToProcess in await listBlock.GetItemsAsync(ItemStatus.Pending))
                     {
-                        itemToProcess.Failed("Exception");
+                        await itemToProcess.FailedAsync("Exception");
 
                         counter++;
                     }
 
-                    listBlock.Complete();
+                    await listBlock.CompleteAsync();
                 }
             }
 
@@ -136,7 +138,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_LargeValuesWithLargeHeader_ThenValuesArePersistedAndRetrievedOk()
+        public async Task If_LargeValuesWithLargeHeader_ThenValuesArePersistedAndRetrievedOk()
         {
             // ARRANGE
             var values = GetLargePersonList(4);
@@ -147,38 +149,38 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             string listBlockId = string.Empty;
             using (var executionContext = CreateTaskExecutionContext(1))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     short maxBlockSize = 4;
-                    var listBlock = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, largeTestHeader, maxBlockSize)).First();
+                    var listBlock = (await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, largeTestHeader, maxBlockSize))).First();
                     listBlockId = listBlock.Block.ListBlockId;
-                    listBlock.Start();
+                    await listBlock.StartAsync();
 
-                    foreach (var itemToProcess in listBlock.GetItems(ItemStatus.Pending))
-                        itemToProcess.Failed("Exception");
+                    foreach (var itemToProcess in await listBlock.GetItemsAsync(ItemStatus.Pending))
+                        await itemToProcess.FailedAsync("Exception");
 
-                    listBlock.Complete();
+                    await listBlock.CompleteAsync();
                 }
             }
 
             using (var executionContext = CreateTaskExecutionContext(1))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var testHeader = GetTestHeader();
                     var emptyPersonList = new List<PersonDto>();
                     short maxBlockSize = 4;
-                    var listBlock = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(emptyPersonList, testHeader, maxBlockSize)).First();
+                    var listBlock = (await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(emptyPersonList, testHeader, maxBlockSize))).First();
                     listBlockId = listBlock.Block.ListBlockId;
-                    listBlock.Start();
+                    await listBlock.StartAsync();
 
                     Assert.Equal(largeTestHeader.PurchaseCode, listBlock.Block.Header.PurchaseCode);
                     Assert.Equal(largeTestHeader.FromDate, listBlock.Block.Header.FromDate);
                     Assert.Equal(largeTestHeader.ToDate, listBlock.Block.Header.ToDate);
 
-                    var itemsToProcess = listBlock.GetItems(ItemStatus.Pending, ItemStatus.Failed).ToList();
+                    var itemsToProcess = (await listBlock.GetItemsAsync(ItemStatus.Pending, ItemStatus.Failed)).ToList();
                     for (int i = 0; i < itemsToProcess.Count; i++)
                     {
                         Assert.Equal(values[i].DateOfBirth, itemsToProcess[i].Value.DateOfBirth);
@@ -186,7 +188,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
                         Assert.Equal(values[i].Name, itemsToProcess[i].Value.Name);
                     }
 
-                    listBlock.Complete();
+                    await listBlock.CompleteAsync();
                 }
             }
         }
@@ -194,7 +196,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsListWithHeaderWithNoValues_ThenCheckpointIsPersistedAndEmptyBlockGenerated()
+        public async Task If_AsListWithHeaderWithNoValues_ThenCheckpointIsPersistedAndEmptyBlockGenerated()
         {
             // ARRANGE
 
@@ -203,13 +205,13 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             string listBlockId = string.Empty;
             using (var executionContext = CreateTaskExecutionContext(1))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var testHeader = GetTestHeader();
                     var values = new List<PersonDto>() { };
                     short maxBlockSize = 4;
-                    var listBlock = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, testHeader, maxBlockSize));
+                    var listBlock = await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, testHeader, maxBlockSize));
                     Assert.False(listBlock.Any());
                     var execEvent = _executionHelper.GetLastEvent(_taskDefinitionId);
                     Assert.Equal(EventType.CheckPoint, execEvent.Item1);
@@ -222,7 +224,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsListWithHeaderWithSingleUnitCommitAndStepSet_ThenStepIsPersisted()
+        public async Task If_AsListWithHeaderWithSingleUnitCommitAndStepSet_ThenStepIsPersisted()
         {
             // ARRANGE
 
@@ -231,26 +233,26 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             string listBlockId = string.Empty;
             using (var executionContext = CreateTaskExecutionContext(1))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var testHeader = GetTestHeader();
                     var values = GetPersonList(9);
                     short maxBlockSize = 4;
-                    var listBlock = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, testHeader, maxBlockSize)).First();
+                    var listBlock = (await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, testHeader, maxBlockSize))).First();
                     listBlockId = listBlock.Block.ListBlockId;
-                    listBlock.Start();
+                    await listBlock.StartAsync();
 
                     int counter = 0;
-                    foreach (var itemToProcess in listBlock.GetItems(ItemStatus.Pending))
+                    foreach (var itemToProcess in await listBlock.GetItemsAsync(ItemStatus.Pending))
                     {
                         itemToProcess.Step = 2;
-                        itemToProcess.Failed("Exception");
+                        await itemToProcess.FailedAsync("Exception");
 
                         counter++;
                     }
 
-                    listBlock.Complete();
+                    await listBlock.CompleteAsync();
                 }
             }
 
@@ -260,7 +262,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsListWithHeaderWithBatchCommitAtEnd_NumberOfBlocksAndStatusesOfBlockExecutionsCorrectAtEveryStep()
+        public async Task If_AsListWithHeaderWithBatchCommitAtEnd_NumberOfBlocksAndStatusesOfBlockExecutionsCorrectAtEveryStep()
         {
             // ARRANGE
 
@@ -268,14 +270,14 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     var testHeader = GetTestHeader();
                     var values = GetPersonList(9);
                     short maxBlockSize = 4;
-                    var listBlocks = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithBatchCommitAtEnd(values, testHeader, maxBlockSize));
+                    var listBlocks = await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithBatchCommitAtEnd(values, testHeader, maxBlockSize));
                     // There should be 3 blocks - 4, 4, 1
                     Assert.Equal(3, _blocksHelper.GetBlockCount(TestConstants.ApplicationName, TestConstants.TaskName));
                     int expectedNotStartedCount = 3;
@@ -288,31 +290,31 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
 
                     foreach (var listBlock in listBlocks)
                     {
-                        listBlock.Start();
+                        await listBlock.StartAsync();
                         expectedNotStartedCount--;
 
                         // There should be one less NotStarted block and exactly 1 Started block
                         Assert.Equal(expectedNotStartedCount, _blocksHelper.GetBlockExecutionCountByStatus(TestConstants.ApplicationName, TestConstants.TaskName, BlockExecutionStatus.NotStarted));
                         Assert.Equal(1, _blocksHelper.GetBlockExecutionCountByStatus(TestConstants.ApplicationName, TestConstants.TaskName, BlockExecutionStatus.Started));
 
-                        int expectedPendingItems = listBlock.GetItems(ItemStatus.Pending).Count();
+                        int expectedPendingItems = (await listBlock.GetItemsAsync(ItemStatus.Pending)).Count();
                         // All items should be Pending and 0 Completed
                         Assert.Equal(expectedPendingItems, _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ItemStatus.Pending));
                         Assert.Equal(0, _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ItemStatus.Completed));
-                        foreach (var itemToProcess in listBlock.GetItems(ItemStatus.Pending))
+                        foreach (var itemToProcess in await listBlock.GetItemsAsync(ItemStatus.Pending))
                         {
                             // do the processing
 
-                            itemToProcess.Completed();
+                            await itemToProcess.CompletedAsync();
 
                             // There should be 0 Completed because we batch commit at the end
                             Assert.Equal(0, _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ItemStatus.Completed));
                         }
 
-                        listBlock.Complete();
+                        await listBlock.CompleteAsync();
 
                         // All items should be completed now
-                        Assert.Equal(listBlock.GetItems(ItemStatus.Completed).Count(), _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ItemStatus.Completed));
+                        Assert.Equal((await listBlock.GetItemsAsync(ItemStatus.Completed)).Count(), _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ItemStatus.Completed));
 
                         // One more block should be completed
                         expectedCompletedCount++;
@@ -325,7 +327,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsListWithHeaderWithPeriodicCommit_NumberOfBlocksAndStatusesOfBlockExecutionsCorrectAtEveryStep()
+        public async Task If_AsListWithHeaderWithPeriodicCommit_NumberOfBlocksAndStatusesOfBlockExecutionsCorrectAtEveryStep()
         {
             // ARRANGE
 
@@ -333,14 +335,14 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     var testHeader = GetTestHeader();
                     var values = GetPersonList(26);
                     short maxBlockSize = 15;
-                    var listBlocks = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithPeriodicCommit(values, testHeader, maxBlockSize, BatchSize.Ten));
+                    var listBlocks = await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithPeriodicCommit(values, testHeader, maxBlockSize, BatchSize.Ten));
                     // There should be 2 blocks - 15, 11
                     Assert.Equal(2, _blocksHelper.GetBlockCount(TestConstants.ApplicationName, TestConstants.TaskName));
                     int expectedNotStartedCount = 2;
@@ -353,26 +355,26 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
 
                     foreach (var listBlock in listBlocks)
                     {
-                        listBlock.Start();
+                        await listBlock.StartAsync();
                         expectedNotStartedCount--;
 
                         // There should be one less NotStarted block and exactly 1 Started block
                         Assert.Equal(expectedNotStartedCount, _blocksHelper.GetBlockExecutionCountByStatus(TestConstants.ApplicationName, TestConstants.TaskName, BlockExecutionStatus.NotStarted));
                         Assert.Equal(1, _blocksHelper.GetBlockExecutionCountByStatus(TestConstants.ApplicationName, TestConstants.TaskName, BlockExecutionStatus.Started));
 
-                        int expectedPendingItems = listBlock.GetItems(ItemStatus.Pending).Count();
+                        int expectedPendingItems = (await listBlock.GetItemsAsync(ItemStatus.Pending)).Count();
                         int expectedCompletedItems = 0;
                         // All items should be Pending and 0 Completed
                         Assert.Equal(expectedPendingItems, _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ItemStatus.Pending));
                         Assert.Equal(expectedCompletedItems, _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ItemStatus.Completed));
                         int itemsProcessed = 0;
                         int itemsCommitted = 0;
-                        foreach (var itemToProcess in listBlock.GetItems(ItemStatus.Pending))
+                        foreach (var itemToProcess in await listBlock.GetItemsAsync(ItemStatus.Pending))
                         {
                             itemsProcessed++;
                             // do the processing
 
-                            itemToProcess.Completed();
+                            await itemToProcess.CompletedAsync();
 
                             // There should be 0 Completed unless we have reached the batch size 10
                             if (itemsProcessed % 10 == 0)
@@ -385,7 +387,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
                         }
 
 
-                        listBlock.Complete();
+                        await listBlock.CompleteAsync();
 
                         // All items should be completed now
                         Assert.Equal(itemsProcessed, _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ItemStatus.Completed));
@@ -401,7 +403,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsListWithHeaderWithPeriodicCommitAndFailsWithReason_ThenReasonIsPersisted()
+        public async Task If_AsListWithHeaderWithPeriodicCommitAndFailsWithReason_ThenReasonIsPersisted()
         {
             // ARRANGE
 
@@ -410,25 +412,25 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             string listBlockId = string.Empty;
             using (var executionContext = CreateTaskExecutionContext(1))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var testHeader = GetTestHeader();
                     var values = GetPersonList(14);
                     short maxBlockSize = 20;
-                    var listBlock = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithPeriodicCommit(values, testHeader, maxBlockSize, BatchSize.Ten)).First();
+                    var listBlock = (await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithPeriodicCommit(values, testHeader, maxBlockSize, BatchSize.Ten))).First();
                     listBlockId = listBlock.Block.ListBlockId;
-                    listBlock.Start();
+                    await listBlock.StartAsync();
 
                     int counter = 0;
-                    foreach (var itemToProcess in listBlock.GetItems(ItemStatus.Pending))
+                    foreach (var itemToProcess in await listBlock.GetItemsAsync(ItemStatus.Pending))
                     {
-                        itemToProcess.Failed("Exception");
+                        await itemToProcess.FailedAsync("Exception");
 
                         counter++;
                     }
 
-                    listBlock.Complete();
+                    await listBlock.CompleteAsync();
                 }
             }
 
@@ -438,7 +440,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsListWithHeaderWithPeriodicCommitAndStepSet_ThenStepIsPersisted()
+        public async Task If_AsListWithHeaderWithPeriodicCommitAndStepSet_ThenStepIsPersisted()
         {
             // ARRANGE
 
@@ -447,26 +449,26 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             string listBlockId = string.Empty;
             using (var executionContext = CreateTaskExecutionContext(1))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var testHeader = GetTestHeader();
                     var values = GetPersonList(14);
                     short maxBlockSize = 20;
-                    var listBlock = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithPeriodicCommit(values, testHeader, maxBlockSize, BatchSize.Ten)).First();
+                    var listBlock = (await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithPeriodicCommit(values, testHeader, maxBlockSize, BatchSize.Ten))).First();
                     listBlockId = listBlock.Block.ListBlockId;
-                    listBlock.Start();
+                    await listBlock.StartAsync();
 
                     int counter = 0;
-                    foreach (var itemToProcess in listBlock.GetItems(ItemStatus.Pending))
+                    foreach (var itemToProcess in await listBlock.GetItemsAsync(ItemStatus.Pending))
                     {
                         itemToProcess.Step = 2;
-                        itemToProcess.Failed("Exception");
+                        await itemToProcess.FailedAsync("Exception");
 
                         counter++;
                     }
 
-                    listBlock.Complete();
+                    await listBlock.CompleteAsync();
                 }
             }
 
@@ -477,7 +479,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_PreviousBlockWithHeader_ThenLastBlockContainsCorrectItems()
+        public async Task If_PreviousBlockWithHeader_ThenLastBlockContainsCorrectItems()
         {
             var testHeader = GetTestHeader();
             testHeader.PurchaseCode = "B";
@@ -486,20 +488,20 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             // Create previous blocks
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var values = GetPersonList(26);
                     short maxBlockSize = 15;
-                    var listBlocks = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithPeriodicCommit(values, testHeader, maxBlockSize, BatchSize.Ten));
+                    var listBlocks = await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithPeriodicCommit(values, testHeader, maxBlockSize, BatchSize.Ten));
 
                     foreach (var listBlock in listBlocks)
                     {
-                        listBlock.Start();
-                        foreach (var itemToProcess in listBlock.GetItems(ItemStatus.Pending))
-                            itemToProcess.Completed();
+                        await listBlock.StartAsync();
+                        foreach (var itemToProcess in await listBlock.GetItemsAsync(ItemStatus.Pending))
+                            await itemToProcess.CompletedAsync();
 
-                        listBlock.Complete();
+                        await listBlock.CompleteAsync();
                     }
                 }
             }
@@ -514,33 +516,36 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             IListBlock<PersonDto, TestHeader> lastBlock = null;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    lastBlock = executionContext.GetLastListBlock<PersonDto, TestHeader>();
+                    lastBlock = await executionContext.GetLastListBlockAsync<PersonDto, TestHeader>();
                 }
             }
 
             // ASSERT
+            var expectedLastBlockItems = await expectedLastBlock.GetItemsAsync();
+            var lastBlockItems = await lastBlock.GetItemsAsync();
+
             Assert.Equal(testHeader.PurchaseCode, lastBlock.Header.PurchaseCode);
-            Assert.Equal(expectedLastBlock.Items.Count, lastBlock.Items.Count);
-            Assert.Equal(expectedLastBlock.Items[0].Value.Id, lastBlock.Items[0].Value.Id);
-            Assert.Equal(expectedLastBlock.Items[1].Value.Id, lastBlock.Items[1].Value.Id);
-            Assert.Equal(expectedLastBlock.Items[2].Value.Id, lastBlock.Items[2].Value.Id);
-            Assert.Equal(expectedLastBlock.Items[3].Value.Id, lastBlock.Items[3].Value.Id);
-            Assert.Equal(expectedLastBlock.Items[4].Value.Id, lastBlock.Items[4].Value.Id);
-            Assert.Equal(expectedLastBlock.Items[5].Value.Id, lastBlock.Items[5].Value.Id);
-            Assert.Equal(expectedLastBlock.Items[6].Value.Id, lastBlock.Items[6].Value.Id);
-            Assert.Equal(expectedLastBlock.Items[7].Value.Id, lastBlock.Items[7].Value.Id);
-            Assert.Equal(expectedLastBlock.Items[8].Value.Id, lastBlock.Items[8].Value.Id);
-            Assert.Equal(expectedLastBlock.Items[9].Value.Id, lastBlock.Items[9].Value.Id);
-            Assert.Equal(expectedLastBlock.Items[10].Value.Id, lastBlock.Items[10].Value.Id);
+            Assert.Equal(expectedLastBlockItems.Count, lastBlockItems.Count);
+            Assert.Equal(expectedLastBlockItems[0].Value.Id, lastBlockItems[0].Value.Id);
+            Assert.Equal(expectedLastBlockItems[1].Value.Id, lastBlockItems[1].Value.Id);
+            Assert.Equal(expectedLastBlockItems[2].Value.Id, lastBlockItems[2].Value.Id);
+            Assert.Equal(expectedLastBlockItems[3].Value.Id, lastBlockItems[3].Value.Id);
+            Assert.Equal(expectedLastBlockItems[4].Value.Id, lastBlockItems[4].Value.Id);
+            Assert.Equal(expectedLastBlockItems[5].Value.Id, lastBlockItems[5].Value.Id);
+            Assert.Equal(expectedLastBlockItems[6].Value.Id, lastBlockItems[6].Value.Id);
+            Assert.Equal(expectedLastBlockItems[7].Value.Id, lastBlockItems[7].Value.Id);
+            Assert.Equal(expectedLastBlockItems[8].Value.Id, lastBlockItems[8].Value.Id);
+            Assert.Equal(expectedLastBlockItems[9].Value.Id, lastBlockItems[9].Value.Id);
+            Assert.Equal(expectedLastBlockItems[10].Value.Id, lastBlockItems[10].Value.Id);
         }
 
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_NoPreviousBlockWithHeader_ThenLastBlockIsNull()
+        public async Task If_NoPreviousBlockWithHeader_ThenLastBlockIsNull()
         {
             // ARRANGE
             // all previous blocks were deleted in TestInitialize
@@ -549,10 +554,10 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             IListBlock<PersonDto, TestHeader> lastBlock = null;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    lastBlock = executionContext.GetLastListBlock<PersonDto, TestHeader>();
+                    lastBlock = await executionContext.GetLastListBlockAsync<PersonDto, TestHeader>();
                 }
             }
 
@@ -563,7 +568,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_PreviousBlockIsPhantomWithHeader_ThenLastBlockNotThisPhantom()
+        public async Task If_PreviousBlockIsPhantomWithHeader_ThenLastBlockNotThisPhantom()
         {
             var testHeader = GetTestHeader();
 
@@ -571,20 +576,20 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             // Create previous blocks
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var values = GetPersonList(3);
                     short maxBlockSize = 15;
-                    var listBlocks = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithPeriodicCommit(values, testHeader, maxBlockSize, BatchSize.Ten));
+                    var listBlocks = await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithPeriodicCommit(values, testHeader, maxBlockSize, BatchSize.Ten));
 
                     foreach (var listBlock in listBlocks)
                     {
-                        listBlock.Start();
-                        foreach (var itemToProcess in listBlock.GetItems(ItemStatus.Pending))
-                            itemToProcess.Completed();
+                        await listBlock.StartAsync();
+                        foreach (var itemToProcess in await listBlock.GetItemsAsync(ItemStatus.Pending))
+                            await itemToProcess.CompletedAsync();
 
-                        listBlock.Complete();
+                        await listBlock.CompleteAsync();
                     }
                 }
             }
@@ -595,25 +600,27 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             IListBlock<PersonDto, TestHeader> lastBlock = null;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    lastBlock = executionContext.GetLastListBlock<PersonDto, TestHeader>();
+                    lastBlock = await executionContext.GetLastListBlockAsync<PersonDto, TestHeader>();
                 }
             }
 
             // ASSERT
+            var lastBlockItems = await lastBlock.GetItemsAsync();
+
             Assert.Equal(testHeader.PurchaseCode, lastBlock.Header.PurchaseCode);
-            Assert.Equal(3, lastBlock.Items.Count);
-            Assert.Equal("1", lastBlock.Items[0].Value.Id);
-            Assert.Equal("2", lastBlock.Items[1].Value.Id);
-            Assert.Equal("3", lastBlock.Items[2].Value.Id);
+            Assert.Equal(3, lastBlockItems.Count);
+            Assert.Equal("1", lastBlockItems[0].Value.Id);
+            Assert.Equal("2", lastBlockItems[1].Value.Id);
+            Assert.Equal("3", lastBlockItems[2].Value.Id);
         }
 
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_BlockWithHeaderAndItemFails_ThenCompleteSetsStatusAsFailed()
+        public async Task If_BlockWithHeaderAndItemFails_ThenCompleteSetsStatusAsFailed()
         {
             // ARRANGE
 
@@ -621,28 +628,28 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContext(1))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var testHeader = GetTestHeader();
                     var values = GetPersonList(9);
                     short maxBlockSize = 4;
-                    var listBlock = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, testHeader, maxBlockSize)).First();
+                    var listBlock = (await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, testHeader, maxBlockSize))).First();
 
-                    listBlock.Start();
+                    await listBlock.StartAsync();
 
                     int counter = 0;
-                    foreach (var itemToProcess in listBlock.GetItems(ItemStatus.Pending))
+                    foreach (var itemToProcess in await listBlock.GetItemsAsync(ItemStatus.Pending))
                     {
                         if (counter == 2)
-                            itemToProcess.Failed("Exception");
+                            await itemToProcess.FailedAsync("Exception");
                         else
-                            itemToProcess.Completed();
+                            await itemToProcess.CompletedAsync();
 
                         counter++;
                     }
 
-                    listBlock.Complete();
+                    await listBlock.CompleteAsync();
                 }
             }
 
@@ -653,47 +660,47 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_ReprocessingSpecificExecutionWithHeaderAndItExistsWithMultipleExecutionsAndOnlyOneFailed_ThenBringBackOnFailedBlockWhenRequested()
+        public async Task If_ReprocessingSpecificExecutionWithHeaderAndItExistsWithMultipleExecutionsAndOnlyOneFailed_ThenBringBackOnFailedBlockWhenRequested()
         {
             string referenceValue = Guid.NewGuid().ToString();
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart(referenceValue);
+                startedOk = await executionContext.TryStartAsync(referenceValue);
                 if (startedOk)
                 {
                     var testHeader = GetTestHeader();
                     var values = GetPersonList(9);
                     short maxBlockSize = 3;
-                    var listBlocks = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithPeriodicCommit(values, testHeader, maxBlockSize, BatchSize.Fifty)).ToList();
+                    var listBlocks = await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithPeriodicCommit(values, testHeader, maxBlockSize, BatchSize.Fifty));
 
                     // block 0 has one failed item
-                    listBlocks[0].Start();
+                    await listBlocks[0].StartAsync();
 
                     int counter = 0;
-                    foreach (var itemToProcess in listBlocks[0].GetItems(ItemStatus.Pending))
+                    foreach (var itemToProcess in await listBlocks[0].GetItemsAsync(ItemStatus.Pending))
                     {
                         if (counter == 2)
-                            listBlocks[0].ItemFailed(itemToProcess, "Exception", 1);
+                            await listBlocks[0].ItemFailedAsync(itemToProcess, "Exception", 1);
                         else
-                            listBlocks[0].ItemComplete(itemToProcess);
+                            await listBlocks[0].ItemCompleteAsync(itemToProcess);
 
                         counter++;
                     }
 
-                    listBlocks[0].Complete();
+                    await listBlocks[0].CompleteAsync();
 
                     // block 1 succeeds
-                    listBlocks[1].Start();
+                    await listBlocks[1].StartAsync();
 
-                    foreach (var itemToProcess in listBlocks[1].GetItems(ItemStatus.Pending))
+                    foreach (var itemToProcess in await listBlocks[1].GetItemsAsync(ItemStatus.Pending))
                     {
-                        listBlocks[1].ItemComplete(itemToProcess);
+                        await listBlocks[1].ItemCompleteAsync(itemToProcess);
 
                         counter++;
                     }
 
-                    listBlocks[1].Complete();
+                    await listBlocks[1].CompleteAsync();
 
                     // block 2 never starts
                 }
@@ -701,28 +708,28 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
 
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
-                    var listBlocksToReprocess = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.ReprocessWithPeriodicCommit(BatchSize.Fifty)
+                    var listBlocksToReprocess = await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.ReprocessWithPeriodicCommit(BatchSize.Fifty)
                                                                 .PendingAndFailedBlocks()
-                                                                .OfExecutionWith(referenceValue)).ToList();
+                                                                .OfExecutionWith(referenceValue));
 
                     // one failed and one block never started
                     Assert.Equal(2, listBlocksToReprocess.Count);
 
                     // the block that failed has one failed item
-                    var itemsOfB1 = listBlocksToReprocess[0].GetItems(ItemStatus.Failed, ItemStatus.Pending).ToList();
+                    var itemsOfB1 = (await listBlocksToReprocess[0].GetItemsAsync(ItemStatus.Failed, ItemStatus.Pending)).ToList();
                     Assert.Single(itemsOfB1);
                     Assert.Equal("Exception", itemsOfB1[0].StatusReason);
                     byte expectedStep = 1;
                     Assert.Equal(expectedStep, itemsOfB1[0].Step);
 
                     // the block that never executed has 3 pending items
-                    var itemsOfB2 = listBlocksToReprocess[1].GetItems(ItemStatus.Failed, ItemStatus.Pending);
+                    var itemsOfB2 = await listBlocksToReprocess[1].GetItemsAsync(ItemStatus.Failed, ItemStatus.Pending);
                     Assert.Equal(3, itemsOfB2.Count());
 
-                    listBlocksToReprocess[0].Complete();
+                    await listBlocksToReprocess[0].CompleteAsync();
                 }
             }
         }
@@ -730,40 +737,40 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsListWithOverridenConfigurationWithHeader_ThenOverridenValuesAreUsed()
+        public async Task If_AsListWithOverridenConfigurationWithHeader_ThenOverridenValuesAreUsed()
         {
             // ARRANGE
-            CreateFailedTask();
-            CreateDeadTask();
+            await CreateFailedTaskAsync();
+            await CreateDeadTaskAsync();
 
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContextWithNoReprocessing())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     var testHeader = GetTestHeader();
                     var values = GetPersonList(8);
                     short maxBlockSize = 4;
-                    var listBlocks = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, testHeader, maxBlockSize)
+                    var listBlocks = await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, testHeader, maxBlockSize)
                                                                 .OverrideConfiguration()
                                                                 .ReprocessFailedTasks(new TimeSpan(1, 0, 0, 0), 3)
                                                                 .ReprocessDeadTasks(new TimeSpan(1, 0, 0, 0), 3)
                                                                 .MaximumBlocksToGenerate(5));
                     // There should be 5 blocks - 3, 3, 3, 3, 4
                     Assert.Equal(5, _blocksHelper.GetBlockCount(TestConstants.ApplicationName, TestConstants.TaskName));
-                    Assert.True(listBlocks[0].GetItems().All(x => x.Status == ItemStatus.Failed));
-                    Assert.Equal(3, listBlocks[0].GetItems().Count());
-                    Assert.True(listBlocks[1].GetItems().All(x => x.Status == ItemStatus.Failed));
-                    Assert.Equal(3, listBlocks[1].GetItems().Count());
-                    Assert.True(listBlocks[2].GetItems().All(x => x.Status == ItemStatus.Pending));
-                    Assert.Equal(3, listBlocks[2].GetItems().Count());
-                    Assert.True(listBlocks[3].GetItems().All(x => x.Status == ItemStatus.Pending));
-                    Assert.Equal(3, listBlocks[3].GetItems().Count());
-                    Assert.True(listBlocks[4].GetItems().All(x => x.Status == ItemStatus.Pending));
-                    Assert.Equal(4, listBlocks[4].GetItems().Count());
+                    Assert.True((await listBlocks[0].GetItemsAsync()).All(x => x.Status == ItemStatus.Failed));
+                    Assert.Equal(3, (await listBlocks[0].GetItemsAsync()).Count());
+                    Assert.True((await listBlocks[1].GetItemsAsync()).All(x => x.Status == ItemStatus.Failed));
+                    Assert.Equal(3, (await listBlocks[1].GetItemsAsync()).Count());
+                    Assert.True((await listBlocks[2].GetItemsAsync()).All(x => x.Status == ItemStatus.Pending));
+                    Assert.Equal(3, (await listBlocks[2].GetItemsAsync()).Count());
+                    Assert.True((await listBlocks[3].GetItemsAsync()).All(x => x.Status == ItemStatus.Pending));
+                    Assert.Equal(3, (await listBlocks[3].GetItemsAsync()).Count());
+                    Assert.True((await listBlocks[4].GetItemsAsync()).All(x => x.Status == ItemStatus.Pending));
+                    Assert.Equal(4, (await listBlocks[4].GetItemsAsync()).Count());
                 }
             }
         }
@@ -771,30 +778,30 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsListWithNoOverridenConfigurationWithHeader_ThenConfigurationValuesAreUsed()
+        public async Task If_AsListWithNoOverridenConfigurationWithHeader_ThenConfigurationValuesAreUsed()
         {
             // ARRANGE
-            CreateFailedTask();
-            CreateDeadTask();
+            await CreateFailedTaskAsync();
+            await CreateDeadTaskAsync();
 
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContextWithNoReprocessing())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     var testHeader = GetTestHeader();
                     var values = GetPersonList(8);
                     short maxBlockSize = 4;
-                    var listBlocks = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, testHeader, maxBlockSize));
+                    var listBlocks = await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, testHeader, maxBlockSize));
                     // There should be 2 blocks - 4, 4
                     Assert.Equal(2, listBlocks.Count);
-                    Assert.True(listBlocks[0].GetItems().All(x => x.Status == ItemStatus.Pending));
-                    Assert.Equal(4, listBlocks[0].GetItems().Count());
-                    Assert.True(listBlocks[1].GetItems().All(x => x.Status == ItemStatus.Pending));
-                    Assert.Equal(4, listBlocks[1].GetItems().Count());
+                    Assert.True((await listBlocks[0].GetItemsAsync()).All(x => x.Status == ItemStatus.Pending));
+                    Assert.Equal(4, (await listBlocks[0].GetItemsAsync()).Count());
+                    Assert.True((await listBlocks[1].GetItemsAsync()).All(x => x.Status == ItemStatus.Pending));
+                    Assert.Equal(4, (await listBlocks[1].GetItemsAsync()).Count());
                 }
             }
         }
@@ -802,7 +809,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_AsListWithHeader_ThenReturnsBlockInOrderOfBlockId()
+        public async Task If_AsListWithHeader_ThenReturnsBlockInOrderOfBlockId()
         {
             // ARRANGE
 
@@ -810,20 +817,20 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     var testHeader = GetTestHeader();
                     var values = GetPersonList(10);
                     short maxBlockSize = 1;
-                    var listBlocks = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, testHeader, maxBlockSize));
+                    var listBlocks = await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, testHeader, maxBlockSize));
 
                     int counter = 0;
                     int lastId = 0;
                     foreach (var listBlock in listBlocks)
                     {
-                        listBlock.Start();
+                        await listBlock.StartAsync();
 
                         int currentId = int.Parse(listBlock.Block.ListBlockId);
                         if (counter > 0)
@@ -833,7 +840,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
 
                         lastId = currentId;
 
-                        listBlock.Complete();
+                        await listBlock.CompleteAsync();
                     }
                 }
             }
@@ -842,7 +849,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_ForceBlockWithHeader_ThenBlockGetsReprocessedAndDequeued()
+        public async Task If_ForceBlockWithHeader_ThenBlockGetsReprocessedAndDequeued()
         {
             var forcedBlockTestHeader = GetTestHeader();
             forcedBlockTestHeader.PurchaseCode = "X";
@@ -850,20 +857,20 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             // ARRANGE
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var values = GetPersonList(3);
                     short maxBlockSize = 15;
-                    var listBlocks = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithPeriodicCommit(values, forcedBlockTestHeader, maxBlockSize, BatchSize.Ten));
+                    var listBlocks = await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithPeriodicCommit(values, forcedBlockTestHeader, maxBlockSize, BatchSize.Ten));
 
                     foreach (var listBlock in listBlocks)
                     {
-                        listBlock.Start();
-                        foreach (var itemToProcess in listBlock.GetItems(ItemStatus.Pending))
-                            listBlock.ItemComplete(itemToProcess);
+                        await listBlock.StartAsync();
+                        foreach (var itemToProcess in await listBlock.GetItemsAsync(ItemStatus.Pending))
+                            await listBlock.ItemCompleteAsync(itemToProcess);
 
-                        listBlock.Complete();
+                        await listBlock.CompleteAsync();
                     }
                 }
             }
@@ -875,28 +882,28 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             // ACT - reprocess the forced block
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var testHeader = GetTestHeader();
-                    var listBlocks = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithBatchCommitAtEnd(new List<PersonDto>(), testHeader, 10));
+                    var listBlocks = await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithBatchCommitAtEnd(new List<PersonDto>(), testHeader, 10));
 
                     Assert.Equal(forcedBlockTestHeader.PurchaseCode, listBlocks[0].Block.Header.PurchaseCode);
                     Assert.Equal(1, listBlocks.Count);
 
-                    var items = listBlocks[0].GetItems().ToList();
+                    var items = (await listBlocks[0].GetItemsAsync()).ToList();
                     Assert.Equal(3, items.Count());
                     Assert.Equal("1", items[0].Value.Id);
                     Assert.Equal("2", items[1].Value.Id);
                     Assert.Equal("3", items[2].Value.Id);
                     foreach (var listBlock in listBlocks)
                     {
-                        listBlock.Start();
+                        await listBlock.StartAsync();
 
-                        foreach (var item in listBlock.GetItems())
-                            listBlock.ItemComplete(item);
+                        foreach (var item in await listBlock.GetItemsAsync())
+                            await listBlock.ItemCompleteAsync(item);
 
-                        listBlock.Complete();
+                        await listBlock.CompleteAsync();
                     }
                 }
             }
@@ -904,11 +911,11 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             // The forced block will have been dequeued so it should not be processed again
             using (var executionContext = CreateTaskExecutionContext())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var items = new List<PersonDto>();
-                    var listBlocks = executionContext.GetListBlocks<PersonDto>(x => x.WithSingleUnitCommit(items, 50));
+                    var listBlocks = await executionContext.GetListBlocksAsync<PersonDto>(x => x.WithSingleUnitCommit(items, 50));
                     Assert.Equal(0, listBlocks.Count);
                 }
             }
@@ -917,7 +924,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_BlockItemsAccessedBeforeGetItemsCalled_ThenItemsAreLoadedOkAnyway()
+        public async Task If_BlockItemsAccessedBeforeGetItemsCalled_ThenItemsAreLoadedOkAnyway()
         {
             // ARRANGE
 
@@ -925,66 +932,66 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
             bool startedOk;
             using (var executionContext = CreateTaskExecutionContext())
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 Assert.True(startedOk);
                 if (startedOk)
                 {
                     var testHeader = GetTestHeader();
                     var values = GetPersonList(10);
                     short maxBlockSize = 1;
-                    var listBlocks = executionContext.GetListBlocks<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, testHeader, maxBlockSize));
+                    var listBlocks = await executionContext.GetListBlocksAsync<PersonDto, TestHeader>(x => x.WithSingleUnitCommit(values, testHeader, maxBlockSize));
 
                     foreach (var listBlock in listBlocks)
                     {
-                        listBlock.Start();
+                        await listBlock.StartAsync();
 
-                        var itemsToProcess = listBlock.Block.Items;
+                        var itemsToProcess = await listBlock.GetItemsAsync();
                         foreach (var item in itemsToProcess)
-                            item.Completed();
+                            await item.CompletedAsync();
 
-                        listBlock.Complete();
+                        await listBlock.CompleteAsync();
                     }
                 }
             }
         }
 
-        private void CreateFailedTask()
+        private async Task CreateFailedTaskAsync()
         {
             using (var executionContext = CreateTaskExecutionContextWithNoReprocessing())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var values = GetPersonList(6);
                     short maxBlockSize = 3;
-                    var listBlocks = executionContext.GetListBlocks<PersonDto>(x => x.WithPeriodicCommit(values, maxBlockSize, BatchSize.Ten));
+                    var listBlocks = await executionContext.GetListBlocksAsync<PersonDto>(x => x.WithPeriodicCommit(values, maxBlockSize, BatchSize.Ten));
 
                     foreach (var listBlock in listBlocks)
                     {
-                        listBlock.Start();
-                        foreach (var itemToProcess in listBlock.GetItems(ItemStatus.Pending))
-                            listBlock.ItemFailed(itemToProcess, "Exception");
+                        await listBlock.StartAsync();
+                        foreach (var itemToProcess in await listBlock.GetItemsAsync(ItemStatus.Pending))
+                            await listBlock.ItemFailedAsync(itemToProcess, "Exception");
 
-                        listBlock.Failed("Something bad happened");
+                        await listBlock.FailedAsync("Something bad happened");
                     }
                 }
             }
         }
 
-        private void CreateDeadTask()
+        private async Task CreateDeadTaskAsync()
         {
             using (var executionContext = CreateTaskExecutionContextWithNoReprocessing())
             {
-                var startedOk = executionContext.TryStart();
+                var startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var values = GetPersonList(6);
                     short maxBlockSize = 3;
-                    var listBlocks = executionContext.GetListBlocks<PersonDto>(x => x.WithPeriodicCommit(values, maxBlockSize, BatchSize.Ten));
+                    var listBlocks = await executionContext.GetListBlocksAsync<PersonDto>(x => x.WithPeriodicCommit(values, maxBlockSize, BatchSize.Ten));
 
                     foreach (var listBlock in listBlocks)
                     {
-                        listBlock.Start();
+                        await listBlock.StartAsync();
                     }
                 }
             }

@@ -26,7 +26,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
             TaskRepository.ClearCache();
         }
-
+        
         private TaskExecutionRepository CreateSut()
         {
             return new TaskExecutionRepository(new TaskRepository(), new ExecutionTokenRepository(new CommonTokenRepository()), new EventsRepository());
@@ -55,7 +55,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "ExecutionTokens")]
-        public void If_KeepAliveMode_ThenReturnsValidDataValues()
+        public async Task If_KeepAliveMode_ThenReturnsValidDataValues()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -66,7 +66,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
             // ACT
             var sut = CreateSut();
-            var response = sut.Start(startRequest);
+            var response = await sut.StartAsync(startRequest);
 
             // ASSERT
             Assert.True(response.TaskExecutionId != "0");
@@ -76,7 +76,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "ExecutionTokens")]
-        public void If_KeepAliveMode_OneTaskAndOneTokenAndIsAvailable_ThenIsGranted()
+        public async Task If_KeepAliveMode_OneTaskAndOneTokenAndIsAvailable_ThenIsGranted()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -87,7 +87,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
             // ACT
             var sut = CreateSut();
-            var response = sut.Start(startRequest);
+            var response = await sut.StartAsync(startRequest);
 
             // ASSERT
             Assert.Equal(GrantStatus.Granted, response.GrantStatus);
@@ -97,7 +97,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "ExecutionTokens")]
-        public void If_KeepAliveMode_TwoConcurrentTasksAndOneTokenAndIsAvailable_ThenIsGrantFirstTaskAndDenyTheOther()
+        public async Task If_KeepAliveMode_TwoConcurrentTasksAndOneTokenAndIsAvailable_ThenIsGrantFirstTaskAndDenyTheOther()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -109,9 +109,9 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
             // ACT
             var sut = CreateSut();
-            var firstResponse = sut.Start(firstStartRequest);
-            sut.SendKeepAlive(CreateKeepAliveRequest(TestConstants.ApplicationName, TestConstants.TaskName, firstResponse.TaskExecutionId, firstResponse.ExecutionTokenId));
-            var secondResponse = sut.Start(secondStartRequest);
+            var firstResponse = await sut.StartAsync(firstStartRequest);
+            await sut.SendKeepAliveAsync(CreateKeepAliveRequest(TestConstants.ApplicationName, TestConstants.TaskName, firstResponse.TaskExecutionId, firstResponse.ExecutionTokenId));
+            var secondResponse = await sut.StartAsync(secondStartRequest);
 
             // ASSERT
             Assert.Equal(GrantStatus.Granted, firstResponse.GrantStatus);
@@ -121,7 +121,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "ExecutionTokens")]
-        public void If_KeepAliveMode_TwoSequentialTasksAndOneTokenAndIsAvailable_ThenIsGrantFirstTaskAndThenGrantTheOther()
+        public async Task If_KeepAliveMode_TwoSequentialTasksAndOneTokenAndIsAvailable_ThenIsGrantFirstTaskAndThenGrantTheOther()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -133,11 +133,11 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
             // ACT
             var sut = CreateSut();
-            var firstStartResponse = sut.Start(firstStartRequest);
+            var firstStartResponse = await sut.StartAsync(firstStartRequest);
             var firstCompleteRequest = new TaskExecutionCompleteRequest(new TaskId(TestConstants.ApplicationName, TestConstants.TaskName), firstStartResponse.TaskExecutionId, firstStartResponse.ExecutionTokenId);
-            var firstCompleteResponse = sut.Complete(firstCompleteRequest);
+            var firstCompleteResponse = await sut.CompleteAsync(firstCompleteRequest);
 
-            var secondStartResponse = sut.Start(secondStartRequest);
+            var secondStartResponse = await sut.StartAsync(secondStartRequest);
 
             // ASSERT
             Assert.Equal(GrantStatus.Granted, firstStartResponse.GrantStatus);
@@ -147,7 +147,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "ExecutionTokens")]
-        public void If_KeepAliveMode_FiveConcurrentTasksAndFourTokensAndAllAreAvailable_ThenIsGrantFirstFourTasksAndDenyTheOther()
+        public async Task If_KeepAliveMode_FiveConcurrentTasksAndFourTokensAndAllAreAvailable_ThenIsGrantFirstFourTasksAndDenyTheOther()
         {
             // ARRANGE
             int concurrencyLimit = 4;
@@ -163,15 +163,15 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
             // ACT
             var sut = CreateSut();
-            var firstResponse = sut.Start(firstStartRequest);
+            var firstResponse = await sut.StartAsync(firstStartRequest);
             executionHelper.SetKeepAlive(firstResponse.TaskExecutionId);
-            var secondResponse = sut.Start(secondStartRequest);
+            var secondResponse = await sut.StartAsync(secondStartRequest);
             executionHelper.SetKeepAlive(secondResponse.TaskExecutionId);
-            var thirdResponse = sut.Start(thirdStartRequest);
+            var thirdResponse = await sut.StartAsync(thirdStartRequest);
             executionHelper.SetKeepAlive(thirdResponse.TaskExecutionId);
-            var fourthResponse = sut.Start(fourthStartRequest);
+            var fourthResponse = await sut.StartAsync(fourthStartRequest);
             executionHelper.SetKeepAlive(fourthResponse.TaskExecutionId);
-            var fifthResponse = sut.Start(fifthStartRequest);
+            var fifthResponse = await sut.StartAsync(fifthStartRequest);
 
             // ASSERT
             Assert.Equal(GrantStatus.Granted, firstResponse.GrantStatus);
@@ -196,21 +196,21 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
             var tuple = new Tuple<int, TaskExecutionRepository>(taskDefinitionId, sut);
 
             var tasks = new List<Task>();
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithKeepAliveMode, tuple, TaskCreationOptions.LongRunning));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithKeepAliveModeAsync(tuple)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithKeepAliveModeAsync(tuple)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithKeepAliveModeAsync(tuple)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithKeepAliveModeAsync(tuple)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithKeepAliveModeAsync(tuple)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithKeepAliveModeAsync(tuple)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithKeepAliveModeAsync(tuple)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithKeepAliveModeAsync(tuple)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithKeepAliveModeAsync(tuple)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithKeepAliveModeAsync(tuple)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithKeepAliveModeAsync(tuple)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithKeepAliveModeAsync(tuple)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithKeepAliveModeAsync(tuple)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithKeepAliveModeAsync(tuple)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithKeepAliveModeAsync(tuple)));
 
             Task.WaitAll(tasks.ToArray());
 
@@ -218,15 +218,14 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
         }
 
-        private void RequestAndReturnTokenWithKeepAliveMode(object state)
+        private async Task RequestAndReturnTokenWithKeepAliveModeAsync(Tuple<int, TaskExecutionRepository> tuple)
         {
-            var tuple = (Tuple<int, TaskExecutionRepository>)state;
             var sut = tuple.Item2;
             for (int i = 0; i < 100; i++)
             {
                 var firstStartRequest = CreateKeepAliveStartRequest();
 
-                var firstStartResponse = sut.Start(firstStartRequest);
+                var firstStartResponse = await sut.StartAsync(firstStartRequest);
 
                 var executionHelper = new ExecutionsHelper();
                 executionHelper.SetKeepAlive(firstStartResponse.TaskExecutionId);
@@ -234,7 +233,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
                 if (firstStartResponse.GrantStatus == GrantStatus.Granted)
                 {
                     var firstCompleteRequest = new TaskExecutionCompleteRequest(new TaskId(TestConstants.ApplicationName, TestConstants.TaskName), firstStartResponse.TaskExecutionId, firstStartResponse.ExecutionTokenId);
-                    var firstCompleteResponse = sut.Complete(firstCompleteRequest);
+                    var firstCompleteResponse = await sut.CompleteAsync(firstCompleteRequest);
                 }
             }
         }
@@ -242,7 +241,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "ExecutionTokens")]
-        public void If_KeepAliveMode_OneTaskAndOneTokenAndIsUnavailableAndKeepAliveHasPassedElapsedTime_ThenIsGranted()
+        public async Task If_KeepAliveMode_OneTaskAndOneTokenAndIsUnavailableAndKeepAliveHasPassedElapsedTime_ThenIsGranted()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -257,12 +256,12 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
             // ACT
             var sut = CreateSut();
-            var firstResponse = sut.Start(startRequest);
+            var firstResponse = await sut.StartAsync(startRequest);
             executionHelper.SetKeepAlive(firstResponse.TaskExecutionId);
 
             Thread.Sleep(6000);
 
-            var secondResponse = sut.Start(secondRequest);
+            var secondResponse = await sut.StartAsync(secondRequest);
 
             // ASSERT
             Assert.Equal(GrantStatus.Granted, secondResponse.GrantStatus);
@@ -272,7 +271,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "ExecutionTokens")]
-        public void If_KeepAliveMode_OneTaskAndOneTokenAndIsUnavailableAndKeepAliveHasNotPassedElapsedTime_ThenIsDenied()
+        public async Task If_KeepAliveMode_OneTaskAndOneTokenAndIsUnavailableAndKeepAliveHasNotPassedElapsedTime_ThenIsDenied()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -287,12 +286,12 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
             // ACT
             var sut = CreateSut();
-            var firstResponse = sut.Start(startRequest);
+            var firstResponse = await sut.StartAsync(startRequest);
             executionHelper.SetKeepAlive(firstResponse.TaskExecutionId);
 
             Thread.Sleep(5000);
 
-            var secondResponse = sut.Start(secondRequest);
+            var secondResponse = await sut.StartAsync(secondRequest);
 
             // ASSERT
             Assert.Equal(GrantStatus.Granted, firstResponse.GrantStatus);
@@ -304,7 +303,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "ExecutionTokens")]
-        public void If_KeepAliveMode_OneTokenExistsAndConcurrencyLimitIsFour_ThenCreateThreeNewTokens()
+        public async Task If_KeepAliveMode_OneTokenExistsAndConcurrencyLimitIsFour_ThenCreateThreeNewTokens()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -315,7 +314,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
             // ACT
             var sut = CreateSut();
-            sut.Start(startRequest);
+            await sut.StartAsync(startRequest);
 
             // ASSERT
             var tokensList = executionHelper.GetExecutionTokens(TestConstants.ApplicationName, TestConstants.TaskName);
@@ -326,7 +325,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "ExecutionTokens")]
-        public void If_KeepAliveMode_OneTokenExistsAndConcurrencyLimitIsUnlimited_ThenRemoveAvailableTokenAndCreateOneNewUnlimitedToken()
+        public async Task If_KeepAliveMode_OneTokenExistsAndConcurrencyLimitIsUnlimited_ThenRemoveAvailableTokenAndCreateOneNewUnlimitedToken()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -337,7 +336,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
             // ACT
             var sut = CreateSut();
-            sut.Start(startRequest);
+            await sut.StartAsync(startRequest);
 
             // ASSERT
             var tokensList = executionHelper.GetExecutionTokens(TestConstants.ApplicationName, TestConstants.TaskName);
@@ -347,7 +346,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "ExecutionTokens")]
-        public void If_KeepAliveMode_OneAvailableTokenAndOneUnavailableTokensExistsAndConcurrencyLimitIsOne_ThenRemoveAvailableToken_AndSoDenyStart()
+        public async Task If_KeepAliveMode_OneAvailableTokenAndOneUnavailableTokensExistsAndConcurrencyLimitIsOne_ThenRemoveAvailableToken_AndSoDenyStart()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -362,7 +361,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
             // ACT
             var sut = CreateSut();
-            var result = sut.Start(startRequest);
+            var result = await sut.StartAsync(startRequest);
 
             // ASSERT
             var tokensList = executionHelper.GetExecutionTokens(TestConstants.ApplicationName, TestConstants.TaskName);
@@ -373,7 +372,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "ExecutionTokens")]
-        public void If_KeepAliveMode_TwoUnavailableTokensExistsAndConcurrencyLimitIsOne_ThenRemoveOneUnavailableToken()
+        public async Task If_KeepAliveMode_TwoUnavailableTokensExistsAndConcurrencyLimitIsOne_ThenRemoveOneUnavailableToken()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -388,7 +387,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
             // ACT
             var sut = CreateSut();
-            sut.Start(startRequest);
+            await sut.StartAsync(startRequest);
 
             // ASSERT
             var tokensList = executionHelper.GetExecutionTokens(TestConstants.ApplicationName, TestConstants.TaskName);

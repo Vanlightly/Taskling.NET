@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Taskling.Blocks.Common;
 using Taskling.Exceptions;
 using Taskling.InfrastructureContracts;
@@ -24,8 +26,8 @@ namespace Taskling.Blocks.ListBlocks
         protected string _taskName;
         protected string _taskExecutionId;
         protected int _maxStatusReasonLength;
-        protected object _uncommittedListSyncRoot = new object();
-        protected object _getItemsSyncRoot = new object();
+        protected SemaphoreSlim _uncommittedListSemaphore = new SemaphoreSlim(1, 1);
+        protected SemaphoreSlim _getItemsSemaphore = new SemaphoreSlim(1, 1);
         protected List<IListBlockItem<TItem>> _uncommittedItems;
         protected bool _completed;
 
@@ -141,7 +143,7 @@ namespace Taskling.Blocks.ListBlocks
 
             if (disposing)
             {
-                CommitUncommittedItems();
+                Task.Run(() => CommitUncommittedItemsAsync());
             }
 
             disposed = true;
@@ -153,7 +155,7 @@ namespace Taskling.Blocks.ListBlocks
                 throw new ExecutionException("The block has been marked as completed");
         }
 
-        protected void SetStatusAsFailed()
+        protected async Task SetStatusAsFailedAsync()
         {
             var request = new BlockExecutionChangeStatusRequest(new TaskId(_applicationName, _taskName),
                     _taskExecutionId,
@@ -161,28 +163,28 @@ namespace Taskling.Blocks.ListBlocks
                     BlockExecutionId,
                     BlockExecutionStatus.Failed);
 
-            Action<BlockExecutionChangeStatusRequest> actionRequest = _listBlockRepository.ChangeStatus;
-            RetryService.InvokeWithRetry(actionRequest, request);
+            Func<BlockExecutionChangeStatusRequest, Task> actionRequest = _listBlockRepository.ChangeStatusAsync;
+            await RetryService.InvokeWithRetryAsync(actionRequest, request);
         }
 
-        protected void UpdateItemStatus(IListBlockItem<TItem> item)
+        protected async Task UpdateItemStatusAsync(IListBlockItem<TItem> item)
         {
             switch (ListUpdateMode)
             {
                 case ListUpdateMode.SingleItemCommit:
-                    Commit(ListBlockId, item);
+                    await CommitAsync(ListBlockId, item);
                     break;
                 case ListUpdateMode.BatchCommitAtEnd:
                     AddToUncommittedItems(item);
                     break;
                 case ListUpdateMode.PeriodicBatchCommit:
                     AddToUncommittedItems(item);
-                    CommitIfUncommittedCountReached();
+                    await CommitIfUncommittedCountReachedAsync();
                     break;
             }
         }
 
-        protected void Commit(string listBlockId, IListBlockItem<TItem> item)
+        protected async Task CommitAsync(string listBlockId, IListBlockItem<TItem> item)
         {
             var singleUpdateRequest = new SingleUpdateRequest()
             {
@@ -191,41 +193,57 @@ namespace Taskling.Blocks.ListBlocks
                 ListBlockItem = Convert(item)
             };
 
-            Action<SingleUpdateRequest> actionRequest = _listBlockRepository.UpdateListBlockItem;
-            RetryService.InvokeWithRetry(actionRequest, singleUpdateRequest);
+            Func<SingleUpdateRequest, Task> actionRequest = _listBlockRepository.UpdateListBlockItemAsync;
+            await RetryService.InvokeWithRetryAsync(actionRequest, singleUpdateRequest);
         }
 
         protected void AddToUncommittedItems(IListBlockItem<TItem> item)
         {
-            lock (_uncommittedListSyncRoot)
+            _uncommittedListSemaphore.Wait();
+            try
             {
                 _uncommittedItems.Add(item);
             }
+            finally
+            {
+                _uncommittedListSemaphore.Release();
+            }
+
         }
 
-        protected void CommitIfUncommittedCountReached()
+        protected async Task CommitIfUncommittedCountReachedAsync()
         {
             bool shouldCommit = false;
-            lock (_uncommittedListSyncRoot)
+            await _uncommittedListSemaphore.WaitAsync();
+            try
             {
                 if (_uncommittedItems.Count == UncommittedThreshold)
                     shouldCommit = true;
             }
+            finally
+            {
+                _uncommittedListSemaphore.Release();
+            }
 
             if (shouldCommit)
-                CommitUncommittedItems();
+                await CommitUncommittedItemsAsync();
         }
 
-        protected void CommitUncommittedItems()
+        protected async Task CommitUncommittedItemsAsync()
         {
             List<IListBlockItem<TItem>> listToCommit = null;
-            lock (_uncommittedListSyncRoot)
+            await _uncommittedListSemaphore.WaitAsync();
+            try
             {
                 if (_uncommittedItems != null && _uncommittedItems.Any())
                 {
                     listToCommit = new List<IListBlockItem<TItem>>(_uncommittedItems);
                     _uncommittedItems.Clear();
                 }
+            }
+            finally
+            {
+                _uncommittedListSemaphore.Release();
             }
 
             if (listToCommit != null && listToCommit.Any())
@@ -237,8 +255,8 @@ namespace Taskling.Blocks.ListBlocks
                     ListBlockItems = Convert(listToCommit)
                 };
 
-                Action<BatchUpdateRequest> actionRequest = _listBlockRepository.BatchUpdateListBlockItems;
-                RetryService.InvokeWithRetry(actionRequest, batchUpdateRequest);
+                Func<BatchUpdateRequest, Task> actionRequest = _listBlockRepository.BatchUpdateListBlockItemsAsync;
+                await RetryService.InvokeWithRetryAsync(actionRequest, batchUpdateRequest);
             }
         }
 
@@ -301,14 +319,6 @@ namespace Taskling.Blocks.ListBlocks
             return input;
         }
 
-        private IList<IListBlockItem<TItem>> GetItems()
-        {
-            if (_hasHeader)
-                return _blockWithHeader.Items;
-
-            return _headerlessBlock.Items;
-        }
-
         private void SetItems(IList<IListBlockItem<TItem>> items)
         {
             if (_hasHeader)
@@ -317,21 +327,22 @@ namespace Taskling.Blocks.ListBlocks
             _headerlessBlock.Items = items;
         }
 
-        private IEnumerable<IListBlockItem<TItem>> GetItemsFromHeaderlessBlock(params ItemStatus[] statuses)
+        private async Task<IEnumerable<IListBlockItem<TItem>>> GetItemsFromHeaderlessBlockAsync(params ItemStatus[] statuses)
         {
             if (statuses.Length == 0)
                 statuses = new[] { ItemStatus.All };
 
-            lock (_getItemsSyncRoot)
+            await _getItemsSemaphore.WaitAsync();
+            try
             {
                 if (_headerlessBlock.Items == null || !_headerlessBlock.Items.Any())
                 {
-                    var protoListBlockItems = _listBlockRepository.GetListBlockItems(new TaskId(_applicationName, _taskName), ListBlockId);
+                    var protoListBlockItems = await _listBlockRepository.GetListBlockItemsAsync(new TaskId(_applicationName, _taskName), ListBlockId);
                     _headerlessBlock.Items = Convert(protoListBlockItems);
 
                     foreach (var item in _headerlessBlock.Items)
                     {
-                        ((ListBlockItem<TItem>)item).SetParentContext(this.ItemComplete, this.ItemFailed, this.DiscardItem);
+                        ((ListBlockItem<TItem>)item).SetParentContext(this.ItemCompleteAsync, this.ItemFailedAsync, this.DiscardItemAsync);
                     }
                 }
 
@@ -340,23 +351,28 @@ namespace Taskling.Blocks.ListBlocks
 
                 return _headerlessBlock.Items.Where(x => statuses.Contains(x.Status)).ToList();
             }
+            finally
+            {
+                _getItemsSemaphore.Release();
+            }
         }
 
-        private IEnumerable<IListBlockItem<TItem>> GetItemsFromBlockWithHeader(params ItemStatus[] statuses)
+        private async Task<IEnumerable<IListBlockItem<TItem>>> GetItemsFromBlockWithHeaderAsync(params ItemStatus[] statuses)
         {
             if (statuses.Length == 0)
                 statuses = new[] { ItemStatus.All };
 
-            lock (_getItemsSyncRoot)
+            await _getItemsSemaphore.WaitAsync();
+            try
             {
                 if (_blockWithHeader.Items == null || !_blockWithHeader.Items.Any())
                 {
-                    var protoListBlockItems = _listBlockRepository.GetListBlockItems(new TaskId(_applicationName, _taskName), ListBlockId);
+                    var protoListBlockItems = await _listBlockRepository.GetListBlockItemsAsync(new TaskId(_applicationName, _taskName), ListBlockId);
                     _blockWithHeader.Items = Convert(protoListBlockItems);
 
                     foreach (var item in _blockWithHeader.Items)
                     {
-                        ((ListBlockItem<TItem>)item).SetParentContext(this.ItemComplete, this.ItemFailed, this.DiscardItem);
+                        ((ListBlockItem<TItem>)item).SetParentContext(this.ItemCompleteAsync, this.ItemFailedAsync, this.DiscardItemAsync);
                     }
                 }
 
@@ -365,6 +381,10 @@ namespace Taskling.Blocks.ListBlocks
 
                 return _blockWithHeader.Items.Where(x => statuses.Contains(x.Status)).ToList();
             }
+            finally
+            {
+                _getItemsSemaphore.Release();
+            }
         }
 
         #endregion .: Private/Protected Methods :.
@@ -372,37 +392,42 @@ namespace Taskling.Blocks.ListBlocks
 
         #region .: Public Methods :.
 
-        public void FillItems()
+        public async Task FillItemsAsync()
         {
-            lock (_getItemsSyncRoot)
+            await _getItemsSemaphore.WaitAsync();
+            try
             {
-                var protoListBlockItems = _listBlockRepository.GetListBlockItems(new TaskId(_applicationName, _taskName), ListBlockId);
+                var protoListBlockItems = await _listBlockRepository.GetListBlockItemsAsync(new TaskId(_applicationName, _taskName), ListBlockId);
                 var listBlockItems = Convert(protoListBlockItems);
                 SetItems(listBlockItems);
 
                 foreach (var item in listBlockItems)
                 {
-                    ((ListBlockItem<TItem>)item).SetParentContext(this.ItemComplete, this.ItemFailed, this.DiscardItem);
+                    ((ListBlockItem<TItem>)item).SetParentContext(this.ItemCompleteAsync, this.ItemFailedAsync, this.DiscardItemAsync);
                 }
+            }
+            finally
+            {
+                _getItemsSemaphore.Release();
             }
         }
 
-        public IEnumerable<IListBlockItem<TItem>> GetItems(params ItemStatus[] statuses)
+        public async Task<IEnumerable<IListBlockItem<TItem>>> GetItemsAsync(params ItemStatus[] statuses)
         {
             if (_hasHeader)
-                return GetItemsFromBlockWithHeader(statuses);
+                return await GetItemsFromBlockWithHeaderAsync(statuses);
 
-            return GetItemsFromHeaderlessBlock(statuses);
+            return await GetItemsFromHeaderlessBlockAsync(statuses);
         }
 
-        public void ItemComplete(IListBlockItem<TItem> item)
+        public async Task ItemCompleteAsync(IListBlockItem<TItem> item)
         {
             ValidateBlockIsActive();
             item.Status = ItemStatus.Completed;
-            UpdateItemStatus(item);
+            await UpdateItemStatusAsync(item);
         }
 
-        public void ItemFailed(IListBlockItem<TItem> item, string reason, byte? step = null)
+        public async Task ItemFailedAsync(IListBlockItem<TItem> item, string reason, byte? step = null)
         {
             item.StatusReason = reason;
 
@@ -411,10 +436,10 @@ namespace Taskling.Blocks.ListBlocks
 
             ValidateBlockIsActive();
             item.Status = ItemStatus.Failed;
-            UpdateItemStatus(item);
+            await UpdateItemStatusAsync(item);
         }
 
-        public void DiscardItem(IListBlockItem<TItem> item, string reason, byte? step = null)
+        public async Task DiscardItemAsync(IListBlockItem<TItem> item, string reason, byte? step = null)
         {
             item.StatusReason = reason;
             if (step.HasValue)
@@ -422,10 +447,10 @@ namespace Taskling.Blocks.ListBlocks
 
             ValidateBlockIsActive();
             item.Status = ItemStatus.Discarded;
-            UpdateItemStatus(item);
+            await UpdateItemStatusAsync(item);
         }
 
-        public void Start()
+        public async Task StartAsync()
         {
             ValidateBlockIsActive();
             var request = new BlockExecutionChangeStatusRequest(new TaskId(_applicationName, _taskName),
@@ -434,17 +459,17 @@ namespace Taskling.Blocks.ListBlocks
                BlockExecutionId,
                BlockExecutionStatus.Started);
 
-            Action<BlockExecutionChangeStatusRequest> actionRequest = _listBlockRepository.ChangeStatus;
-            RetryService.InvokeWithRetry(actionRequest, request);
+            Func<BlockExecutionChangeStatusRequest, Task> actionRequest = _listBlockRepository.ChangeStatusAsync;
+            await RetryService.InvokeWithRetryAsync(actionRequest, request);
         }
 
-        public void Complete()
+        public async Task CompleteAsync()
         {
             ValidateBlockIsActive();
-            CommitUncommittedItems();
+            await CommitUncommittedItemsAsync();
 
             var status = BlockExecutionStatus.Completed;
-            if (GetItems(ItemStatus.Failed, ItemStatus.Pending).Any())
+            if ((await GetItemsAsync(ItemStatus.Failed, ItemStatus.Pending)).Any())
                 status = BlockExecutionStatus.Failed;
 
             var request = new BlockExecutionChangeStatusRequest(new TaskId(_applicationName, _taskName),
@@ -453,20 +478,20 @@ namespace Taskling.Blocks.ListBlocks
                BlockExecutionId,
                status);
 
-            Action<BlockExecutionChangeStatusRequest> actionRequest = _listBlockRepository.ChangeStatus;
-            RetryService.InvokeWithRetry(actionRequest, request);
+            Func<BlockExecutionChangeStatusRequest, Task> actionRequest = _listBlockRepository.ChangeStatusAsync;
+            await RetryService.InvokeWithRetryAsync(actionRequest, request);
         }
 
-        public void Failed()
+        public async Task FailedAsync()
         {
             ValidateBlockIsActive();
-            CommitUncommittedItems();
-            SetStatusAsFailed();
+            await CommitUncommittedItemsAsync();
+            await SetStatusAsFailedAsync();
         }
 
-        public void Failed(string message)
+        public async Task FailedAsync(string message)
         {
-            Failed();
+            await FailedAsync();
 
             string errorMessage = string.Format("BlockId {0} Error: {1}", ListBlockId, message);
             var errorRequest = new TaskExecutionErrorRequest()
@@ -476,15 +501,20 @@ namespace Taskling.Blocks.ListBlocks
                 TreatTaskAsFailed = false,
                 Error = errorMessage
             };
-            _taskExecutionRepository.Error(errorRequest);
+            await _taskExecutionRepository.ErrorAsync(errorRequest);
         }
 
-        public IEnumerable<TItem> GetItemValues(params ItemStatus[] statuses)
+        public async Task<IEnumerable<TItem>> GetItemValuesAsync(params ItemStatus[] statuses)
         {
             if (statuses.Length == 0)
                 statuses = new[] { ItemStatus.All };
 
-            return GetItems(statuses).Select(x => x.Value);
+            return (await GetItemsAsync(statuses)).Select(x => x.Value);
+        }
+
+        public async Task FlushAsync()
+        {
+            await CommitUncommittedItemsAsync();
         }
 
         public void Dispose()

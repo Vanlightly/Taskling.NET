@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Taskling.Contexts;
 using Taskling.Exceptions;
 using Taskling.ExecutionContext;
@@ -46,12 +47,12 @@ namespace Taskling.CriticalSection
             return _started && !_completeCalled;
         }
 
-        public bool TryStart()
+        public async Task<bool> TryStartAsync()
         {
-            return TryStart(new TimeSpan(0, 0, 30), 3);
+            return await TryStartAsync(new TimeSpan(0, 0, 30), 3);
         }
 
-        public bool TryStart(TimeSpan retryInterval, int numberOfAttempts)
+        public async Task<bool> TryStartAsync(TimeSpan retryInterval, int numberOfAttempts)
         {
             int tryCount = 0;
             bool started = false;
@@ -59,15 +60,15 @@ namespace Taskling.CriticalSection
             while (started == false && tryCount <= numberOfAttempts)
             {
                 tryCount++;
-                started = TryStartCriticalSection();
+                started = await TryStartCriticalSectionAsync();
                 if (!started)
-                    Thread.Sleep(retryInterval);
+                    await Task.Delay(retryInterval);
             }
 
             return started;
         }
 
-        public void Complete()
+        public async Task CompleteAsync()
         {
             if (!_started || _completeCalled)
                 throw new ExecutionException("There is no active critical section to complete");
@@ -76,7 +77,7 @@ namespace Taskling.CriticalSection
                 _taskExecutionInstance.TaskExecutionId,
                 _criticalSectionType);
 
-            _criticalSectionRepository.Complete(completeRequest);
+            await _criticalSectionRepository.CompleteAsync(completeRequest);
 
             _completeCalled = true;
         }
@@ -97,12 +98,12 @@ namespace Taskling.CriticalSection
             { }
 
             if (_started && !_completeCalled)
-                Complete();
+                Task.Run(async () => await CompleteAsync());
 
             disposed = true;
         }
 
-        private bool TryStartCriticalSection()
+        private async Task<bool> TryStartCriticalSectionAsync()
         {
             if (_started)
                 throw new ExecutionException("There is already an active critical section");
@@ -120,7 +121,7 @@ namespace Taskling.CriticalSection
             if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.KeepAlive)
                 startRequest.KeepAliveDeathThreshold = _taskExecutionOptions.KeepAliveDeathThreshold.Value;
 
-            var response = _criticalSectionRepository.Start(startRequest);
+            var response = await _criticalSectionRepository.StartAsync(startRequest);
             if (response.GrantStatus == GrantStatus.Denied)
             {
                 _started = false;

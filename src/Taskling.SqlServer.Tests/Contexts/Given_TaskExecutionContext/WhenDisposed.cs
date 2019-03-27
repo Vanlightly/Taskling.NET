@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using Taskling.SqlServer.Tests.Helpers;
 using Taskling.SqlServer.Tokens.Executions;
+using System.Threading.Tasks;
 
 namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
 {
@@ -16,11 +17,11 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
             var executionHelper = new ExecutionsHelper();
             executionHelper.DeleteRecordsOfApplication(TestConstants.ApplicationName);
         }
-
+        
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "TaskExecutions")]
-        public void If_InUsingBlockAndNoExecutionTokenExists_ThenExecutionTokenCreatedAutomatically()
+        public async Task If_InUsingBlockAndNoExecutionTokenExists_ThenExecutionTokenCreatedAutomatically()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -34,9 +35,11 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
 
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 tokenStatusAfterStart = executionsHelper.GetExecutionTokenStatus(TestConstants.ApplicationName, TestConstants.TaskName);
             }
+
+            await Task.Delay(1000);
             tokenStatusAfterUsingBlock = executionsHelper.GetExecutionTokenStatus(TestConstants.ApplicationName, TestConstants.TaskName);
 
             // ASSERT
@@ -48,7 +51,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "TaskExecutions")]
-        public void If_InUsingBlock_ThenExecutionCompletedOnEndOfBlock()
+        public async Task If_InUsingBlock_ThenExecutionCompletedOnEndOfBlock()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -63,9 +66,12 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
 
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 tokenStatusAfterStart = executionsHelper.GetExecutionTokenStatus(TestConstants.ApplicationName, TestConstants.TaskName);
             }
+
+            await Task.Delay(1000);
+
             tokenStatusAfterUsingBlock = executionsHelper.GetExecutionTokenStatus(TestConstants.ApplicationName, TestConstants.TaskName);
 
             // ASSERT
@@ -77,7 +83,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "TaskExecutions")]
-        public void If_KeepAlive_ThenKeepAliveContinuesUntilExecutionContextDies()
+        public async Task If_KeepAlive_ThenKeepAliveContinuesUntilExecutionContextDies()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -85,7 +91,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
             executionHelper.InsertAvailableExecutionToken(taskDefinitionId);
 
             // ACT
-            StartContextWithoutUsingOrComplete();
+            await StartContextWithoutUsingOrCompleteAsync();
             GC.Collect(0, GCCollectionMode.Forced); // referenceless context is collected
             Thread.Sleep(6000);
 
@@ -95,10 +101,10 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
             Assert.True(lastKeepAlive < expectedLastKeepAliveMax);
         }
 
-        private void StartContextWithoutUsingOrComplete()
+        private async Task StartContextWithoutUsingOrCompleteAsync()
         {
             var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing());
-            executionContext.TryStart();
+            await executionContext.TryStartAsync();
         }
     }
 }

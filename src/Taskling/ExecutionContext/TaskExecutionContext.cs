@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 using Taskling.Blocks.Common;
 using Taskling.Blocks.Factories;
 using Taskling.Blocks.ListBlocks;
@@ -117,7 +118,7 @@ namespace Taskling.ExecutionContext
 
             if (_startedCalled && !_completeCalled)
             {
-                Complete();
+                Task.Run(async () => await CompleteAsync());
             }
 
             disposed = true;
@@ -139,12 +140,12 @@ namespace Taskling.ExecutionContext
 
         #region .: Public methods :.
 
-        public bool TryStart()
+        public async Task<bool> TryStartAsync()
         {
-            return TryStart(null);
+            return await TryStartAsync(null);
         }
 
-        public bool TryStart(string referenceValue)
+        public async Task<bool> TryStartAsync(string referenceValue)
         {
             if (!_taskExecutionOptions.Enabled)
             {
@@ -161,13 +162,13 @@ namespace Taskling.ExecutionContext
 
             try
             {
-                var response = _taskExecutionRepository.Start(startRequest);
+                var response = await _taskExecutionRepository.StartAsync(startRequest);
                 _taskExecutionInstance.TaskExecutionId = response.TaskExecutionId;
                 _taskExecutionInstance.ExecutionTokenId = response.ExecutionTokenId;
 
                 if (response.GrantStatus == GrantStatus.Denied)
                 {
-                    Complete();
+                    await CompleteAsync();
                     return false;
                 }
 
@@ -183,39 +184,39 @@ namespace Taskling.ExecutionContext
             return true;
         }
 
-        public bool TryStart<TExecutionHeader>(TExecutionHeader executionHeader)
+        public async Task<bool> TryStartAsync<TExecutionHeader>(TExecutionHeader executionHeader)
         {
             _taskExecutionHeader = executionHeader;
-            return TryStart();
+            return await TryStartAsync();
         }
 
-        public bool TryStart<TExecutionHeader>(TExecutionHeader executionHeader, string referenceValue)
+        public async Task<bool> TryStartAsync<TExecutionHeader>(TExecutionHeader executionHeader, string referenceValue)
         {
             _taskExecutionHeader = executionHeader;
-            return TryStart(referenceValue);
+            return await TryStartAsync(referenceValue);
         }
 
-        public void Complete()
+        public async Task CompleteAsync()
         {
-            if (!IsExecutionContextActive)
-                throw new ExecutionException(NotActiveMessage);
+            if (IsExecutionContextActive)
+            {
+                _completeCalled = true;
 
-            _completeCalled = true;
+                if (_keepAliveDaemon != null)
+                    _keepAliveDaemon.Stop();
 
-            if (_keepAliveDaemon != null)
-                _keepAliveDaemon.Stop();
-
-            var completeRequest = new TaskExecutionCompleteRequest(new TaskId(_taskExecutionInstance.ApplicationName, _taskExecutionInstance.TaskName),
-                _taskExecutionInstance.TaskExecutionId,
-                _taskExecutionInstance.ExecutionTokenId);
-            completeRequest.Failed = _executionHasFailed;
+                var completeRequest = new TaskExecutionCompleteRequest(new TaskId(_taskExecutionInstance.ApplicationName, _taskExecutionInstance.TaskName),
+                    _taskExecutionInstance.TaskExecutionId,
+                    _taskExecutionInstance.ExecutionTokenId);
+                completeRequest.Failed = _executionHasFailed;
 
 
-            var response = _taskExecutionRepository.Complete(completeRequest);
-            _taskExecutionInstance.CompletedAt = response.CompletedAt;
+                var response = await _taskExecutionRepository.CompleteAsync(completeRequest);
+                _taskExecutionInstance.CompletedAt = response.CompletedAt;
+            }
         }
 
-        public void Checkpoint(string checkpointMessage)
+        public async Task CheckpointAsync(string checkpointMessage)
         {
             if (!IsExecutionContextActive)
                 throw new ExecutionException(NotActiveMessage);
@@ -226,10 +227,10 @@ namespace Taskling.ExecutionContext
                 TaskExecutionId = _taskExecutionInstance.TaskExecutionId,
                 Message = checkpointMessage
             };
-            _taskExecutionRepository.Checkpoint(request);
+            await _taskExecutionRepository.CheckpointAsync(request);
         }
 
-        public void Error(string errorMessage, bool treatTaskAsFailed)
+        public async Task ErrorAsync(string errorMessage, bool treatTaskAsFailed)
         {
             if (!IsExecutionContextActive)
                 throw new ExecutionException(NotActiveMessage);
@@ -243,7 +244,7 @@ namespace Taskling.ExecutionContext
                 Error = errorMessage,
                 TreatTaskAsFailed = treatTaskAsFailed
             };
-            _taskExecutionRepository.Error(request);
+            await _taskExecutionRepository.ErrorAsync(request);
         }
 
         public TExecutionHeader GetHeader<TExecutionHeader>()
@@ -270,7 +271,7 @@ namespace Taskling.ExecutionContext
             return _userCriticalSectionContext;
         }
 
-        public IList<IDateRangeBlockContext> GetDateRangeBlocks(Func<IFluentDateRangeBlockDescriptor, object> fluentBlockRequest)
+        public async Task<IList<IDateRangeBlockContext>> GetDateRangeBlocksAsync(Func<IFluentDateRangeBlockDescriptor, object> fluentBlockRequest)
         {
             if (!IsExecutionContextActive)
                 throw new ExecutionException(NotActiveMessage);
@@ -281,22 +282,27 @@ namespace Taskling.ExecutionContext
             var request = ConvertToDateRangeBlockRequest(settings);
             if (ShouldProtect(request))
             {
-                using (var csContext = CreateClientCriticalSection())
+                var csContext = CreateClientCriticalSection();
+                try
                 {
-                    var csStarted = csContext.TryStart(new TimeSpan(0, 0, 20), 3);
+                    var csStarted = await csContext.TryStartAsync(new TimeSpan(0, 0, 20), 3);
                     if (csStarted)
-                        return _blockFactory.GenerateDateRangeBlocks(request);
+                        return await _blockFactory.GenerateDateRangeBlocksAsync(request);
 
                     throw new CriticalSectionException("Could not start a critical section in the alloted time");
+                }
+                finally
+                {
+                    await csContext.CompleteAsync();
                 }
             }
             else
             {
-                return _blockFactory.GenerateDateRangeBlocks(request);
+                return await _blockFactory.GenerateDateRangeBlocksAsync(request);
             }
         }
 
-        public IList<INumericRangeBlockContext> GetNumericRangeBlocks(Func<IFluentNumericRangeBlockDescriptor, object> fluentBlockRequest)
+        public async Task<IList<INumericRangeBlockContext>> GetNumericRangeBlocksAsync(Func<IFluentNumericRangeBlockDescriptor, object> fluentBlockRequest)
         {
             if (!IsExecutionContextActive)
                 throw new ExecutionException(NotActiveMessage);
@@ -307,22 +313,27 @@ namespace Taskling.ExecutionContext
             var request = ConvertToNumericRangeBlockRequest(settings);
             if (ShouldProtect(request))
             {
-                using (var csContext = CreateClientCriticalSection())
+                var csContext = CreateClientCriticalSection();
+                try
                 {
-                    var csStarted = csContext.TryStart(new TimeSpan(0, 0, 20), 3);
+                    var csStarted = await csContext.TryStartAsync(new TimeSpan(0, 0, 20), 3);
                     if (csStarted)
-                        return _blockFactory.GenerateNumericRangeBlocks(request);
+                        return await _blockFactory.GenerateNumericRangeBlocksAsync(request);
 
                     throw new CriticalSectionException("Could not start a critical section in the alloted time");
+                }
+                finally
+                {
+                    await csContext.CompleteAsync();
                 }
             }
             else
             {
-                return _blockFactory.GenerateNumericRangeBlocks(request);
+                return await _blockFactory.GenerateNumericRangeBlocksAsync(request);
             }
         }
 
-        public IList<IListBlockContext<T>> GetListBlocks<T>(Func<IFluentListBlockDescriptorBase<T>, object> fluentBlockRequest)
+        public async Task<IList<IListBlockContext<T>>> GetListBlocksAsync<T>(Func<IFluentListBlockDescriptorBase<T>, object> fluentBlockRequest)
         {
             if (!IsExecutionContextActive)
                 throw new ExecutionException(NotActiveMessage);
@@ -335,24 +346,29 @@ namespace Taskling.ExecutionContext
                 var request = ConvertToListBlockRequest(settings);
                 if (ShouldProtect(request))
                 {
-                    using (var csContext = CreateClientCriticalSection())
+                    var csContext = CreateClientCriticalSection();
+                    try
                     {
-                        var csStarted = csContext.TryStart(new TimeSpan(0, 0, 20), 3);
+                        var csStarted = await csContext.TryStartAsync(new TimeSpan(0, 0, 20), 3);
                         if (csStarted)
-                            return _blockFactory.GenerateListBlocks<T>(request);
+                            return await _blockFactory.GenerateListBlocksAsync<T>(request);
                         throw new CriticalSectionException("Could not start a critical section in the alloted time");
+                    }
+                    finally
+                    {
+                        await csContext.CompleteAsync();
                     }
                 }
                 else
                 {
-                    return _blockFactory.GenerateListBlocks<T>(request);
+                    return await _blockFactory.GenerateListBlocksAsync<T>(request);
                 }
             }
 
             throw new NotSupportedException("BlockType not supported");
         }
 
-        public IList<IListBlockContext<TItem, THeader>> GetListBlocks<TItem, THeader>(Func<IFluentListBlockDescriptorBase<TItem, THeader>, object> fluentBlockRequest)
+        public async Task<IList<IListBlockContext<TItem, THeader>>> GetListBlocksAsync<TItem, THeader>(Func<IFluentListBlockDescriptorBase<TItem, THeader>, object> fluentBlockRequest)
         {
             if (!IsExecutionContextActive)
                 throw new ExecutionException(NotActiveMessage);
@@ -365,24 +381,29 @@ namespace Taskling.ExecutionContext
                 var request = ConvertToListBlockRequest(settings);
                 if (ShouldProtect(request))
                 {
-                    using (var csContext = CreateClientCriticalSection())
+                    var csContext = CreateClientCriticalSection();
+                    try
                     {
-                        var csStarted = csContext.TryStart(new TimeSpan(0, 0, 20), 3);
+                        var csStarted = await csContext.TryStartAsync(new TimeSpan(0, 0, 20), 3);
                         if (csStarted)
-                            return _blockFactory.GenerateListBlocks<TItem, THeader>(request);
+                            return await _blockFactory.GenerateListBlocksAsync<TItem, THeader>(request);
                         throw new CriticalSectionException("Could not start a critical section in the alloted time");
+                    }
+                    finally
+                    {
+                        await csContext.CompleteAsync();
                     }
                 }
                 else
                 {
-                    return _blockFactory.GenerateListBlocks<TItem, THeader>(request);
+                    return await _blockFactory.GenerateListBlocksAsync<TItem, THeader>(request);
                 }
             }
 
             throw new NotSupportedException("BlockType not supported");
         }
 
-        public IList<IObjectBlockContext<T>> GetObjectBlocks<T>(Func<IFluentObjectBlockDescriptorBase<T>, object> fluentBlockRequest)
+        public async Task<IList<IObjectBlockContext<T>>> GetObjectBlocksAsync<T>(Func<IFluentObjectBlockDescriptorBase<T>, object> fluentBlockRequest)
         {
             if (!IsExecutionContextActive)
                 throw new ExecutionException(NotActiveMessage);
@@ -393,21 +414,26 @@ namespace Taskling.ExecutionContext
             var request = ConvertToObjectBlockRequest(settings);
             if (ShouldProtect(request))
             {
-                using (var csContext = CreateClientCriticalSection())
+                var csContext = CreateClientCriticalSection();
+                try
                 {
-                    var csStarted = csContext.TryStart(new TimeSpan(0, 0, 20), 3);
+                    var csStarted = await csContext.TryStartAsync(new TimeSpan(0, 0, 20), 3);
                     if (csStarted)
-                        return _blockFactory.GenerateObjectBlocks(request);
+                        return await _blockFactory.GenerateObjectBlocksAsync(request);
                     throw new CriticalSectionException("Could not start a critical section in the alloted time");
+                }
+                finally
+                {
+                    await csContext.CompleteAsync();
                 }
             }
             else
             {
-                return _blockFactory.GenerateObjectBlocks(request);
+                return await _blockFactory.GenerateObjectBlocksAsync(request);
             }
         }
 
-        public IDateRangeBlock GetLastDateRangeBlock(LastBlockOrder lastBlockOrder)
+        public async Task<IDateRangeBlock> GetLastDateRangeBlockAsync(LastBlockOrder lastBlockOrder)
         {
             if (!IsExecutionContextActive)
                 throw new ExecutionException(NotActiveMessage);
@@ -416,10 +442,10 @@ namespace Taskling.ExecutionContext
                 BlockType.DateRange);
             request.LastBlockOrder = lastBlockOrder;
 
-            return _rangeBlockRepository.GetLastRangeBlock(request);
+            return await _rangeBlockRepository.GetLastRangeBlockAsync(request);
         }
 
-        public INumericRangeBlock GetLastNumericRangeBlock(LastBlockOrder lastBlockOrder)
+        public async Task<INumericRangeBlock> GetLastNumericRangeBlockAsync(LastBlockOrder lastBlockOrder)
         {
             if (!IsExecutionContextActive)
                 throw new ExecutionException(NotActiveMessage);
@@ -428,10 +454,10 @@ namespace Taskling.ExecutionContext
                 BlockType.NumericRange);
             request.LastBlockOrder = lastBlockOrder;
 
-            return _rangeBlockRepository.GetLastRangeBlock(request);
+            return await _rangeBlockRepository.GetLastRangeBlockAsync(request);
         }
 
-        public IListBlock<T> GetLastListBlock<T>()
+        public async Task<IListBlock<T>> GetLastListBlockAsync<T>()
         {
             if (!IsExecutionContextActive)
                 throw new ExecutionException(NotActiveMessage);
@@ -439,10 +465,10 @@ namespace Taskling.ExecutionContext
             var request = new LastBlockRequest(new TaskId(_taskExecutionInstance.ApplicationName, _taskExecutionInstance.TaskName),
                 BlockType.List);
 
-            return _blockFactory.GetLastListBlock<T>(request);
+            return await _blockFactory.GetLastListBlockAsync<T>(request);
         }
 
-        public IListBlock<TItem, THeader> GetLastListBlock<TItem, THeader>()
+        public async Task<IListBlock<TItem, THeader>> GetLastListBlockAsync<TItem, THeader>()
         {
             if (!IsExecutionContextActive)
                 throw new ExecutionException(NotActiveMessage);
@@ -450,10 +476,10 @@ namespace Taskling.ExecutionContext
             var request = new LastBlockRequest(new TaskId(_taskExecutionInstance.ApplicationName, _taskExecutionInstance.TaskName),
                 BlockType.List);
 
-            return _blockFactory.GetLastListBlock<TItem, THeader>(request);
+            return await _blockFactory.GetLastListBlockAsync<TItem, THeader>(request);
         }
 
-        public IObjectBlock<T> GetLastObjectBlock<T>()
+        public async Task<IObjectBlock<T>> GetLastObjectBlockAsync<T>()
         {
             if (!IsExecutionContextActive)
                 throw new ExecutionException(NotActiveMessage);
@@ -461,14 +487,14 @@ namespace Taskling.ExecutionContext
             var request = new LastBlockRequest(new TaskId(_taskExecutionInstance.ApplicationName, _taskExecutionInstance.TaskName),
                 BlockType.Object);
 
-            return _objectBlockRepository.GetLastObjectBlock<T>(request);
+            return await _objectBlockRepository.GetLastObjectBlockAsync<T>(request);
         }
 
-        public TaskExecutionMeta GetLastExecutionMeta()
+        public async Task<TaskExecutionMeta> GetLastExecutionMetaAsync()
         {
             var request = CreateTaskExecutionMetaRequest(1);
 
-            var response = _taskExecutionRepository.GetLastExecutionMetas(request);
+            var response = await _taskExecutionRepository.GetLastExecutionMetasAsync(request);
             if (response.Executions != null && response.Executions.Any())
             {
                 var meta = response.Executions.First();
@@ -478,11 +504,11 @@ namespace Taskling.ExecutionContext
             return null;
         }
 
-        public IList<TaskExecutionMeta> GetLastExecutionMetas(int numberToRetrieve)
+        public async Task<IList<TaskExecutionMeta>> GetLastExecutionMetasAsync(int numberToRetrieve)
         {
             var request = CreateTaskExecutionMetaRequest(numberToRetrieve);
 
-            var response = _taskExecutionRepository.GetLastExecutionMetas(request);
+            var response = await _taskExecutionRepository.GetLastExecutionMetasAsync(request);
             if (response.Executions != null && response.Executions.Any())
             {
                 return response.Executions.Select(x => new TaskExecutionMeta(x.StartedAt, x.CompletedAt, x.Status, x.ReferenceValue)).ToList();
@@ -491,11 +517,11 @@ namespace Taskling.ExecutionContext
             return new List<TaskExecutionMeta>();
         }
 
-        public TaskExecutionMeta<TExecutionHeader> GetLastExecutionMeta<TExecutionHeader>()
+        public async Task<TaskExecutionMeta<TExecutionHeader>> GetLastExecutionMetaAsync<TExecutionHeader>()
         {
             var request = CreateTaskExecutionMetaRequest(1);
 
-            var response = _taskExecutionRepository.GetLastExecutionMetas(request);
+            var response = await _taskExecutionRepository.GetLastExecutionMetasAsync(request);
             if (response.Executions != null && response.Executions.Any())
             {
                 var meta = response.Executions.First();
@@ -509,11 +535,11 @@ namespace Taskling.ExecutionContext
             return null;
         }
 
-        public IList<TaskExecutionMeta<TExecutionHeader>> GetLastExecutionMetas<TExecutionHeader>(int numberToRetrieve)
+        public async Task<IList<TaskExecutionMeta<TExecutionHeader>>> GetLastExecutionMetasAsync<TExecutionHeader>(int numberToRetrieve)
         {
             var request = CreateTaskExecutionMetaRequest(numberToRetrieve);
 
-            var response = _taskExecutionRepository.GetLastExecutionMetas(request);
+            var response = await _taskExecutionRepository.GetLastExecutionMetasAsync(request);
             if (response.Executions != null && response.Executions.Any())
             {
                 return response.Executions.Select(x => new TaskExecutionMeta<TExecutionHeader>(x.StartedAt,

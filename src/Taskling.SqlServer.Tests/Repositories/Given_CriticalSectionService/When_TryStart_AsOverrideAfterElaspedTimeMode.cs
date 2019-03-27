@@ -12,6 +12,7 @@ using Taskling.SqlServer.Tasks;
 using Taskling.SqlServer.Tokens;
 using Taskling.SqlServer.Tokens.CriticalSections;
 using Taskling.Tasks;
+using System.Threading.Tasks;
 
 namespace Taskling.SqlServer.Tests.Repositories.Given_CriticalSectionService
 {
@@ -31,7 +32,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_CriticalSectionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "CriticalSectionTokens")]
-        public void If_OverrideMode_TokenAvailableAndNothingInQueue_ThenGrant()
+        public async Task If_OverrideMode_TokenAvailableAndNothingInQueue_ThenGrant()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -47,7 +48,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_CriticalSectionService
 
             // ACT
             var sut = CreateSut();
-            var response = sut.Start(request);
+            var response = await sut.StartAsync(request);
 
             // ASSERT
             Assert.Equal(GrantStatus.Granted, response.GrantStatus);
@@ -56,7 +57,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_CriticalSectionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "CriticalSectionTokens")]
-        public void If_OverrideMode_TokenNotAvailableAndNothingInQueue_ThenAddToQueueAndDeny()
+        public async Task If_OverrideMode_TokenNotAvailableAndNothingInQueue_ThenAddToQueueAndDeny()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -78,7 +79,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_CriticalSectionService
 
             // ACT
             var sut = CreateSut();
-            var response = sut.Start(request);
+            var response = await sut.StartAsync(request);
 
             // ASSERT
             var isInQueue = executionHelper.GetQueueCount(taskExecutionId2) == 1;
@@ -89,7 +90,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_CriticalSectionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "CriticalSectionTokens")]
-        public void If_OverrideMode_TokenNotAvailableAndAlreadyInQueue_ThenDoNotAddToQueueAndDeny()
+        public async Task If_OverrideMode_TokenNotAvailableAndAlreadyInQueue_ThenDoNotAddToQueueAndDeny()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -112,7 +113,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_CriticalSectionService
 
             // ACT
             var sut = CreateSut();
-            var response = sut.Start(request);
+            var response = await sut.StartAsync(request);
 
             // ASSERT
             var numberOfQueueRecords = executionHelper.GetQueueCount(taskExecutionId2);
@@ -123,7 +124,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_CriticalSectionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "CriticalSectionTokens")]
-        public void If_OverrideMode_TokenAvailableAndIsFirstInQueue_ThenRemoveFromQueueAndGrant()
+        public async Task If_OverrideMode_TokenAvailableAndIsFirstInQueue_ThenRemoveFromQueueAndGrant()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -143,7 +144,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_CriticalSectionService
 
             // ACT
             var sut = CreateSut();
-            var response = sut.Start(request);
+            var response = await sut.StartAsync(request);
 
             // ASSERT
             var numberOfQueueRecords = executionHelper.GetQueueCount(taskExecutionId1);
@@ -154,7 +155,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_CriticalSectionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "CriticalSectionTokens")]
-        public void If_OverrideMode_TokenAvailableAndIsNotFirstInQueue_ThenDoNotChangeQueueAndDeny()
+        public async Task If_OverrideMode_TokenAvailableAndIsNotFirstInQueue_ThenDoNotChangeQueueAndDeny()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -180,7 +181,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_CriticalSectionService
 
             // ACT
             var sut = CreateSut();
-            var response = sut.Start(request);
+            var response = await sut.StartAsync(request);
 
             // ASSERT
             var numberOfQueueRecords = executionHelper.GetQueueCount(taskExecutionId2);
@@ -191,7 +192,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_CriticalSectionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "CriticalSectionTokens")]
-        public void If_OverrideMode_TokenAvailableAndIsNotFirstInQueueButFirstHasExpiredTimeout_ThenRemoveBothFromQueueAndGrant()
+        public async Task If_OverrideMode_TokenAvailableAndIsNotFirstInQueueButFirstHasExpiredTimeout_ThenRemoveBothFromQueueAndGrant()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -221,7 +222,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_CriticalSectionService
 
             // ACT
             var sut = CreateSut();
-            var response = sut.Start(request);
+            var response = await sut.StartAsync(request);
 
             // ASSERT
             var numberOfQueueRecordsForExecution1 = executionHelper.GetQueueCount(taskExecutionId1);
@@ -234,7 +235,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_CriticalSectionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "CriticalSectionTokens")]
-        public void If_OverrideMode_TokenAvailableAndIsNotFirstInQueueButFirstHasCompleted_ThenRemoveBothFromQueueAndGrant()
+        public async Task If_OverrideMode_TokenAvailableAndIsNotFirstInQueueButFirstHasCompleted_ThenRemoveBothFromQueueAndGrant()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -261,7 +262,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_CriticalSectionService
 
             // ACT
             var sut = CreateSut();
-            var response = sut.Start(request);
+            var response = await sut.StartAsync(request);
 
             // ASSERT
             var numberOfQueueRecordsForExecution1 = executionHelper.GetQueueCount(taskExecutionId1);

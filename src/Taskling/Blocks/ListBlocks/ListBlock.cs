@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Taskling.Contexts;
 
 namespace Taskling.Blocks.ListBlocks
@@ -13,7 +14,7 @@ namespace Taskling.Blocks.ListBlocks
 
         public ListBlock()
         {
-            Items = new List<IListBlockItem<T>>();
+            _items = new List<IListBlockItem<T>>();
         }
 
         internal void SetParentContext(IListBlockContext<T> parentContext)
@@ -23,58 +24,58 @@ namespace Taskling.Blocks.ListBlocks
 
         public string ListBlockId { get; set; }
         public int Attempt { get; set; }
+
         public IList<IListBlockItem<T>> Items
         {
-            get
-            {
-                if (_items == null || !_items.Any())
-                {
-                    if (_parentContext != null)
-                        _parentContext.FillItems();
-                }
+            get { return _items; }
+            set { _items = value; }
+        }
 
-                return _items;
-            }
-            set
+        public async Task<IList<IListBlockItem<T>>> GetItemsAsync()
+        {
+            if (_items == null || !_items.Any())
             {
-                _items = value;
+                if (_parentContext != null)
+                   await _parentContext.FillItemsAsync();
             }
+
+            return _items;
         }
     }
 
     public class ListBlock<TItem, THeader> : IListBlock<TItem, THeader>
     {
         private IList<IListBlockItem<TItem>> _items;
-        private IListBlockContext<TItem, THeader> _parentContext;
+        private ListBlockContext<TItem, THeader> _parentContext;
 
         public ListBlock()
         {
-            Items = new List<IListBlockItem<TItem>>();
+            _items = new List<IListBlockItem<TItem>>();
         }
 
         internal void SetParentContext(IListBlockContext<TItem, THeader> parentContext)
         {
-            _parentContext = parentContext;
+            _parentContext = (ListBlockContext<TItem,THeader>)parentContext;
         }
 
         public string ListBlockId { get; set; }
         public int Attempt { get; set; }
         public THeader Header { get; set; }
-        public IList<IListBlockItem<TItem>> Items
-        {
-            get
-            {
-                if (_items == null)
-                {
-                    _parentContext.GetItems();
-                }
 
-                return _items;
-            }
-            set
+        internal IList<IListBlockItem<TItem>> Items
+        {
+            get { return _items; }
+            set { _items = value; }
+        }
+
+        public async Task<IList<IListBlockItem<TItem>>> GetItemsAsync()
+        {
+            if (_items == null)
             {
-                _items = value;
+                await _parentContext.FillItemsAsync();
             }
+
+            return _items;
         }
     }
 }

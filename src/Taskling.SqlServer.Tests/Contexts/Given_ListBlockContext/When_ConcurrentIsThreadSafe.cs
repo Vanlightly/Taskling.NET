@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Taskling.Blocks.ListBlocks;
 using Taskling.SqlServer.Tests.Helpers;
+using System.Threading;
 
 namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
 {
@@ -28,30 +29,30 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Slow")]
         [Trait("Area", "Blocks")]
-        public void If_AsListWithSingleUnitCommit_BlocksProcessedSequentially_BlocksListItemsProcessedInParallel_ThenNoConcurrencyIssues()
+        public async Task If_AsListWithSingleUnitCommit_BlocksProcessedSequentially_BlocksListItemsProcessedInParallel_ThenNoConcurrencyIssues()
         {
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing(10000)))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var values = GetList(100000);
                     short maxBlockSize = 1000;
-                    var listBlocks = executionContext.GetListBlocks<PersonDto>(x => x.WithSingleUnitCommit(values, maxBlockSize));
+                    var listBlocks = await executionContext.GetListBlocksAsync<PersonDto>(x => x.WithSingleUnitCommit(values, maxBlockSize));
                     foreach (var listBlock in listBlocks)
                     {
-                        listBlock.Start();
-                        Parallel.ForEach(listBlock.GetItems(ItemStatus.Failed, ItemStatus.Pending), (currentItem) =>
+                        await listBlock.StartAsync();
+                        Parallel.ForEach(await listBlock.GetItemsAsync(ItemStatus.Failed, ItemStatus.Pending), async (currentItem) =>
                         {
-                            listBlock.ItemComplete(currentItem);
+                            await listBlock.ItemCompleteAsync(currentItem);
                         });
 
-                        listBlock.Complete();
+                        await listBlock.CompleteAsync();
 
                         // All items should be completed now
-                        Assert.Equal(listBlock.GetItems(ItemStatus.Completed).Count(), _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ItemStatus.Completed));
+                        Assert.Equal((await listBlock.GetItemsAsync(ItemStatus.Completed)).Count(), _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ItemStatus.Completed));
                     }
                 }
             }
@@ -60,30 +61,30 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Slow")]
         [Trait("Area", "Blocks")]
-        public void If_AsListWithBatchCommitAtEnd_BlocksProcessedSequentially_BlocksListItemsProcessedInParallel_ThenNoConcurrencyIssues()
+        public async Task If_AsListWithBatchCommitAtEnd_BlocksProcessedSequentially_BlocksListItemsProcessedInParallel_ThenNoConcurrencyIssues()
         {
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing(10000)))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var values = GetList(100000);
                     short maxBlockSize = 1000;
-                    var listBlocks = executionContext.GetListBlocks<PersonDto>(x => x.WithBatchCommitAtEnd(values, maxBlockSize));
+                    var listBlocks = await executionContext.GetListBlocksAsync<PersonDto>(x => x.WithBatchCommitAtEnd(values, maxBlockSize));
                     foreach (var listBlock in listBlocks)
                     {
-                        listBlock.Start();
-                        Parallel.ForEach(listBlock.GetItems(ItemStatus.Failed, ItemStatus.Pending), (currentItem) =>
+                        await listBlock.StartAsync();
+                        Parallel.ForEach(await listBlock.GetItemsAsync(ItemStatus.Failed, ItemStatus.Pending), async (currentItem) =>
                         {
-                            listBlock.ItemComplete(currentItem);
+                            await listBlock.ItemCompleteAsync(currentItem);
                         });
 
-                        listBlock.Complete();
+                        await listBlock.CompleteAsync();
 
                         // All items should be completed now
-                        Assert.Equal(listBlock.GetItems(ItemStatus.Completed).Count(), _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ItemStatus.Completed));
+                        Assert.Equal((await listBlock.GetItemsAsync(ItemStatus.Completed)).Count(), _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ItemStatus.Completed));
                     }
                 }
             }
@@ -92,30 +93,30 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Slow")]
         [Trait("Area", "Blocks")]
-        public void If_AsListWithPeriodicCommit_BlocksProcessedSequentially_BlocksListItemsProcessedInParallel_ThenNoConcurrencyIssues()
+        public async Task If_AsListWithPeriodicCommit_BlocksProcessedSequentially_BlocksListItemsProcessedInParallel_ThenNoConcurrencyIssues()
         {
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing(10000)))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var values = GetList(100000);
                     short maxBlockSize = 1000;
-                    var listBlocks = executionContext.GetListBlocks<PersonDto>(x => x.WithPeriodicCommit(values, maxBlockSize, BatchSize.Hundred));
+                    var listBlocks = await executionContext.GetListBlocksAsync<PersonDto>(x => x.WithPeriodicCommit(values, maxBlockSize, BatchSize.Hundred));
                     foreach (var listBlock in listBlocks)
                     {
-                        listBlock.Start();
-                        Parallel.ForEach(listBlock.GetItems(ItemStatus.Failed, ItemStatus.Pending), (currentItem) =>
+                        await listBlock.StartAsync();
+                        Parallel.ForEach(await listBlock.GetItemsAsync(ItemStatus.Failed, ItemStatus.Pending), async (currentItem) =>
                         {
-                            listBlock.ItemComplete(currentItem);
+                            await listBlock.ItemCompleteAsync(currentItem);
                         });
 
-                        listBlock.Complete();
+                        await listBlock.CompleteAsync();
 
                         // All items should be completed now
-                        Assert.Equal(listBlock.GetItems(ItemStatus.Completed).Count(), _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ItemStatus.Completed));
+                        Assert.Equal((await listBlock.GetItemsAsync(ItemStatus.Completed)).Count(), _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ItemStatus.Completed));
                     }
                 }
             }
@@ -124,31 +125,31 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
         [Fact]
         [Trait("Speed", "Slow")]
         [Trait("Area", "Blocks")]
-        public void If_AsListWithSingleUnitCommit_BlocksProcessedInParallel_BlocksListItemsProcessedSequentially_ThenNoConcurrencyIssues()
+        public async Task If_AsListWithSingleUnitCommit_BlocksProcessedInParallel_BlocksListItemsProcessedSequentially_ThenNoConcurrencyIssues()
         {
             // ACT and // ASSERT
             bool startedOk;
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing(10000)))
             {
-                startedOk = executionContext.TryStart();
+                startedOk = await executionContext.TryStartAsync();
                 if (startedOk)
                 {
                     var values = GetList(100000);
                     short maxBlockSize = 1000;
-                    var listBlocks = executionContext.GetListBlocks<PersonDto>(x => x.WithSingleUnitCommit(values, maxBlockSize));
+                    var listBlocks = await executionContext.GetListBlocksAsync<PersonDto>(x => x.WithSingleUnitCommit(values, maxBlockSize));
 
-                    Parallel.ForEach(listBlocks, (currentBlock) =>
+                    Parallel.ForEach(listBlocks, async (currentBlock) =>
                     {
-                        currentBlock.Start();
+                        await currentBlock.StartAsync();
 
-                        foreach (var currentItem in currentBlock.GetItems(ItemStatus.Pending))
+                        foreach (var currentItem in await currentBlock.GetItemsAsync(ItemStatus.Pending))
                         {
-                            currentBlock.ItemComplete(currentItem);
+                            await currentBlock.ItemCompleteAsync(currentItem);
                         };
 
-                        currentBlock.Complete();
+                        await currentBlock.CompleteAsync();
                         // All items should be completed now
-                        Assert.Equal(currentBlock.GetItems(ItemStatus.Completed).Count(), _blocksHelper.GetListBlockItemCountByStatus(currentBlock.ListBlockId, ItemStatus.Completed));
+                        Assert.Equal((await currentBlock.GetItemsAsync(ItemStatus.Completed)).Count(), _blocksHelper.GetListBlockItemCountByStatus(currentBlock.ListBlockId, ItemStatus.Completed));
                     });
                 }
             }
@@ -165,5 +166,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
 
             return list;
         }
+
+        
     }
 }

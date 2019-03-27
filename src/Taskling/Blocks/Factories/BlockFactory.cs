@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Taskling.Blocks.Common;
 using Taskling.Blocks.ListBlocks;
 using Taskling.Blocks.ObjectBlocks;
@@ -42,141 +43,141 @@ namespace Taskling.Blocks.Factories
             _taskExecutionRepository = taskExecutionRepository;
         }
 
-        public IList<IDateRangeBlockContext> GenerateDateRangeBlocks(DateRangeBlockRequest blockRequest)
+        public async Task<IList<IDateRangeBlockContext>> GenerateDateRangeBlocksAsync(DateRangeBlockRequest blockRequest)
         {
             var blocks = new List<RangeBlockContext>();
 
             if (!string.IsNullOrEmpty(blockRequest.ReprocessReferenceValue))
             {
-                blocks = LoadRangeBlocksOfTask(blockRequest);
+                blocks = await LoadRangeBlocksOfTaskAsync(blockRequest);
             }
             else
             {
-                var forceBlocks = GetForcedBlocks(blockRequest);
+                var forceBlocks = await GetForcedBlocksAsync(blockRequest);
                 blocks.AddRange(forceBlocks);
 
                 if (GetBlocksRemaining(blockRequest, blocks) > 0)
-                    LoadFailedAndDeadBlocks(blockRequest, blocks);
+                    await LoadFailedAndDeadBlocksAsync(blockRequest, blocks);
 
                 int blocksRemaining = GetBlocksRemaining(blockRequest, blocks);
                 if (blocksRemaining > 0 && blockRequest.RangeBegin.HasValue)
-                    blocks.AddRange(GenerateNewDateRangeBlocks(blockRequest, blocksRemaining));
+                    blocks.AddRange(await GenerateNewDateRangeBlocksAsync(blockRequest, blocksRemaining));
             }
 
             if (!blocks.Any())
             {
-                LogEmptyBlockEvent(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName);
+                await LogEmptyBlockEventAsync(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName);
             }
 
             var dateRangeBlocks = blocks.Select(x => (IDateRangeBlockContext)x);
             return dateRangeBlocks.OrderBy(x => long.Parse(x.DateRangeBlock.RangeBlockId)).ToList();
         }
 
-        public IList<INumericRangeBlockContext> GenerateNumericRangeBlocks(NumericRangeBlockRequest blockRequest)
+        public async Task<IList<INumericRangeBlockContext>> GenerateNumericRangeBlocksAsync(NumericRangeBlockRequest blockRequest)
         {
             var blocks = new List<RangeBlockContext>();
 
             if (!string.IsNullOrEmpty(blockRequest.ReprocessReferenceValue))
             {
-                blocks = LoadRangeBlocksOfTask(blockRequest);
+                blocks = await LoadRangeBlocksOfTaskAsync(blockRequest);
             }
             else
             {
-                var forceBlocks = GetForcedBlocks(blockRequest);
+                var forceBlocks = await GetForcedBlocksAsync(blockRequest);
                 blocks.AddRange(forceBlocks);
 
                 if (GetBlocksRemaining(blockRequest, blocks) > 0)
-                    LoadFailedAndDeadBlocks(blockRequest, blocks);
+                    await LoadFailedAndDeadBlocksAsync(blockRequest, blocks);
 
                 int blocksRemaining = GetBlocksRemaining(blockRequest, blocks);
                 if (blocksRemaining > 0 && blockRequest.RangeBegin.HasValue)
-                    blocks.AddRange(GenerateNewNumericRangeBlocks(blockRequest, blocksRemaining));
+                    blocks.AddRange(await GenerateNewNumericRangeBlocksAsync(blockRequest, blocksRemaining));
             }
 
             if (!blocks.Any())
             {
-                LogEmptyBlockEvent(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName);
+                await LogEmptyBlockEventAsync(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName);
             }
 
             var numericRangeBlocks = blocks.Select(x => (INumericRangeBlockContext)x);
             return numericRangeBlocks.OrderBy(x => long.Parse(x.NumericRangeBlock.RangeBlockId)).ToList();
         }
 
-        public IList<IListBlockContext<T>> GenerateListBlocks<T>(ListBlockRequest blockRequest)
+        public async Task<IList<IListBlockContext<T>>> GenerateListBlocksAsync<T>(ListBlockRequest blockRequest)
         {
-            var blocks = CreateProtoListBlocks(blockRequest);
-            var blockContexts = CreateListBlockContexts<T>(blockRequest, blocks).ToList();
+            var blocks = await CreateProtoListBlocksAsync(blockRequest);
+            var blockContexts = (await CreateListBlockContextsAsync<T>(blockRequest, blocks)).ToList();
 
             if (blocks.Any(x => x.IsForcedBlock))
-                DequeueForcedBlocks(blockRequest, blocks.Where(x => x.IsForcedBlock).Select(x => x.ForcedBlockQueueId.ToString()).ToList());
+                await DequeueForcedBlocksAsync(blockRequest, blocks.Where(x => x.IsForcedBlock).Select(x => x.ForcedBlockQueueId.ToString()).ToList());
 
             if (!blocks.Any())
             {
-                LogEmptyBlockEvent(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName);
+                await LogEmptyBlockEventAsync(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName);
             }
 
             return blockContexts.OrderBy(x => long.Parse(x.Block.ListBlockId)).ToList();
         }
 
-        public IList<IListBlockContext<TItem, THeader>> GenerateListBlocks<TItem, THeader>(ListBlockRequest blockRequest)
+        public async Task<IList<IListBlockContext<TItem, THeader>>> GenerateListBlocksAsync<TItem, THeader>(ListBlockRequest blockRequest)
         {
-            var blocks = CreateProtoListBlocks(blockRequest);
-            var blockContexts = CreateListBlockContexts<TItem, THeader>(blockRequest, blocks).ToList();
+            var blocks = await CreateProtoListBlocksAsync(blockRequest);
+            var blockContexts = (await CreateListBlockContextsAsync<TItem, THeader>(blockRequest, blocks)).ToList();
 
             if (blocks.Any(x => x.IsForcedBlock))
-                DequeueForcedBlocks(blockRequest, blocks.Where(x => x.IsForcedBlock).Select(x => x.ForcedBlockQueueId.ToString()).ToList());
+                await DequeueForcedBlocksAsync(blockRequest, blocks.Where(x => x.IsForcedBlock).Select(x => x.ForcedBlockQueueId.ToString()).ToList());
 
             if (!blocks.Any())
             {
-                LogEmptyBlockEvent(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName);
+                await LogEmptyBlockEventAsync(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName);
             }
 
             return blockContexts.OrderBy(x => long.Parse(x.Block.ListBlockId)).ToList();
         }
 
-        public IList<IObjectBlockContext<T>> GenerateObjectBlocks<T>(ObjectBlockRequest<T> blockRequest)
+        public async Task<IList<IObjectBlockContext<T>>> GenerateObjectBlocksAsync<T>(ObjectBlockRequest<T> blockRequest)
         {
             var blocks = new List<IObjectBlockContext<T>>();
 
             if (!string.IsNullOrEmpty(blockRequest.ReprocessReferenceValue))
             {
-                blocks = LoadObjectBlocksOfTask(blockRequest);
+                blocks = await LoadObjectBlocksOfTaskAsync(blockRequest);
             }
             else
             {
-                var forceBlocks = GetForcedObjectBlocks(blockRequest);
+                var forceBlocks = await GetForcedObjectBlocksAsync(blockRequest);
                 blocks.AddRange(forceBlocks);
 
                 if (GetBlocksRemaining(blockRequest, blocks) > 0)
-                    LoadFailedAndDeadObjectBlocks(blockRequest, blocks);
+                    await LoadFailedAndDeadObjectBlocksAsync(blockRequest, blocks);
 
                 if (GetBlocksRemaining(blockRequest, blocks) > 0 && blockRequest.Object != null)
                 {
-                    var newBlock = GenerateNewObjectBlock(blockRequest);
+                    var newBlock = await GenerateNewObjectBlockAsync(blockRequest);
                     blocks.Add(newBlock);
                 }
             }
 
             if (!blocks.Any())
             {
-                LogEmptyBlockEvent(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName);
+                await LogEmptyBlockEventAsync(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName);
             }
 
             return blocks.OrderBy(x => long.Parse(x.Block.ObjectBlockId)).ToList();
         }
 
-        public IListBlock<T> GetLastListBlock<T>(LastBlockRequest lastBlockRequest)
+        public async Task<IListBlock<T>> GetLastListBlockAsync<T>(LastBlockRequest lastBlockRequest)
         {
-            var lastProtoListBlock = _listBlockRepository.GetLastListBlock(lastBlockRequest);
+            var lastProtoListBlock = await _listBlockRepository.GetLastListBlockAsync(lastBlockRequest);
             if (lastProtoListBlock == null)
                 return null;
 
             return Convert<T>(lastProtoListBlock, true);
         }
 
-        public IListBlock<TItem, THeader> GetLastListBlock<TItem, THeader>(LastBlockRequest lastBlockRequest)
+        public async Task<IListBlock<TItem, THeader>> GetLastListBlockAsync<TItem, THeader>(LastBlockRequest lastBlockRequest)
         {
-            var lastProtoListBlock = _listBlockRepository.GetLastListBlock(lastBlockRequest);
+            var lastProtoListBlock = await _listBlockRepository.GetLastListBlockAsync(lastBlockRequest);
 
             return Convert<TItem, THeader>(lastProtoListBlock, true);
         }
@@ -184,7 +185,7 @@ namespace Taskling.Blocks.Factories
 
         #region .: Range Blocks :.
 
-        private void LogEmptyBlockEvent(string taskExecutionId, string appName, string taskName)
+        private async Task LogEmptyBlockEventAsync(string taskExecutionId, string appName, string taskName)
         {
             var checkPointRequest = new TaskExecutionCheckpointRequest()
             {
@@ -192,7 +193,7 @@ namespace Taskling.Blocks.Factories
                 Message = "No values for generate the block. Emtpy Block context returned.",
                 TaskId = new TaskId(appName, taskName)
             };
-            _taskExecutionRepository.Checkpoint(checkPointRequest);
+            await _taskExecutionRepository.CheckpointAsync(checkPointRequest);
         }
 
         private int GetBlocksRemaining(BlockRequest blockRequest, List<RangeBlockContext> blocks)
@@ -200,25 +201,25 @@ namespace Taskling.Blocks.Factories
             return blockRequest.MaxBlocks - blocks.Count;
         }
 
-        private List<RangeBlockContext> GetForcedBlocks(BlockRequest blockRequest)
+        private async Task<List<RangeBlockContext>> GetForcedBlocksAsync(BlockRequest blockRequest)
         {
             var forcedBlockRequest = new QueuedForcedBlocksRequest(new TaskId(blockRequest.ApplicationName, blockRequest.TaskName),
                     blockRequest.TaskExecutionId,
                     blockRequest.BlockType);
 
-            var queuedForcedBlocks = _blockRepository.GetQueuedForcedRangeBlocks(forcedBlockRequest);
+            var queuedForcedBlocks = await _blockRepository.GetQueuedForcedRangeBlocksAsync(forcedBlockRequest);
 
             var forcedBlocks = new List<RangeBlockContext>();
             foreach (var queuedForcedBlock in queuedForcedBlocks)
-                forcedBlocks.Add(CreateBlockContext(blockRequest, queuedForcedBlock.RangeBlock, queuedForcedBlock.ForcedBlockQueueId));
+                forcedBlocks.Add(await CreateBlockContextAsync(blockRequest, queuedForcedBlock.RangeBlock, queuedForcedBlock.ForcedBlockQueueId));
 
             if (forcedBlocks.Any())
-                DequeueForcedBlocks(blockRequest, forcedBlocks.Select(x => x.ForcedBlockQueueId).ToList());
+                await DequeueForcedBlocksAsync(blockRequest, forcedBlocks.Select(x => x.ForcedBlockQueueId).ToList());
 
             return forcedBlocks;
         }
 
-        private void DequeueForcedBlocks(BlockRequest blockRequest, List<string> forcedBlockQueueIds)
+        private async Task DequeueForcedBlocksAsync(BlockRequest blockRequest, List<string> forcedBlockQueueIds)
         {
             var request = new DequeueForcedBlocksRequest(
                 new TaskId(blockRequest.ApplicationName, blockRequest.TaskName),
@@ -226,10 +227,10 @@ namespace Taskling.Blocks.Factories
                 blockRequest.BlockType,
                 forcedBlockQueueIds);
 
-            _blockRepository.DequeueForcedBlocks(request);
+            await _blockRepository.DequeueForcedBlocksAsync(request);
         }
 
-        private List<RangeBlockContext> LoadRangeBlocksOfTask(BlockRequest blockRequest)
+        private async Task<List<RangeBlockContext>> LoadRangeBlocksOfTaskAsync(BlockRequest blockRequest)
         {
             var failedBlockRequest = new FindBlocksOfTaskRequest(new TaskId(blockRequest.ApplicationName, blockRequest.TaskName),
                 blockRequest.TaskExecutionId,
@@ -237,14 +238,14 @@ namespace Taskling.Blocks.Factories
                 blockRequest.ReprocessReferenceValue,
                 blockRequest.ReprocessOption);
 
-            var blocksOfTask = _blockRepository.FindRangeBlocksOfTask(failedBlockRequest).ToList();
+            var blocksOfTask = (await _blockRepository.FindRangeBlocksOfTaskAsync(failedBlockRequest)).ToList();
             if (!blocksOfTask.Any())
                 return new List<RangeBlockContext>();
 
-            return CreateBlockContexts(blockRequest, blocksOfTask);
+            return await CreateBlockContextsAsync(blockRequest, blocksOfTask);
         }
 
-        private IList<ProtoListBlock> LoadListBlocksOfTask(ListBlockRequest blockRequest)
+        private async Task<IList<ProtoListBlock>> LoadListBlocksOfTaskAsync(ListBlockRequest blockRequest)
         {
             var failedBlockRequest = new FindBlocksOfTaskRequest(new TaskId(blockRequest.ApplicationName, blockRequest.TaskName),
                 blockRequest.TaskExecutionId,
@@ -252,33 +253,33 @@ namespace Taskling.Blocks.Factories
                 blockRequest.ReprocessReferenceValue,
                 blockRequest.ReprocessOption);
 
-            var blocksOfTask = _blockRepository.FindListBlocksOfTask(failedBlockRequest);
+            var blocksOfTask = await _blockRepository.FindListBlocksOfTaskAsync(failedBlockRequest);
 
             return blocksOfTask;
         }
 
-        private void LoadFailedAndDeadBlocks(BlockRequest blockRequest, List<RangeBlockContext> blocks)
+        private async Task LoadFailedAndDeadBlocksAsync(BlockRequest blockRequest, List<RangeBlockContext> blocks)
         {
             int blocksRemaining = blockRequest.MaxBlocks - blocks.Count;
             if (blockRequest.ReprocessDeadTasks)
             {
-                blocks.AddRange(GetDeadBlocks(blockRequest, blocksRemaining));
+                blocks.AddRange(await GetDeadBlocksAsync(blockRequest, blocksRemaining));
             }
 
             if (GetBlocksRemaining(blockRequest, blocks) > 0 && blockRequest.ReprocessFailedTasks)
             {
-                blocks.AddRange(GetFailedBlocks(blockRequest, blocksRemaining));
+                blocks.AddRange(await GetFailedBlocksAsync(blockRequest, blocksRemaining));
             }
         }
 
-        private List<RangeBlockContext> GetDeadBlocks(BlockRequest blockRequest, int blockCountLimit)
+        private async Task<List<RangeBlockContext>> GetDeadBlocksAsync(BlockRequest blockRequest, int blockCountLimit)
         {
             var deadBlockRequest = CreateDeadBlocksRequest(blockRequest, blockCountLimit);
-            var deadBlocks = _blockRepository.FindDeadRangeBlocks(deadBlockRequest);
-            return CreateBlockContexts(blockRequest, deadBlocks);
+            var deadBlocks = await _blockRepository.FindDeadRangeBlocksAsync(deadBlockRequest);
+            return await CreateBlockContextsAsync(blockRequest, deadBlocks);
         }
 
-        private List<RangeBlockContext> GetFailedBlocks(BlockRequest blockRequest, int blockCountLimit)
+        private async Task<List<RangeBlockContext>> GetFailedBlocksAsync(BlockRequest blockRequest, int blockCountLimit)
         {
             var failedBlockRequest = new FindFailedBlocksRequest(new TaskId(blockRequest.ApplicationName, blockRequest.TaskName),
                 blockRequest.TaskExecutionId,
@@ -289,23 +290,23 @@ namespace Taskling.Blocks.Factories
                 blockRequest.FailedTaskRetryLimit
             );
 
-            var failedBlocks = _blockRepository.FindFailedRangeBlocks(failedBlockRequest);
-            return CreateBlockContexts(blockRequest, failedBlocks);
+            var failedBlocks = await _blockRepository.FindFailedRangeBlocksAsync(failedBlockRequest);
+            return await CreateBlockContextsAsync(blockRequest, failedBlocks);
         }
 
-        private List<RangeBlockContext> CreateBlockContexts(BlockRequest blockRequest, IList<RangeBlock> rangeBlocks)
+        private async Task<List<RangeBlockContext>> CreateBlockContextsAsync(BlockRequest blockRequest, IList<RangeBlock> rangeBlocks)
         {
             var blocks = new List<RangeBlockContext>();
             foreach (var rangeBlock in rangeBlocks)
             {
-                var blockContext = CreateBlockContext(blockRequest, rangeBlock);
+                var blockContext = await CreateBlockContextAsync(blockRequest, rangeBlock);
                 blocks.Add(blockContext);
             }
 
             return blocks;
         }
 
-        private RangeBlockContext CreateBlockContext(BlockRequest blockRequest,
+        private async Task<RangeBlockContext> CreateBlockContextAsync(BlockRequest blockRequest,
             RangeBlock rangeBlock,
             int forcedBlockQueueId = 0)
         {
@@ -316,7 +317,7 @@ namespace Taskling.Blocks.Factories
                     rangeBlock.RangeBlockId,
                     attempt);
 
-            var blockExecutionId = _blockRepository.AddRangeBlockExecution(createRequest);
+            var blockExecutionId = await _blockRepository.AddRangeBlockExecutionAsync(createRequest);
             var blockContext = new RangeBlockContext(_rangeBlockRepository,
                     _taskExecutionRepository,
                     blockRequest.ApplicationName,
@@ -328,7 +329,7 @@ namespace Taskling.Blocks.Factories
             return blockContext;
         }
 
-        private List<RangeBlockContext> GenerateNewDateRangeBlocks(DateRangeBlockRequest blockRequest, int blockCountLimit)
+        private async Task<List<RangeBlockContext>> GenerateNewDateRangeBlocksAsync(DateRangeBlockRequest blockRequest, int blockCountLimit)
         {
             var newBlocks = new List<RangeBlockContext>();
             DateTime blockStart = blockRequest.RangeBegin.Value;
@@ -344,8 +345,8 @@ namespace Taskling.Blocks.Factories
                     stopGeneration = true;
                 }
 
-                var dateRangeBlock = GenerateDateRangeBlock(blockRequest, blockStart, blockEnd);
-                var blockContext = CreateBlockContext(blockRequest, dateRangeBlock);
+                var dateRangeBlock = await GenerateDateRangeBlockAsync(blockRequest, blockStart, blockEnd);
+                var blockContext = await CreateBlockContextAsync(blockRequest, dateRangeBlock);
                 newBlocks.Add(blockContext);
                 blocksAdded++;
 
@@ -357,19 +358,19 @@ namespace Taskling.Blocks.Factories
             return newBlocks;
         }
 
-        private RangeBlock GenerateDateRangeBlock(DateRangeBlockRequest blockRequest, DateTime rangeBegin, DateTime rangeEnd)
+        private async Task<RangeBlock> GenerateDateRangeBlockAsync(DateRangeBlockRequest blockRequest, DateTime rangeBegin, DateTime rangeEnd)
         {
             var request = new RangeBlockCreateRequest(new TaskId(blockRequest.ApplicationName, blockRequest.TaskName),
                 blockRequest.TaskExecutionId,
                 rangeBegin,
                 rangeEnd);
 
-            var rangeBlock = _blockRepository.AddRangeBlock(request).Block;
-            Thread.Sleep(5); // guarantee that each block has a unique created date
+            var rangeBlock = (await _blockRepository.AddRangeBlockAsync(request)).Block;
+            await Task.Delay(10); // guarantee that each block has a unique created date
             return rangeBlock;
         }
 
-        private List<RangeBlockContext> GenerateNewNumericRangeBlocks(NumericRangeBlockRequest blockRequest, int blockCountLimit)
+        private async Task<List<RangeBlockContext>> GenerateNewNumericRangeBlocksAsync(NumericRangeBlockRequest blockRequest, int blockCountLimit)
         {
             var newBlocks = new List<RangeBlockContext>();
             long blockStart = blockRequest.RangeBegin.Value;
@@ -385,8 +386,8 @@ namespace Taskling.Blocks.Factories
                     stopGeneration = true;
                 }
 
-                var numericRangeBlock = GenerateNumericRangeBlock(blockRequest, blockStart, blockEnd);
-                var blockContext = CreateBlockContext(blockRequest, numericRangeBlock);
+                var numericRangeBlock = await GenerateNumericRangeBlockAsync(blockRequest, blockStart, blockEnd);
+                var blockContext = await CreateBlockContextAsync(blockRequest, numericRangeBlock);
                 newBlocks.Add(blockContext);
                 blocksAdded++;
 
@@ -397,15 +398,15 @@ namespace Taskling.Blocks.Factories
             return newBlocks;
         }
 
-        private RangeBlock GenerateNumericRangeBlock(NumericRangeBlockRequest blockRequest, long rangeBegin, long rangeEnd)
+        private async Task<RangeBlock> GenerateNumericRangeBlockAsync(NumericRangeBlockRequest blockRequest, long rangeBegin, long rangeEnd)
         {
             var request = new RangeBlockCreateRequest(new TaskId(blockRequest.ApplicationName, blockRequest.TaskName),
                 blockRequest.TaskExecutionId,
                 rangeBegin,
                 rangeEnd);
 
-            var rangeBlock = _blockRepository.AddRangeBlock(request).Block;
-            Thread.Sleep(5); // guarantee that each block has a unique created date
+            var rangeBlock = (await _blockRepository.AddRangeBlockAsync(request)).Block;
+            await Task.Delay(10); // guarantee that each block has a unique created date
             return rangeBlock;
         }
 
@@ -415,18 +416,18 @@ namespace Taskling.Blocks.Factories
 
         #region .: Create ProtoListBlocks :.
 
-        private List<ProtoListBlock> CreateProtoListBlocks(ListBlockRequest blockRequest)
+        private async Task<List<ProtoListBlock>> CreateProtoListBlocksAsync(ListBlockRequest blockRequest)
         {
             var blocks = new List<ProtoListBlock>();
 
             if (!string.IsNullOrEmpty(blockRequest.ReprocessReferenceValue))
             {
-                blocks = LoadListBlocksOfTask(blockRequest).ToList();
+                blocks = (await LoadListBlocksOfTaskAsync(blockRequest)).ToList();
             }
             else
             {
                 // Forced blocks
-                var forceBlockQueueItems = GetForcedListBlocks(blockRequest);
+                var forceBlockQueueItems = await GetForcedListBlocksAsync(blockRequest);
                 var forceBlocks = new List<ProtoListBlock>();
                 foreach (var forceBlockQueueItem in forceBlockQueueItems)
                 {
@@ -440,13 +441,13 @@ namespace Taskling.Blocks.Factories
 
                 // Failed and Dead blocks
                 if (GetBlocksRemaining(blockRequest, blocks) > 0)
-                    LoadFailedAndDeadListBlocks(blockRequest, blocks);
+                    await LoadFailedAndDeadListBlocksAsync(blockRequest, blocks);
 
                 // New blocks
                 int blocksRemaining = GetBlocksRemaining(blockRequest, blocks);
                 if (blocksRemaining > 0 && blockRequest.SerializedValues != null && blockRequest.SerializedValues.Any())
                 {
-                    blocks.AddRange(GenerateNewListBlocks(blockRequest, blocksRemaining));
+                    blocks.AddRange(await GenerateNewListBlocksAsync(blockRequest, blocksRemaining));
                 }
             }
 
@@ -458,41 +459,41 @@ namespace Taskling.Blocks.Factories
             return blockRequest.MaxBlocks - blocks.Count;
         }
 
-        private IList<ForcedListBlockQueueItem> GetForcedListBlocks(ListBlockRequest blockRequest)
+        private async Task<IList<ForcedListBlockQueueItem>> GetForcedListBlocksAsync(ListBlockRequest blockRequest)
         {
             var forcedBlockRequest = new QueuedForcedBlocksRequest(new TaskId(blockRequest.ApplicationName, blockRequest.TaskName),
                     blockRequest.TaskExecutionId,
                     blockRequest.BlockType);
 
-            var queuedForcedBlocks = _blockRepository.GetQueuedForcedListBlocks(forcedBlockRequest);
+            var queuedForcedBlocks = await _blockRepository.GetQueuedForcedListBlocksAsync(forcedBlockRequest);
 
             return queuedForcedBlocks;
         }
 
-        private void LoadFailedAndDeadListBlocks(ListBlockRequest blockRequest, List<ProtoListBlock> blocks)
+        private async Task LoadFailedAndDeadListBlocksAsync(ListBlockRequest blockRequest, List<ProtoListBlock> blocks)
         {
             int blocksRemaining = GetBlocksRemaining(blockRequest, blocks);
             if (blockRequest.ReprocessDeadTasks)
             {
-                blocks.AddRange(GetDeadListBlocks(blockRequest, blocksRemaining));
+                blocks.AddRange(await GetDeadListBlocksAsync(blockRequest, blocksRemaining));
                 blocksRemaining = blockRequest.MaxBlocks - blocks.Count;
             }
 
             if (GetBlocksRemaining(blockRequest, blocks) > 0 && blockRequest.ReprocessFailedTasks)
             {
-                blocks.AddRange(GetFailedListBlocks(blockRequest, blocksRemaining));
+                blocks.AddRange(await GetFailedListBlocksAsync(blockRequest, blocksRemaining));
             }
         }
 
-        private IList<ProtoListBlock> GetDeadListBlocks(ListBlockRequest blockRequest, int blockCountLimit)
+        private async Task<IList<ProtoListBlock>> GetDeadListBlocksAsync(ListBlockRequest blockRequest, int blockCountLimit)
         {
             var deadBlockRequest = CreateDeadBlocksRequest(blockRequest, blockCountLimit);
-            var deadBlocks = _blockRepository.FindDeadListBlocks(deadBlockRequest);
+            var deadBlocks = await _blockRepository.FindDeadListBlocksAsync(deadBlockRequest);
 
             return deadBlocks;
         }
 
-        private IList<ProtoListBlock> GetFailedListBlocks(ListBlockRequest blockRequest, int blockCountLimit)
+        private async Task<IList<ProtoListBlock>> GetFailedListBlocksAsync(ListBlockRequest blockRequest, int blockCountLimit)
         {
             var failedBlockRequest = new FindFailedBlocksRequest(new TaskId(blockRequest.ApplicationName, blockRequest.TaskName),
                 blockRequest.TaskExecutionId,
@@ -503,11 +504,11 @@ namespace Taskling.Blocks.Factories
                 blockRequest.FailedTaskRetryLimit
             );
 
-            var failedBlocks = _blockRepository.FindFailedListBlocks(failedBlockRequest);
+            var failedBlocks = await _blockRepository.FindFailedListBlocksAsync(failedBlockRequest);
             return failedBlocks;
         }
 
-        private List<ProtoListBlock> GenerateNewListBlocks(ListBlockRequest blockRequest, int blockCountLimit)
+        private async Task<List<ProtoListBlock>> GenerateNewListBlocksAsync(ListBlockRequest blockRequest, int blockCountLimit)
         {
             var newBlocks = new List<ProtoListBlock>();
             int listLength = blockRequest.SerializedValues.Count;
@@ -522,7 +523,7 @@ namespace Taskling.Blocks.Factories
 
                 if (values.Count == blockRequest.MaxBlockSize || listIndex == listLength - 1)
                 {
-                    var newListBlock = GenerateListBlock(blockRequest, values);
+                    var newListBlock = await GenerateListBlockAsync(blockRequest, values);
                     newBlocks.Add(newListBlock);
                     values = new List<string>();
                     blocksAdded++;
@@ -534,7 +535,7 @@ namespace Taskling.Blocks.Factories
             return newBlocks;
         }
 
-        private ProtoListBlock GenerateListBlock(ListBlockRequest blockRequest, List<string> values)
+        private async Task<ProtoListBlock> GenerateListBlockAsync(ListBlockRequest blockRequest, List<string> values)
         {
             var request = new ListBlockCreateRequest(new TaskId(blockRequest.ApplicationName, blockRequest.TaskName),
                 blockRequest.TaskExecutionId,
@@ -542,8 +543,8 @@ namespace Taskling.Blocks.Factories
                 blockRequest.SerializedHeader,
                 blockRequest.CompressionThreshold);
 
-            var listBlock = _blockRepository.AddListBlock(request).Block;
-            Thread.Sleep(5); // guarantee that each block has a unique created date
+            var listBlock = (await _blockRepository.AddListBlockAsync(request)).Block;
+            await Task.Delay(10); // guarantee that each block has a unique created date
             return listBlock;
         }
 
@@ -551,19 +552,19 @@ namespace Taskling.Blocks.Factories
 
         #region .: Create List Contexts :.
 
-        private IList<IListBlockContext<T>> CreateListBlockContexts<T>(ListBlockRequest blockRequest, IList<ProtoListBlock> listBlocks)
+        private async Task<IList<IListBlockContext<T>>> CreateListBlockContextsAsync<T>(ListBlockRequest blockRequest, IList<ProtoListBlock> listBlocks)
         {
             var blocks = new List<IListBlockContext<T>>();
             foreach (var listBlock in listBlocks)
             {
-                var blockContext = CreateListBlockContext<T>(blockRequest, listBlock);
+                var blockContext = await CreateListBlockContextAsync<T>(blockRequest, listBlock);
                 blocks.Add(blockContext);
             }
 
             return blocks;
         }
 
-        private IListBlockContext<T> CreateListBlockContext<T>(ListBlockRequest blockRequest, ProtoListBlock listBlock, int forcedBlockQueueId = 0)
+        private async Task<IListBlockContext<T>> CreateListBlockContextAsync<T>(ListBlockRequest blockRequest, ProtoListBlock listBlock, int forcedBlockQueueId = 0)
         {
             var attempt = listBlock.Attempt + 1;
             var createRequest = new BlockExecutionCreateRequest(new TaskId(blockRequest.ApplicationName, blockRequest.TaskName),
@@ -572,7 +573,7 @@ namespace Taskling.Blocks.Factories
                     listBlock.ListBlockId,
                     attempt);
 
-            var blockExecutionId = _blockRepository.AddListBlockExecution(createRequest);
+            var blockExecutionId = await _blockRepository.AddListBlockExecutionAsync(createRequest);
 
             var listBlockOfT = Convert<T>(listBlock);
             var blockContext = new ListBlockContext<T>(_listBlockRepository,
@@ -590,19 +591,19 @@ namespace Taskling.Blocks.Factories
             return blockContext;
         }
 
-        private IList<IListBlockContext<TItem, THeader>> CreateListBlockContexts<TItem, THeader>(ListBlockRequest blockRequest, IList<ProtoListBlock> listBlocks)
+        private async Task<IList<IListBlockContext<TItem, THeader>>> CreateListBlockContextsAsync<TItem, THeader>(ListBlockRequest blockRequest, IList<ProtoListBlock> listBlocks)
         {
             var blocks = new List<IListBlockContext<TItem, THeader>>();
             foreach (var listBlock in listBlocks)
             {
-                var blockContext = CreateListBlockContext<TItem, THeader>(blockRequest, listBlock);
+                var blockContext = await CreateListBlockContextAsync<TItem, THeader>(blockRequest, listBlock);
                 blocks.Add(blockContext);
             }
 
             return blocks;
         }
 
-        private IListBlockContext<TItem, THeader> CreateListBlockContext<TItem, THeader>(ListBlockRequest blockRequest, ProtoListBlock listBlock, int forcedBlockQueueId = 0)
+        private async Task<IListBlockContext<TItem, THeader>> CreateListBlockContextAsync<TItem, THeader>(ListBlockRequest blockRequest, ProtoListBlock listBlock, int forcedBlockQueueId = 0)
         {
             var attempt = listBlock.Attempt + 1;
             var createRequest = new BlockExecutionCreateRequest(new TaskId(blockRequest.ApplicationName, blockRequest.TaskName),
@@ -611,7 +612,7 @@ namespace Taskling.Blocks.Factories
                     listBlock.ListBlockId,
                     attempt);
 
-            var blockExecutionId = _blockRepository.AddListBlockExecution(createRequest);
+            var blockExecutionId = await _blockRepository.AddListBlockExecutionAsync(createRequest);
 
             var listBlockOfT = Convert<TItem, THeader>(listBlock);
             var blockContext = new ListBlockContext<TItem, THeader>(_listBlockRepository,
@@ -691,7 +692,7 @@ namespace Taskling.Blocks.Factories
 
         #region .: Object Blocks :.
 
-        private List<IObjectBlockContext<T>> LoadObjectBlocksOfTask<T>(ObjectBlockRequest<T> blockRequest)
+        private async Task<List<IObjectBlockContext<T>>> LoadObjectBlocksOfTaskAsync<T>(ObjectBlockRequest<T> blockRequest)
         {
             var failedBlockRequest = new FindBlocksOfTaskRequest(new TaskId(blockRequest.ApplicationName, blockRequest.TaskName),
                 blockRequest.TaskExecutionId,
@@ -699,54 +700,54 @@ namespace Taskling.Blocks.Factories
                 blockRequest.ReprocessReferenceValue,
                 blockRequest.ReprocessOption);
 
-            var blocksOfTask = _blockRepository.FindObjectBlocksOfTask<T>(failedBlockRequest);
+            var blocksOfTask = await _blockRepository.FindObjectBlocksOfTaskAsync<T>(failedBlockRequest);
             if (!blocksOfTask.Any())
                 return new List<IObjectBlockContext<T>>();
 
-            return CreateObjectBlockContexts(blockRequest, blocksOfTask);
+            return await CreateObjectBlockContextsAsync(blockRequest, blocksOfTask);
         }
 
-        private List<IObjectBlockContext<T>> GetForcedObjectBlocks<T>(ObjectBlockRequest<T> blockRequest)
+        private async Task<List<IObjectBlockContext<T>>> GetForcedObjectBlocksAsync<T>(ObjectBlockRequest<T> blockRequest)
         {
             var forcedBlockRequest = new QueuedForcedBlocksRequest(new TaskId(blockRequest.ApplicationName, blockRequest.TaskName),
                     blockRequest.TaskExecutionId,
                     blockRequest.BlockType);
 
-            var queuedForcedBlocks = _blockRepository.GetQueuedForcedObjectBlocks<T>(forcedBlockRequest);
+            var queuedForcedBlocks = await _blockRepository.GetQueuedForcedObjectBlocksAsync<T>(forcedBlockRequest);
 
             var forcedBlocks = new List<IObjectBlockContext<T>>();
             foreach (var queuedForcedBlock in queuedForcedBlocks)
-                forcedBlocks.Add(CreateObjectBlockContext(blockRequest, queuedForcedBlock.ObjectBlock, queuedForcedBlock.ForcedBlockQueueId));
+                forcedBlocks.Add(await CreateObjectBlockContextAsync(blockRequest, queuedForcedBlock.ObjectBlock, queuedForcedBlock.ForcedBlockQueueId));
 
             if (forcedBlocks.Any())
-                DequeueForcedBlocks(blockRequest, forcedBlocks.Select(x => x.ForcedBlockQueueId).ToList());
+                await DequeueForcedBlocksAsync(blockRequest, forcedBlocks.Select(x => x.ForcedBlockQueueId).ToList());
 
             return forcedBlocks;
         }
 
-        private void LoadFailedAndDeadObjectBlocks<T>(ObjectBlockRequest<T> blockRequest, List<IObjectBlockContext<T>> blocks)
+        private async Task LoadFailedAndDeadObjectBlocksAsync<T>(ObjectBlockRequest<T> blockRequest, List<IObjectBlockContext<T>> blocks)
         {
             int blocksRemaining = GetBlocksRemaining(blockRequest, blocks);
             if (blockRequest.ReprocessDeadTasks)
             {
-                blocks.AddRange(GetDeadObjectBlocks(blockRequest, blocksRemaining));
+                blocks.AddRange(await GetDeadObjectBlocksAsync(blockRequest, blocksRemaining));
                 blocksRemaining = blockRequest.MaxBlocks - blocks.Count;
             }
 
             if (GetBlocksRemaining(blockRequest, blocks) > 0 && blockRequest.ReprocessFailedTasks)
             {
-                blocks.AddRange(GetFailedObjectBlocks(blockRequest, blocksRemaining));
+                blocks.AddRange(await GetFailedObjectBlocksAsync(blockRequest, blocksRemaining));
             }
         }
 
-        private List<IObjectBlockContext<T>> GetDeadObjectBlocks<T>(ObjectBlockRequest<T> blockRequest, int blockCountLimit)
+        private async Task<List<IObjectBlockContext<T>>> GetDeadObjectBlocksAsync<T>(ObjectBlockRequest<T> blockRequest, int blockCountLimit)
         {
             var deadBlockRequest = CreateDeadBlocksRequest(blockRequest, blockCountLimit);
-            var deadBlocks = _blockRepository.FindDeadObjectBlocks<T>(deadBlockRequest);
-            return CreateObjectBlockContexts(blockRequest, deadBlocks);
+            var deadBlocks = await _blockRepository.FindDeadObjectBlocksAsync<T>(deadBlockRequest);
+            return await CreateObjectBlockContextsAsync(blockRequest, deadBlocks);
         }
 
-        private List<IObjectBlockContext<T>> GetFailedObjectBlocks<T>(ObjectBlockRequest<T> blockRequest, int blockCountLimit)
+        private async Task<List<IObjectBlockContext<T>>> GetFailedObjectBlocksAsync<T>(ObjectBlockRequest<T> blockRequest, int blockCountLimit)
         {
             var failedBlockRequest = new FindFailedBlocksRequest(new TaskId(blockRequest.ApplicationName, blockRequest.TaskName),
                 blockRequest.TaskExecutionId,
@@ -757,23 +758,23 @@ namespace Taskling.Blocks.Factories
                 blockRequest.FailedTaskRetryLimit
             );
 
-            var failedBlocks = _blockRepository.FindFailedObjectBlocks<T>(failedBlockRequest);
-            return CreateObjectBlockContexts<T>(blockRequest, failedBlocks);
+            var failedBlocks = await _blockRepository.FindFailedObjectBlocksAsync<T>(failedBlockRequest);
+            return await CreateObjectBlockContextsAsync<T>(blockRequest, failedBlocks);
         }
 
-        private List<IObjectBlockContext<T>> CreateObjectBlockContexts<T>(ObjectBlockRequest<T> blockRequest, IList<ObjectBlock<T>> objectBlocks)
+        private async Task<List<IObjectBlockContext<T>>> CreateObjectBlockContextsAsync<T>(ObjectBlockRequest<T> blockRequest, IList<ObjectBlock<T>> objectBlocks)
         {
             var blocks = new List<IObjectBlockContext<T>>();
             foreach (var objectBlock in objectBlocks)
             {
-                var blockContext = CreateObjectBlockContext(blockRequest, objectBlock);
+                var blockContext = await CreateObjectBlockContextAsync(blockRequest, objectBlock);
                 blocks.Add(blockContext);
             }
 
             return blocks;
         }
 
-        private IObjectBlockContext<T> CreateObjectBlockContext<T>(ObjectBlockRequest<T> blockRequest, ObjectBlock<T> objectBlock, int forcedBlockQueueId = 0)
+        private async Task<IObjectBlockContext<T>> CreateObjectBlockContextAsync<T>(ObjectBlockRequest<T> blockRequest, ObjectBlock<T> objectBlock, int forcedBlockQueueId = 0)
         {
             var attempt = objectBlock.Attempt + 1;
             var createRequest = new BlockExecutionCreateRequest(new TaskId(blockRequest.ApplicationName, blockRequest.TaskName),
@@ -782,7 +783,7 @@ namespace Taskling.Blocks.Factories
                     objectBlock.ObjectBlockId,
                     attempt);
 
-            var blockExecutionId = _blockRepository.AddObjectBlockExecution(createRequest);
+            var blockExecutionId = await _blockRepository.AddObjectBlockExecutionAsync(createRequest);
             var blockContext = new ObjectBlockContext<T>(_objectBlockRepository,
                     _taskExecutionRepository,
                     blockRequest.ApplicationName,
@@ -795,21 +796,21 @@ namespace Taskling.Blocks.Factories
             return blockContext;
         }
 
-        private IObjectBlockContext<T> GenerateNewObjectBlock<T>(ObjectBlockRequest<T> blockRequest)
+        private async Task<IObjectBlockContext<T>> GenerateNewObjectBlockAsync<T>(ObjectBlockRequest<T> blockRequest)
         {
-            var newObjectBlock = GenerateObjectBlock(blockRequest);
-            return CreateObjectBlockContext(blockRequest, newObjectBlock);
+            var newObjectBlock = await GenerateObjectBlockAsync(blockRequest);
+            return await CreateObjectBlockContextAsync(blockRequest, newObjectBlock);
         }
 
-        private ObjectBlock<T> GenerateObjectBlock<T>(ObjectBlockRequest<T> blockRequest)
+        private async Task<ObjectBlock<T>> GenerateObjectBlockAsync<T>(ObjectBlockRequest<T> blockRequest)
         {
             var request = new ObjectBlockCreateRequest<T>(new TaskId(blockRequest.ApplicationName, blockRequest.TaskName),
                 blockRequest.TaskExecutionId,
                 blockRequest.Object,
                 blockRequest.CompressionThreshold);
 
-            var objectBlock = _blockRepository.AddObjectBlock(request).Block;
-            Thread.Sleep(5); // guarantee that each block has a unique created date
+            var objectBlock = (await _blockRepository.AddObjectBlockAsync(request)).Block;
+            await Task.Delay(10); // guarantee that each block has a unique created date
             return objectBlock;
         }
 

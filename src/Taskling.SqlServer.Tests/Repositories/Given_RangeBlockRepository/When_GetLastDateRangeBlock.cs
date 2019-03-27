@@ -10,6 +10,7 @@ using Taskling.InfrastructureContracts.Blocks;
 using Taskling.SqlServer.Blocks;
 using Taskling.SqlServer.Tests.Helpers;
 using Taskling.SqlServer.Tasks;
+using System.Threading.Tasks;
 
 namespace Taskling.SqlServer.Tests.Repositories.Given_RangeBlockRepository
 {
@@ -40,7 +41,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_RangeBlockRepository
 
             TaskRepository.ClearCache();
         }
-
+        
         private RangeBlockRepository CreateSut()
         {
             return new RangeBlockRepository(new TaskRepository());
@@ -70,14 +71,14 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_RangeBlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_OrderByLastCreated_ThenReturnLastCreated()
+        public async Task If_OrderByLastCreated_ThenReturnLastCreated()
         {
             // ARRANGE
             InsertBlocks();
 
             // ACT
             var sut = CreateSut();
-            var block = sut.GetLastRangeBlock(CreateRequest(LastBlockOrder.LastCreated));
+            var block = await sut.GetLastRangeBlockAsync(CreateRequest(LastBlockOrder.LastCreated));
 
             // ASSERT
             Assert.Equal(_block5, block.RangeBlockId);
@@ -88,14 +89,14 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_RangeBlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_OrderByMaxFromDate_ThenReturnBlockWithMaxFromDate()
+        public async Task If_OrderByMaxFromDate_ThenReturnBlockWithMaxFromDate()
         {
             // ARRANGE
             InsertBlocks();
 
             // ACT
             var sut = CreateSut();
-            var block = sut.GetLastRangeBlock(CreateRequest(LastBlockOrder.MaxRangeStartValue));
+            var block = await sut.GetLastRangeBlockAsync(CreateRequest(LastBlockOrder.MaxRangeStartValue));
 
             // ASSERT
             Assert.Equal(_block2, block.RangeBlockId);
@@ -106,14 +107,14 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_RangeBlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void If_OrderByMaxToDate_ThenReturnBlockWithMaxToDate()
+        public async Task If_OrderByMaxToDate_ThenReturnBlockWithMaxToDate()
         {
             // ARRANGE
             InsertBlocks();
 
             // ACT
             var sut = CreateSut();
-            var block = sut.GetLastRangeBlock(CreateRequest(LastBlockOrder.MaxRangeEndValue));
+            var block = await sut.GetLastRangeBlockAsync(CreateRequest(LastBlockOrder.MaxRangeEndValue));
 
             // ASSERT
             Assert.Equal(_block1, block.RangeBlockId);

@@ -42,7 +42,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "ExecutionTokens")]
-        public void If_TimeOverrideMode_ThenReturnsValidDataValues()
+        public async Task If_TimeOverrideMode_ThenReturnsValidDataValues()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -53,7 +53,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
             // ACT
             var sut = CreateSut();
-            var response = sut.Start(startRequest);
+            var response = await sut.StartAsync(startRequest);
 
             // ASSERT
             Assert.True(response.TaskExecutionId != "0");
@@ -63,7 +63,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "ExecutionTokens")]
-        public void If_TimeOverrideMode_OneTaskAndOneTokenAndIsAvailable_ThenIsGranted()
+        public async Task If_TimeOverrideMode_OneTaskAndOneTokenAndIsAvailable_ThenIsGranted()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -74,7 +74,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
             // ACT
             var sut = CreateSut();
-            var response = sut.Start(startRequest);
+            var response = await sut.StartAsync(startRequest);
 
             // ASSERT
             Assert.Equal(GrantStatus.Granted, response.GrantStatus);
@@ -84,7 +84,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "ExecutionTokens")]
-        public void If_TimeOverrideMode_TwoConcurrentTasksAndOneTokenAndIsAvailable_ThenIsGrantFirstTaskAndDenyTheOther()
+        public async Task If_TimeOverrideMode_TwoConcurrentTasksAndOneTokenAndIsAvailable_ThenIsGrantFirstTaskAndDenyTheOther()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -96,8 +96,8 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
             // ACT
             var sut = CreateSut();
-            var firstResponse = sut.Start(firstStartRequest);
-            var secondResponse = sut.Start(secondStartRequest);
+            var firstResponse = await sut.StartAsync(firstStartRequest);
+            var secondResponse = await sut.StartAsync(secondStartRequest);
 
             // ASSERT
             Assert.Equal(GrantStatus.Granted, firstResponse.GrantStatus);
@@ -107,7 +107,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "ExecutionTokens")]
-        public void If_TimeOverrideMode_TwoSequentialTasksAndOneTokenAndIsAvailable_ThenIsGrantFirstTaskAndThenGrantTheOther()
+        public async Task If_TimeOverrideMode_TwoSequentialTasksAndOneTokenAndIsAvailable_ThenIsGrantFirstTaskAndThenGrantTheOther()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -119,11 +119,11 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
             // ACT
             var sut = CreateSut();
-            var firstStartResponse = sut.Start(firstStartRequest);
+            var firstStartResponse = await sut.StartAsync(firstStartRequest);
             var firstCompleteRequest = new TaskExecutionCompleteRequest(new TaskId(TestConstants.ApplicationName, TestConstants.TaskName), firstStartResponse.TaskExecutionId, firstStartResponse.ExecutionTokenId);
-            var firstCompleteResponse = sut.Complete(firstCompleteRequest);
+            var firstCompleteResponse = await sut.CompleteAsync(firstCompleteRequest);
 
-            var secondStartResponse = sut.Start(secondStartRequest);
+            var secondStartResponse = await sut.StartAsync(secondStartRequest);
 
             // ASSERT
             Assert.Equal(GrantStatus.Granted, firstStartResponse.GrantStatus);
@@ -133,7 +133,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "ExecutionTokens")]
-        public void If_TimeOverrideMode_FiveConcurrentTasksAndFourTokensAndAllAreAvailable_ThenIsGrantFirstFourTasksAndDenyTheOther()
+        public async Task If_TimeOverrideMode_FiveConcurrentTasksAndFourTokensAndAllAreAvailable_ThenIsGrantFirstFourTasksAndDenyTheOther()
         {
             // ARRANGE
             int concurrencyLimit = 4;
@@ -149,11 +149,11 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
             // ACT
             var sut = CreateSut();
-            var firstResponse = sut.Start(firstStartRequest);
-            var secondResponse = sut.Start(secondStartRequest);
-            var thirdResponse = sut.Start(thirdStartRequest);
-            var fourthResponse = sut.Start(fourthStartRequest);
-            var fifthResponse = sut.Start(fifthStartRequest);
+            var firstResponse = await sut.StartAsync(firstStartRequest);
+            var secondResponse = await sut.StartAsync(secondStartRequest);
+            var thirdResponse = await sut.StartAsync(thirdStartRequest);
+            var fourthResponse = await sut.StartAsync(fourthStartRequest);
+            var fifthResponse = await sut.StartAsync(fifthStartRequest);
 
             // ASSERT
             Assert.Equal(GrantStatus.Granted, firstResponse.GrantStatus);
@@ -176,21 +176,21 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
             // ACT
             var sut = CreateSut();
             var tasks = new List<Task>();
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithTimeOverrideMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithTimeOverrideMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithTimeOverrideMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithTimeOverrideMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithTimeOverrideMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithTimeOverrideMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithTimeOverrideMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithTimeOverrideMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithTimeOverrideMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithTimeOverrideMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithTimeOverrideMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithTimeOverrideMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithTimeOverrideMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithTimeOverrideMode, sut, TaskCreationOptions.LongRunning));
-            tasks.Add(Task.Factory.StartNew(RequestAndReturnTokenWithTimeOverrideMode, sut, TaskCreationOptions.LongRunning));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithTimeOverrideModeAsync(sut)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithTimeOverrideModeAsync(sut)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithTimeOverrideModeAsync(sut)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithTimeOverrideModeAsync(sut)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithTimeOverrideModeAsync(sut)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithTimeOverrideModeAsync(sut)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithTimeOverrideModeAsync(sut)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithTimeOverrideModeAsync(sut)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithTimeOverrideModeAsync(sut)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithTimeOverrideModeAsync(sut)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithTimeOverrideModeAsync(sut)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithTimeOverrideModeAsync(sut)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithTimeOverrideModeAsync(sut)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithTimeOverrideModeAsync(sut)));
+            tasks.Add(Task.Run(async () => await RequestAndReturnTokenWithTimeOverrideModeAsync(sut)));
 
             Task.WaitAll(tasks.ToArray());
 
@@ -198,19 +198,18 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
         }
 
-        private void RequestAndReturnTokenWithTimeOverrideMode(object sutObj)
+        private async Task RequestAndReturnTokenWithTimeOverrideModeAsync(TaskExecutionRepository sut)
         {
-            var sut = (TaskExecutionRepository)sutObj;
             for (int i = 0; i < 100; i++)
             {
                 var firstStartRequest = CreateOverrideStartRequest();
 
-                var firstStartResponse = sut.Start(firstStartRequest);
+                var firstStartResponse = await sut.StartAsync(firstStartRequest);
 
                 if (firstStartResponse.GrantStatus == GrantStatus.Granted)
                 {
                     var firstCompleteRequest = new TaskExecutionCompleteRequest(new TaskId(TestConstants.ApplicationName, TestConstants.TaskName), firstStartResponse.TaskExecutionId, firstStartResponse.ExecutionTokenId);
-                    var firstCompleteResponse = sut.Complete(firstCompleteRequest);
+                    var firstCompleteResponse = await sut.CompleteAsync(firstCompleteRequest);
                 }
             }
         }
@@ -218,7 +217,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "ExecutionTokens")]
-        public void If_TimeOverrideMode_OneTaskAndOneTokenAndIsUnavailableAndGrantedDateHasPassedElapsedTime_ThenIsGranted()
+        public async Task If_TimeOverrideMode_OneTaskAndOneTokenAndIsUnavailableAndGrantedDateHasPassedElapsedTime_ThenIsGranted()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -232,11 +231,11 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
             // ACT
             var sut = CreateSut();
-            var firstResponse = sut.Start(startRequest);
+            var firstResponse = await sut.StartAsync(startRequest);
 
             Thread.Sleep(6000);
 
-            var secondResponse = sut.Start(secondRequest);
+            var secondResponse = await sut.StartAsync(secondRequest);
 
             // ASSERT
             Assert.Equal(GrantStatus.Granted, firstResponse.GrantStatus);
@@ -247,7 +246,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "ExecutionTokens")]
-        public void If_TimeOverrideMode_OneTaskAndOneTokenAndIsUnavailableAndKeepAliveHasNotPassedElapsedTime_ThenIsDenied()
+        public async Task If_TimeOverrideMode_OneTaskAndOneTokenAndIsUnavailableAndKeepAliveHasNotPassedElapsedTime_ThenIsDenied()
         {
             // ARRANGE
             var executionHelper = new ExecutionsHelper();
@@ -259,11 +258,11 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_TaskExecutionService
 
             // ACT
             var sut = CreateSut();
-            var firstResponse = sut.Start(startRequest);
+            var firstResponse = await sut.StartAsync(startRequest);
 
             Thread.Sleep(5000);
 
-            var secondResponse = sut.Start(secondRequest);
+            var secondResponse = await sut.StartAsync(secondRequest);
 
             // ASSERT
             Assert.Equal(GrantStatus.Granted, firstResponse.GrantStatus);

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Taskling.Blocks.Common;
 using Taskling.Contexts;
 using Taskling.InfrastructureContracts;
@@ -61,7 +62,7 @@ namespace Taskling.Blocks.RangeBlocks
         public string BlockExecutionId { get; private set; }
         public string ForcedBlockQueueId { get; private set; }
 
-        public void Start()
+        public async Task StartAsync()
         {
 
 
@@ -71,16 +72,16 @@ namespace Taskling.Blocks.RangeBlocks
                 BlockExecutionId,
                 BlockExecutionStatus.Started);
 
-            Action<BlockExecutionChangeStatusRequest> actionRequest = _rangeBlockRepository.ChangeStatus;
-            RetryService.InvokeWithRetry(actionRequest, request);
+            Func<BlockExecutionChangeStatusRequest, Task> actionRequest = _rangeBlockRepository.ChangeStatusAsync;
+            await RetryService.InvokeWithRetryAsync(actionRequest, request);
         }
 
-        public void Complete()
+        public async Task CompleteAsync()
         {
-            Complete(-1);
+            await CompleteAsync(-1);
         }
 
-        public void Complete(int itemsProcessed)
+        public async Task CompleteAsync(int itemsProcessed)
         {
             var request = new BlockExecutionChangeStatusRequest(new TaskId(_applicationName, _taskName),
                 _taskExecutionId,
@@ -89,11 +90,11 @@ namespace Taskling.Blocks.RangeBlocks
                 BlockExecutionStatus.Completed);
             request.ItemsProcessed = itemsProcessed;
 
-            Action<BlockExecutionChangeStatusRequest> actionRequest = _rangeBlockRepository.ChangeStatus;
-            RetryService.InvokeWithRetry(actionRequest, request);
+            Func<BlockExecutionChangeStatusRequest, Task> actionRequest = _rangeBlockRepository.ChangeStatusAsync;
+            await RetryService.InvokeWithRetryAsync(actionRequest, request);
         }
 
-        public void Failed()
+        public async Task FailedAsync()
         {
             var request = new BlockExecutionChangeStatusRequest(new TaskId(_applicationName, _taskName),
                 _taskExecutionId,
@@ -101,13 +102,13 @@ namespace Taskling.Blocks.RangeBlocks
                 BlockExecutionId,
                 BlockExecutionStatus.Failed);
 
-            Action<BlockExecutionChangeStatusRequest> actionRequest = _rangeBlockRepository.ChangeStatus;
-            RetryService.InvokeWithRetry(actionRequest, request);
+            Func<BlockExecutionChangeStatusRequest, Task> actionRequest = _rangeBlockRepository.ChangeStatusAsync;
+            await RetryService.InvokeWithRetryAsync(actionRequest, request);
         }
 
-        public void Failed(string message)
+        public async Task FailedAsync(string message)
         {
-            Failed();
+            await FailedAsync();
 
             string errorMessage = string.Empty;
             if (_block.RangeType == BlockType.DateRange)
@@ -135,7 +136,7 @@ namespace Taskling.Blocks.RangeBlocks
                 TreatTaskAsFailed = false,
                 Error = errorMessage
             };
-            _taskExecutionRepository.Error(errorRequest);
+            await _taskExecutionRepository.ErrorAsync(errorRequest);
         }
     }
 }

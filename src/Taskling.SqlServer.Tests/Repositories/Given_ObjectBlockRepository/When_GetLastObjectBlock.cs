@@ -10,6 +10,7 @@ using Taskling.InfrastructureContracts.Blocks;
 using Taskling.SqlServer.Blocks;
 using Taskling.SqlServer.Tests.Helpers;
 using Taskling.SqlServer.Tasks;
+using System.Threading.Tasks;
 
 namespace Taskling.SqlServer.Tests.Repositories.Given_ObjectBlockRepository
 {
@@ -70,14 +71,14 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_ObjectBlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void ThenReturnLastCreated()
+        public async Task ThenReturnLastCreated()
         {
             // ARRANGE
             InsertBlocks();
 
             // ACT
             var sut = CreateSut();
-            var block = sut.GetLastObjectBlock<string>(CreateRequest());
+            var block = await sut.GetLastObjectBlockAsync<string>(CreateRequest());
 
             // ASSERT
             Assert.Equal(_block5, block.ObjectBlockId);

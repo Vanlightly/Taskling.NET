@@ -4,22 +4,23 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Taskling.Tasks;
 
 namespace Taskling.SqlServer.Tokens
 {
     public class CommonTokenRepository : ICommonTokenRepository
     {
-        public void AcquireRowLock(int taskDefinitionId, string taskExecutionId, SqlCommand command)
+        public async Task AcquireRowLockAsync(int taskDefinitionId, string taskExecutionId, SqlCommand command)
         {
             command.Parameters.Clear();
             command.CommandText = TokensQueryBuilder.AcquireLockQuery;
             command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
             command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
-            command.ExecuteNonQuery();
+            await command.ExecuteNonQueryAsync();
         }
 
-        public List<TaskExecutionState> GetTaskExecutionStates(List<string> taskExecutionIds, SqlCommand command)
+        public async Task<List<TaskExecutionState>> GetTaskExecutionStatesAsync(List<string> taskExecutionIds, SqlCommand command)
         {
             var results = new List<TaskExecutionState>();
 
@@ -29,9 +30,9 @@ namespace Taskling.SqlServer.Tokens
             for (int i = 0; i < taskExecutionIds.Count; i++)
                 command.Parameters.Add("@InParam" + i, SqlDbType.Int).Value = taskExecutionIds[i];
 
-            using (var reader = command.ExecuteReader())
+            using (var reader = await command.ExecuteReaderAsync())
             {
-                while (reader.Read())
+                while (await reader.ReadAsync())
                 {
                     var teState = new TaskExecutionState();
 

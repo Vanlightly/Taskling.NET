@@ -11,6 +11,7 @@ using Taskling.Serialization;
 using Taskling.SqlServer.Blocks;
 using Taskling.SqlServer.Tests.Helpers;
 using Taskling.SqlServer.Tasks;
+using System.Threading.Tasks;
 
 namespace Taskling.SqlServer.Tests.Repositories.Given_ListBlockRepository
 {
@@ -41,7 +42,7 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_ListBlockRepository
 
             TaskRepository.ClearCache();
         }
-
+        
         private ListBlockRepository CreateSut()
         {
             return new ListBlockRepository(new TaskRepository());
@@ -80,14 +81,14 @@ namespace Taskling.SqlServer.Tests.Repositories.Given_ListBlockRepository
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "Blocks")]
-        public void ThenReturnLastCreated()
+        public async Task ThenReturnLastCreated()
         {
             // ARRANGE
             InsertBlocks();
 
             // ACT
             var sut = CreateSut();
-            var block = sut.GetLastListBlock(CreateRequest());
+            var block = await sut.GetLastListBlockAsync(CreateRequest());
 
             // ASSERT
             Assert.Equal(_block5, block.ListBlockId);

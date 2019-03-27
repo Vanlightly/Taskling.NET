@@ -5,6 +5,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Taskling.InfrastructureContracts;
 using Taskling.InfrastructureContracts.TaskExecution;
 using Taskling.SqlServer.AncilliaryServices;
@@ -14,15 +15,16 @@ namespace Taskling.SqlServer.Tasks
 {
     public class TaskRepository : DbOperationsService, ITaskRepository
     {
-        private static object _myCacheSyncObj = new object();
-        private static object _getTaskObj = new object();
+        private static SemaphoreSlim _cacheSemaphore = new SemaphoreSlim(1, 1);
+        private static SemaphoreSlim _getTaskSemaphore = new SemaphoreSlim(1, 1);
         private static Dictionary<string, CachedTaskDefinition> _cachedTaskDefinitions = new Dictionary<string, CachedTaskDefinition>();
                 
-        public TaskDefinition EnsureTaskDefinition(TaskId taskId)
+        public async Task<TaskDefinition> EnsureTaskDefinitionAsync(TaskId taskId)
         {
-            lock (_getTaskObj)
+            await _getTaskSemaphore.WaitAsync();
+            try
             {
-                var taskDefinition = GetTask(taskId);
+                var taskDefinition = await GetTaskAsync(taskId);
                 if (taskDefinition != null)
                 {
                     return taskDefinition;
@@ -32,28 +34,32 @@ namespace Taskling.SqlServer.Tasks
                     // wait a random amount of time in case two threads or two instances of this repository 
                     // independently belive that the task doesn't exist
                     Thread.Sleep(new Random(Guid.NewGuid().GetHashCode()).Next(2000));
-                    taskDefinition = GetTask(taskId);
+                    taskDefinition = await GetTaskAsync(taskId);
                     if (taskDefinition != null)
                     {
                         return taskDefinition;
                     }
 
-                    return InsertNewTask(taskId);
+                    return await InsertNewTaskAsync(taskId);
                 }
+            }
+            finally
+            {
+                _getTaskSemaphore.Release();
             }
         }
 
-        public DateTime GetLastTaskCleanUpTime(TaskId taskId)
+        public async Task<DateTime> GetLastTaskCleanUpTimeAsync(TaskId taskId)
         {
-            using (var connection = CreateNewConnection(taskId))
+            using (var connection = await CreateNewConnectionAsync(taskId))
             {
                 using (var command = new SqlCommand(TaskQueryBuilder.GetLastCleanUpTimeQuery, connection))
                 {
                     command.Parameters.Add(new SqlParameter("@ApplicationName", SqlDbType.VarChar, 200)).Value = taskId.ApplicationName;
                     command.Parameters.Add(new SqlParameter("@TaskName", SqlDbType.VarChar, 200)).Value = taskId.TaskName;
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        while (reader.Read())
+                        while (await reader.ReadAsync())
                         {
                             if (reader["LastCleaned"] == DBNull.Value)
                                 return DateTime.MinValue;
@@ -67,35 +73,41 @@ namespace Taskling.SqlServer.Tasks
             return DateTime.MinValue;
         }
 
-        public void SetLastCleaned(TaskId taskId)
+        public async Task SetLastCleanedAsync(TaskId taskId)
         {
-            using (var connection = CreateNewConnection(taskId))
+            using (var connection = await CreateNewConnectionAsync(taskId))
             {
                 using (var command = new SqlCommand(TaskQueryBuilder.SetLastCleanUpTimeQuery, connection))
                 {
                     command.Parameters.Add(new SqlParameter("@ApplicationName", SqlDbType.VarChar, 200)).Value = taskId.ApplicationName;
                     command.Parameters.Add(new SqlParameter("@TaskName", SqlDbType.VarChar, 200)).Value = taskId.TaskName;
-                    command.ExecuteNonQuery();
+                    await command.ExecuteNonQueryAsync();
                 }
             }
         }
 
         public static void ClearCache()
         {
-            lock (_myCacheSyncObj)
+            _cacheSemaphore.Wait();
+            try
             {
                 _cachedTaskDefinitions.Clear();
             }
+            finally
+            {
+                _cacheSemaphore.Release();
+            }
         }
 
-        private TaskDefinition GetTask(TaskId taskId)
+        private async Task<TaskDefinition> GetTaskAsync(TaskId taskId)
         {
-            return GetCachedDefinition(taskId);
+            return await GetCachedDefinitionAsync(taskId);
         }
 
-        private TaskDefinition GetCachedDefinition(TaskId taskId)
+        private async Task<TaskDefinition> GetCachedDefinitionAsync(TaskId taskId)
         {
-            lock (_myCacheSyncObj)
+            await _cacheSemaphore.WaitAsync();
+            try
             {
                 string key = taskId.ApplicationName + "::" + taskId.TaskName;
 
@@ -107,26 +119,30 @@ namespace Taskling.SqlServer.Tasks
                 }
                 else
                 {
-                    var task = LoadTask(taskId);
+                    var task = await LoadTaskAsync(taskId);
                     CacheTaskDefinition(key, task);
                     return task;
                 }
+            }
+            finally
+            {
+                _cacheSemaphore.Release();
             }
 
             return null;
         }
 
-        private TaskDefinition LoadTask(TaskId taskId)
+        private async Task<TaskDefinition> LoadTaskAsync(TaskId taskId)
         {
-            using (var connection = CreateNewConnection(taskId))
+            using (var connection = await CreateNewConnectionAsync(taskId))
             {
                 using (var command = new SqlCommand(TaskQueryBuilder.GetTaskQuery, connection))
                 {
                     command.Parameters.Add(new SqlParameter("@ApplicationName", SqlDbType.VarChar, 200)).Value = taskId.ApplicationName;
                     command.Parameters.Add(new SqlParameter("@TaskName", SqlDbType.VarChar, 200)).Value = taskId.TaskName;
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        while (reader.Read())
+                        while (await reader.ReadAsync())
                         {
                             var task = new TaskDefinition();
                             task.TaskDefinitionId = int.Parse(reader["TaskDefinitionId"].ToString());
@@ -160,9 +176,9 @@ namespace Taskling.SqlServer.Tasks
             }
         }
 
-        private TaskDefinition InsertNewTask(TaskId taskId)
+        private async Task<TaskDefinition> InsertNewTaskAsync(TaskId taskId)
         {
-            using (var connection = CreateNewConnection(taskId))
+            using (var connection = await CreateNewConnectionAsync(taskId))
             {
                 using (var command = new SqlCommand(TaskQueryBuilder.InsertTaskQuery, connection))
                 {
@@ -170,14 +186,20 @@ namespace Taskling.SqlServer.Tasks
                     command.Parameters.Add(new SqlParameter("@TaskName", SqlDbType.VarChar, 200)).Value = taskId.TaskName;
 
                     var task = new TaskDefinition();
-                    task.TaskDefinitionId = (int)command.ExecuteScalar();
+                    task.TaskDefinitionId = (int)await command.ExecuteScalarAsync();
 
                     string key = taskId.ApplicationName + "::" + taskId.TaskName;
 
-                    lock (_myCacheSyncObj)
+                    await _cacheSemaphore.WaitAsync();
+                    try
                     {
                         CacheTaskDefinition(key, task);
                     }
+                    finally
+                    {
+                        _cacheSemaphore.Release();
+                    }
+
                     return task;
                 }
             }

@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Taskling.Events;
 using Taskling.Exceptions;
 using Taskling.InfrastructureContracts;
@@ -31,59 +32,59 @@ namespace Taskling.SqlServer.TaskExecution
             _eventsRepository = eventsRepository;
         }
 
-        public TaskExecutionStartResponse Start(TaskExecutionStartRequest startRequest)
+        public async Task<TaskExecutionStartResponse> StartAsync(TaskExecutionStartRequest startRequest)
         {
             ValidateStartRequest(startRequest);
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(startRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(startRequest.TaskId);
 
             if (startRequest.TaskDeathMode == TaskDeathMode.KeepAlive)
-                return StartKeepAliveExecution(startRequest, taskDefinition.TaskDefinitionId);
+                return await StartKeepAliveExecutionAsync(startRequest, taskDefinition.TaskDefinitionId);
 
             if (startRequest.TaskDeathMode == TaskDeathMode.Override)
-                return StartOverrideExecution(startRequest, taskDefinition.TaskDefinitionId);
+                return await StartOverrideExecutionAsync(startRequest, taskDefinition.TaskDefinitionId);
 
             throw new ExecutionException("Unsupported TaskDeathMode");
         }
 
-        public TaskExecutionCompleteResponse Complete(TaskExecutionCompleteRequest completeRequest)
+        public async Task<TaskExecutionCompleteResponse> CompleteAsync(TaskExecutionCompleteRequest completeRequest)
         {
-            SetCompletedDateOnTaskExecution(completeRequest.TaskId, completeRequest.TaskExecutionId);
-            RegisterEvent(completeRequest.TaskId, completeRequest.TaskExecutionId, EventType.End, null);
-            return ReturnExecutionToken(completeRequest);
+            await SetCompletedDateOnTaskExecutionAsync(completeRequest.TaskId, completeRequest.TaskExecutionId);
+            await RegisterEventAsync(completeRequest.TaskId, completeRequest.TaskExecutionId, EventType.End, null);
+            return await ReturnExecutionTokenAsync(completeRequest);
         }
 
-        public void Checkpoint(TaskExecutionCheckpointRequest taskExecutionRequest)
+        public async Task CheckpointAsync(TaskExecutionCheckpointRequest taskExecutionRequest)
         {
-            RegisterEvent(taskExecutionRequest.TaskId, taskExecutionRequest.TaskExecutionId, EventType.CheckPoint, taskExecutionRequest.Message);
+            await RegisterEventAsync(taskExecutionRequest.TaskId, taskExecutionRequest.TaskExecutionId, EventType.CheckPoint, taskExecutionRequest.Message);
         }
 
-        public void Error(TaskExecutionErrorRequest taskExecutionErrorRequest)
+        public async Task ErrorAsync(TaskExecutionErrorRequest taskExecutionErrorRequest)
         {
             if (taskExecutionErrorRequest.TreatTaskAsFailed)
-                SetTaskExecutionAsFailed(taskExecutionErrorRequest.TaskId, taskExecutionErrorRequest.TaskExecutionId);
+                await SetTaskExecutionAsFailedAsync(taskExecutionErrorRequest.TaskId, taskExecutionErrorRequest.TaskExecutionId);
 
-            RegisterEvent(taskExecutionErrorRequest.TaskId, taskExecutionErrorRequest.TaskExecutionId, EventType.Error, taskExecutionErrorRequest.Error);
+            await RegisterEventAsync(taskExecutionErrorRequest.TaskId, taskExecutionErrorRequest.TaskExecutionId, EventType.Error, taskExecutionErrorRequest.Error);
         }
 
-        public void SendKeepAlive(SendKeepAliveRequest sendKeepAliveRequest)
+        public async Task SendKeepAliveAsync(SendKeepAliveRequest sendKeepAliveRequest)
         {
-            using (var connection = CreateNewConnection(sendKeepAliveRequest.TaskId))
+            using (var connection = await CreateNewConnectionAsync(sendKeepAliveRequest.TaskId))
             {
                 using (var command = new SqlCommand(TaskQueryBuilder.KeepAliveQuery, connection))
                 {
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(sendKeepAliveRequest.TaskId).QueryTimeoutSeconds;
                     command.Parameters.Add(new SqlParameter("@TaskExecutionId", SqlDbType.Int)).Value = int.Parse(sendKeepAliveRequest.TaskExecutionId);
-                    command.ExecuteNonQuery();
+                    await command.ExecuteNonQueryAsync();
                 }
             }
         }
 
-        public TaskExecutionMetaResponse GetLastExecutionMetas(TaskExecutionMetaRequest taskExecutionMetaRequest)
+        public async Task<TaskExecutionMetaResponse> GetLastExecutionMetasAsync(TaskExecutionMetaRequest taskExecutionMetaRequest)
         {
             var response = new TaskExecutionMetaResponse();
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(taskExecutionMetaRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(taskExecutionMetaRequest.TaskId);
 
-            using (var connection = CreateNewConnection(taskExecutionMetaRequest.TaskId))
+            using (var connection = await CreateNewConnectionAsync(taskExecutionMetaRequest.TaskId))
             {
                 var command = connection.CreateCommand();
                 command.CommandTimeout = ConnectionStore.Instance.GetConnection(taskExecutionMetaRequest.TaskId).QueryTimeoutSeconds;
@@ -91,9 +92,9 @@ namespace Taskling.SqlServer.TaskExecution
                 command.Parameters.Add("Top", SqlDbType.Int).Value = taskExecutionMetaRequest.ExecutionsToRetrieve;
                 command.Parameters.Add("TaskDefinitionId", SqlDbType.Int).Value = taskDefinition.TaskDefinitionId;
 
-                using (var reader = command.ExecuteReader())
+                using (var reader = await command.ExecuteReaderAsync())
                 {
-                    while (reader.Read())
+                    while (await reader.ReadAsync())
                     {
                         var executionMeta = new TaskExecutionMetaItem();
                         executionMeta.StartedAt = (DateTime)reader["StartedAt"];
@@ -162,9 +163,9 @@ namespace Taskling.SqlServer.TaskExecution
             }
         }
 
-        private TaskExecutionStartResponse StartKeepAliveExecution(TaskExecutionStartRequest startRequest, int taskDefinitionId)
+        private async Task<TaskExecutionStartResponse> StartKeepAliveExecutionAsync(TaskExecutionStartRequest startRequest, int taskDefinitionId)
         {
-            var taskExecutionId = CreateKeepAliveTaskExecution(startRequest.TaskId,
+            var taskExecutionId = await CreateKeepAliveTaskExecutionAsync(startRequest.TaskId,
                     taskDefinitionId,
                     startRequest.KeepAliveInterval.Value,
                     startRequest.KeepAliveDeathThreshold.Value,
@@ -174,35 +175,35 @@ namespace Taskling.SqlServer.TaskExecution
                     startRequest.TasklingVersion,
                     startRequest.TaskExecutionHeader);
 
-            RegisterEvent(startRequest.TaskId, taskExecutionId.ToString(), EventType.Start, null);
-            var tokenResponse = TryGetExecutionToken(startRequest.TaskId, taskDefinitionId, taskExecutionId, startRequest.ConcurrencyLimit);
+            await RegisterEventAsync(startRequest.TaskId, taskExecutionId.ToString(), EventType.Start, null);
+            var tokenResponse = await TryGetExecutionTokenAsync(startRequest.TaskId, taskDefinitionId, taskExecutionId, startRequest.ConcurrencyLimit);
             if (tokenResponse.GrantStatus == GrantStatus.Denied)
             { 
-                SetBlockedOnTaskExecution(startRequest.TaskId, taskExecutionId.ToString());
-                RegisterEvent(startRequest.TaskId, taskExecutionId.ToString(), EventType.Blocked, null);
+                await SetBlockedOnTaskExecutionAsync(startRequest.TaskId, taskExecutionId.ToString());
+                await RegisterEventAsync(startRequest.TaskId, taskExecutionId.ToString(), EventType.Blocked, null);
             }
 
             return tokenResponse;
         }
 
-        private TaskExecutionStartResponse StartOverrideExecution(TaskExecutionStartRequest startRequest, int taskDefinitionId)
+        private async Task<TaskExecutionStartResponse> StartOverrideExecutionAsync(TaskExecutionStartRequest startRequest, int taskDefinitionId)
         {
-            var taskExecutionId = CreateOverrideTaskExecution(startRequest.TaskId, taskDefinitionId, startRequest.OverrideThreshold.Value, startRequest.ReferenceValue,
-                startRequest.FailedTaskRetryLimit, startRequest.DeadTaskRetryLimit, startRequest.TasklingVersion, startRequest.TaskExecutionHeader);
-            RegisterEvent(startRequest.TaskId, taskExecutionId.ToString(), EventType.Start, null);
+            var taskExecutionId = await CreateOverrideTaskExecutionAsync(startRequest.TaskId, taskDefinitionId, startRequest.OverrideThreshold.Value, startRequest.ReferenceValue,
+            startRequest.FailedTaskRetryLimit, startRequest.DeadTaskRetryLimit, startRequest.TasklingVersion, startRequest.TaskExecutionHeader);
+            await RegisterEventAsync(startRequest.TaskId, taskExecutionId.ToString(), EventType.Start, null);
 
-            var tokenResponse = TryGetExecutionToken(startRequest.TaskId, taskDefinitionId, taskExecutionId, startRequest.ConcurrencyLimit);
+            var tokenResponse = await TryGetExecutionTokenAsync(startRequest.TaskId, taskDefinitionId, taskExecutionId, startRequest.ConcurrencyLimit);
 
             if (tokenResponse.GrantStatus == GrantStatus.Denied)
             {
-                SetBlockedOnTaskExecution(startRequest.TaskId, taskExecutionId.ToString());
-                RegisterEvent(startRequest.TaskId, taskExecutionId.ToString(), EventType.Blocked, null);
+                await SetBlockedOnTaskExecutionAsync(startRequest.TaskId, taskExecutionId.ToString());
+                await RegisterEventAsync(startRequest.TaskId, taskExecutionId.ToString(), EventType.Blocked, null);
             }
 
             return tokenResponse;
         }
 
-        private TaskExecutionStartResponse TryGetExecutionToken(TaskId taskId, int taskDefinitionId, int taskExecutionId, int concurrencyLimit)
+        private async Task<TaskExecutionStartResponse> TryGetExecutionTokenAsync(TaskId taskId, int taskDefinitionId, int taskExecutionId, int concurrencyLimit)
         {
             var tokenRequest = new TokenRequest()
             {
@@ -212,7 +213,7 @@ namespace Taskling.SqlServer.TaskExecution
                 ConcurrencyLimit = concurrencyLimit
             };
 
-            var tokenResponse = _executionTokenRepository.TryAcquireExecutionToken(tokenRequest);
+            var tokenResponse = await _executionTokenRepository.TryAcquireExecutionTokenAsync(tokenRequest);
 
             var response = new TaskExecutionStartResponse();
             response.ExecutionTokenId = tokenResponse.ExecutionTokenId;
@@ -223,10 +224,10 @@ namespace Taskling.SqlServer.TaskExecution
             return response;
         }
 
-        private int CreateKeepAliveTaskExecution(TaskId taskId, int taskDefinitionId, TimeSpan keepAliveInterval, TimeSpan keepAliveDeathThreshold, string referenceValue,
+        private async Task<int> CreateKeepAliveTaskExecutionAsync(TaskId taskId, int taskDefinitionId, TimeSpan keepAliveInterval, TimeSpan keepAliveDeathThreshold, string referenceValue,
             short failedTaskRetryLimit, short deadTaskRetryLimit, string tasklingVersion, string executionHeader)
         {
-            using (var connection = CreateNewConnection(taskId))
+            using (var connection = await CreateNewConnectionAsync(taskId))
             {
                 using (var command = new SqlCommand(TaskQueryBuilder.InsertKeepAliveTaskExecution, connection))
                 {
@@ -250,17 +251,17 @@ namespace Taskling.SqlServer.TaskExecution
                     else
                         command.Parameters.Add(new SqlParameter("@ReferenceValue", SqlDbType.NVarChar, 2000)).Value = referenceValue;
 
-                    var taskExecutionId = (int)command.ExecuteScalar();
+                    var taskExecutionId = (int)await command.ExecuteScalarAsync();
 
                     return taskExecutionId;
                 }
             }
         }
 
-        private int CreateOverrideTaskExecution(TaskId taskId, int taskDefinitionId, TimeSpan overrideThreshold, string referenceValue,
+        private async Task<int> CreateOverrideTaskExecutionAsync(TaskId taskId, int taskDefinitionId, TimeSpan overrideThreshold, string referenceValue,
             short failedTaskRetryLimit, short deadTaskRetryLimit, string tasklingVersion, string executionHeader)
         {
-            using (var connection = CreateNewConnection(taskId))
+            using (var connection = await CreateNewConnectionAsync(taskId))
             {
                 using (var command = new SqlCommand(TaskQueryBuilder.InsertKeepAliveTaskExecution, connection))
                 {
@@ -284,14 +285,14 @@ namespace Taskling.SqlServer.TaskExecution
                     else
                         command.Parameters.Add(new SqlParameter("@ReferenceValue", SqlDbType.NVarChar, 2000)).Value = referenceValue;
 
-                    return (int)command.ExecuteScalar();
+                    return (int)await command.ExecuteScalarAsync();
                 }
             }
         }
 
-        private TaskExecutionCompleteResponse ReturnExecutionToken(TaskExecutionCompleteRequest taskExecutionCompleteRequest)
+        private async Task<TaskExecutionCompleteResponse> ReturnExecutionTokenAsync(TaskExecutionCompleteRequest taskExecutionCompleteRequest)
         {
-            var taskDefinition = _taskRepository.EnsureTaskDefinition(taskExecutionCompleteRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(taskExecutionCompleteRequest.TaskId);
 
             var tokenRequest = new TokenRequest()
             {
@@ -300,55 +301,55 @@ namespace Taskling.SqlServer.TaskExecution
                 TaskExecutionId = taskExecutionCompleteRequest.TaskExecutionId
             };
 
-            _executionTokenRepository.ReturnExecutionToken(tokenRequest, taskExecutionCompleteRequest.ExecutionTokenId);
+            await _executionTokenRepository.ReturnExecutionTokenAsync(tokenRequest, taskExecutionCompleteRequest.ExecutionTokenId);
 
             var response = new TaskExecutionCompleteResponse();
             response.CompletedAt = DateTime.UtcNow;
             return response;
         }
 
-        private void SetBlockedOnTaskExecution(TaskId taskId, string taskExecutionId)
+        private async Task SetBlockedOnTaskExecutionAsync(TaskId taskId, string taskExecutionId)
         {
-            using (var connection = CreateNewConnection(taskId))
+            using (var connection = await CreateNewConnectionAsync(taskId))
             {
                 using (var command = new SqlCommand(TaskQueryBuilder.SetBlockedTaskExecutionQuery, connection))
                 {
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(taskId).QueryTimeoutSeconds;
                     command.Parameters.Add(new SqlParameter("@TaskExecutionId", SqlDbType.Int)).Value = int.Parse(taskExecutionId);
-                    command.ExecuteNonQuery();
+                    await command.ExecuteNonQueryAsync();
                 }
             }
         }
 
-        private void SetCompletedDateOnTaskExecution(TaskId taskId, string taskExecutionId)
+        private async Task SetCompletedDateOnTaskExecutionAsync(TaskId taskId, string taskExecutionId)
         {
-            using (var connection = CreateNewConnection(taskId))
+            using (var connection = await CreateNewConnectionAsync(taskId))
             {
                 using (var command = new SqlCommand(TaskQueryBuilder.SetCompletedDateOfTaskExecutionQuery, connection))
                 {
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(taskId).QueryTimeoutSeconds;
                     command.Parameters.Add(new SqlParameter("@TaskExecutionId", SqlDbType.Int)).Value = int.Parse(taskExecutionId);
-                    command.ExecuteNonQuery();
+                    await command.ExecuteNonQueryAsync();
                 }
             }
         }
 
-        private void SetTaskExecutionAsFailed(TaskId taskId, string taskExecutionId)
+        private async Task SetTaskExecutionAsFailedAsync(TaskId taskId, string taskExecutionId)
         {
-            using (var connection = CreateNewConnection(taskId))
+            using (var connection = await CreateNewConnectionAsync(taskId))
             {
                 using (var command = new SqlCommand(TaskQueryBuilder.SetTaskExecutionAsFailedQuery, connection))
                 {
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(taskId).QueryTimeoutSeconds;
                     command.Parameters.Add(new SqlParameter("@TaskExecutionId", SqlDbType.Int)).Value = int.Parse(taskExecutionId);
-                    command.ExecuteNonQuery();
+                    await command.ExecuteNonQueryAsync();
                 }
             }
         }
 
-        private void RegisterEvent(TaskId taskId, string taskExecutionId, EventType eventType, string message)
+        private async Task RegisterEventAsync(TaskId taskId, string taskExecutionId, EventType eventType, string message)
         {
-            _eventsRepository.LogEvent(taskId, taskExecutionId, eventType, message);
+            await _eventsRepository.LogEventAsync(taskId, taskExecutionId, eventType, message);
         }
     }
 }

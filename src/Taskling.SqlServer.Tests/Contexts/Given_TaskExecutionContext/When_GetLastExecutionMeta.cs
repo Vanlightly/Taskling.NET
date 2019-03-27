@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using Taskling.SqlServer.Tests.Helpers;
+using System.Threading.Tasks;
+using Xunit.Abstractions;
 
 namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
 {
@@ -19,11 +21,11 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
 
             _taskDefinitionId = executionHelper.InsertTask(TestConstants.ApplicationName, TestConstants.TaskName);
         }
-
+        
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "TaskExecutions")]
-        public void If_MultipleExecutionsAndGetLastExecutionMeta_ThenReturnLastOne()
+        public async Task If_MultipleExecutionsAndGetLastExecutionMeta_ThenReturnLastOne()
         {
             // ARRANGE
 
@@ -31,7 +33,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
             {
                 using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
                 {
-                    executionContext.TryStart("My reference value" + i);
+                    await executionContext.TryStartAsync("My reference value" + i);
                 }
                 Thread.Sleep(200);
             }
@@ -39,7 +41,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
             // ACT and ASSERT
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                var executionMeta = executionContext.GetLastExecutionMeta();
+                var executionMeta = await executionContext.GetLastExecutionMetaAsync();
                 Assert.Equal("My reference value4", executionMeta.ReferenceValue);
             }
         }
@@ -47,7 +49,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "TaskExecutions")]
-        public void If_MultipleExecutionsAndGetLastExecutionMetas_ThenReturnLastXItems()
+        public async Task If_MultipleExecutionsAndGetLastExecutionMetas_ThenReturnLastXItems()
         {
             // ARRANGE
 
@@ -55,7 +57,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
             {
                 using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
                 {
-                    executionContext.TryStart("My reference value" + i);
+                    await executionContext.TryStartAsync("My reference value" + i);
                 }
                 Thread.Sleep(200);
             }
@@ -63,7 +65,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
             // ACT and ASSERT
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                var executionMetas = executionContext.GetLastExecutionMetas(3);
+                var executionMetas = await executionContext.GetLastExecutionMetasAsync(3);
                 Assert.Equal(3, executionMetas.Count);
                 Assert.Equal("My reference value4", executionMetas[0].ReferenceValue);
                 Assert.Equal("My reference value3", executionMetas[1].ReferenceValue);
@@ -74,14 +76,14 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "TaskExecutions")]
-        public void If_NoPreviousExecutionsAndGetLastExecutionMeta_ThenReturnNull()
+        public async Task If_NoPreviousExecutionsAndGetLastExecutionMeta_ThenReturnNull()
         {
             // ARRANGE
 
             // ACT and ASSERT
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                var executionMeta = executionContext.GetLastExecutionMeta();
+                var executionMeta = await executionContext.GetLastExecutionMetaAsync();
                 Assert.Null(executionMeta);
             }
         }
@@ -89,7 +91,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "TaskExecutions")]
-        public void If_MultipleExecutionsAndGetLastExecutionMetaWithHeader_ThenReturnLastOne()
+        public async Task If_MultipleExecutionsAndGetLastExecutionMetaWithHeader_ThenReturnLastOne()
         {
             // ARRANGE
 
@@ -103,7 +105,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
 
                 using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
                 {
-                    executionContext.TryStart(myHeader);
+                    await executionContext.TryStartAsync(myHeader);
                 }
                 Thread.Sleep(200);
             }
@@ -111,7 +113,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
             // ACT and ASSERT
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                var executionMeta = executionContext.GetLastExecutionMeta<MyHeader>();
+                var executionMeta = await executionContext.GetLastExecutionMetaAsync<MyHeader>();
                 Assert.Equal(4, executionMeta.Header.Id);
             }
         }
@@ -119,7 +121,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "TaskExecutions")]
-        public void If_MultipleExecutionsAndGetLastExecutionMetasWithHeader_ThenReturnLastXItems()
+        public async Task If_MultipleExecutionsAndGetLastExecutionMetasWithHeader_ThenReturnLastXItems()
         {
             // ARRANGE
 
@@ -133,7 +135,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
 
                 using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
                 {
-                    executionContext.TryStart(myHeader);
+                    await executionContext.TryStartAsync(myHeader);
                 }
                 Thread.Sleep(200);
             }
@@ -141,7 +143,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
             // ACT and ASSERT
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                var executionMetas = executionContext.GetLastExecutionMetas<MyHeader>(3);
+                var executionMetas = await executionContext.GetLastExecutionMetasAsync<MyHeader>(3);
                 Assert.Equal(3, executionMetas.Count);
                 Assert.Equal(4, executionMetas[0].Header.Id);
                 Assert.Equal(3, executionMetas[1].Header.Id);
@@ -152,7 +154,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "TaskExecutions")]
-        public void If_NoPreviousExecutionsAndGetLastExecutionMetaWithHeader_ThenReturnNull()
+        public async Task If_NoPreviousExecutionsAndGetLastExecutionMetaWithHeader_ThenReturnNull()
         {
             // ARRANGE
             // ACT
@@ -160,7 +162,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
             // ASSERT
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                var executionMeta = executionContext.GetLastExecutionMeta<MyHeader>();
+                var executionMeta = await executionContext.GetLastExecutionMetaAsync<MyHeader>();
                 Assert.Null(executionMeta);
             }
         }
@@ -168,12 +170,12 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "TaskExecutions")]
-        public void If_LastExecutionCompleted_ThenReturnStatusIsCompleted()
+        public async Task If_LastExecutionCompleted_ThenReturnStatusIsCompleted()
         {
             // ARRANGE
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                executionContext.TryStart();
+                await executionContext.TryStartAsync();
             }
             Thread.Sleep(200);
 
@@ -181,7 +183,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
             // ACT and ASSERT
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                var executionMeta = executionContext.GetLastExecutionMeta();
+                var executionMeta = await executionContext.GetLastExecutionMetaAsync();
                 Assert.Equal(Taskling.Tasks.TaskExecutionStatus.Completed, executionMeta.Status);
             }
         }
@@ -189,13 +191,13 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "TaskExecutions")]
-        public void If_LastExecutionFailed_ThenReturnStatusIsFailed()
+        public async Task If_LastExecutionFailed_ThenReturnStatusIsFailed()
         {
             // ARRANGE
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                executionContext.TryStart();
-                executionContext.Error("", true);
+                await executionContext.TryStartAsync();
+                await executionContext.ErrorAsync("", true);
             }
             Thread.Sleep(200);
 
@@ -203,7 +205,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
             // ACT and ASSERT
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                var executionMeta = executionContext.GetLastExecutionMeta();
+                var executionMeta = await executionContext.GetLastExecutionMetaAsync();
                 Assert.Equal(Taskling.Tasks.TaskExecutionStatus.Failed, executionMeta.Status);
             }
         }
@@ -211,18 +213,21 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "TaskExecutions")]
-        public void If_LastExecutionBlocked_ThenReturnStatusIsBlocked()
+        public async Task If_LastExecutionBlocked_ThenReturnStatusIsBlockedAsync()
         {
             // ARRANGE
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                executionContext.TryStart();
+                await executionContext.TryStartAsync();
                 Thread.Sleep(200);
 
                 using (var executionContext2 = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
                 {
-                    executionContext2.TryStart();
+                    await executionContext2.TryStartAsync();
+                    await executionContext2.CompleteAsync();
                 }
+
+                await executionContext.CompleteAsync();
             }
 
 
@@ -230,25 +235,27 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
             // ACT and ASSERT
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                var executionMeta = executionContext.GetLastExecutionMeta();
+                var executionMeta = await executionContext.GetLastExecutionMetaAsync();
                 Assert.Equal(Taskling.Tasks.TaskExecutionStatus.Blocked, executionMeta.Status);
+
+                await executionContext.CompleteAsync();
             }
         }
 
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "TaskExecutions")]
-        public void If_LastExecutionInProgress_ThenReturnStatusIsInProgress()
+        public async Task If_LastExecutionInProgress_ThenReturnStatusIsInProgress()
         {
             // ARRANGE, ACT, ASSERT
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                executionContext.TryStart();
+                await executionContext.TryStartAsync();
                 Thread.Sleep(200);
 
                 using (var executionContext2 = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
                 {
-                    var executionMeta = executionContext2.GetLastExecutionMeta();
+                    var executionMeta = await executionContext2.GetLastExecutionMetaAsync();
                     Assert.Equal(Taskling.Tasks.TaskExecutionStatus.InProgress, executionMeta.Status);
                 }
             }
@@ -257,19 +264,19 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_TaskExecutionContext
         [Fact]
         [Trait("Speed", "Fast")]
         [Trait("Area", "TaskExecutions")]
-        public void If_LastExecutionDead_ThenReturnStatusIsDead()
+        public async Task If_LastExecutionDead_ThenReturnStatusIsDead()
         {
             // ARRANGE, ACT, ASSERT
             using (var executionContext = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
             {
-                executionContext.TryStart();
+                await executionContext.TryStartAsync();
                 Thread.Sleep(200);
                 var helper = new ExecutionsHelper();
                 helper.SetLastExecutionAsDead(_taskDefinitionId);
 
                 using (var executionContext2 = ClientHelper.GetExecutionContext(TestConstants.TaskName, ClientHelper.GetDefaultTaskConfigurationWithKeepAliveAndReprocessing()))
                 {
-                    var executionMeta = executionContext2.GetLastExecutionMeta();
+                    var executionMeta = await executionContext2.GetLastExecutionMetaAsync();
                     Assert.Equal(Taskling.Tasks.TaskExecutionStatus.Dead, executionMeta.Status);
                 }
             }
