@@ -104,7 +104,7 @@ namespace Taskling.SqlServer
             if (cleanUpService != null)
                 _cleanUpService = cleanUpService;
             else
-                _cleanUpService = new CleanUpService(_configuration, cleanUpRepository);
+                _cleanUpService = new CleanUpService(_configuration, cleanUpRepository, taskExecutionRepository);
         }
 
         public TasklingClient(IConfigurationReader configurationReader,
@@ -164,7 +164,7 @@ namespace Taskling.SqlServer
             if (customDependencies.CleanUpService != null)
                 _cleanUpService = customDependencies.CleanUpService;
             else
-                _cleanUpService = new CleanUpService(_configuration, customDependencies.CleanUpRepository);
+                _cleanUpService = new CleanUpService(_configuration, customDependencies.CleanUpRepository, customDependencies.TaskExecutionRepository);
         }
 
         public ITaskExecutionContext CreateTaskExecutionContext(string applicationName,

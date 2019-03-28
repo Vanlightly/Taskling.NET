@@ -22,7 +22,7 @@ namespace Taskling.SqlServer.TaskExecution
             _taskRepository = taskRepository;
         }
 
-        public async Task CleanOldDataAsync(CleanUpRequest cleanUpRequest)
+        public async Task<bool> CleanOldDataAsync(CleanUpRequest cleanUpRequest)
         {
             var lastCleaned = await _taskRepository.GetLastTaskCleanUpTimeAsync(cleanUpRequest.TaskId);
             var periodSinceLastClean = DateTime.UtcNow - lastCleaned;
@@ -33,7 +33,10 @@ namespace Taskling.SqlServer.TaskExecution
                 var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(cleanUpRequest.TaskId);
                 await CleanListItemsAsync(cleanUpRequest.TaskId, taskDefinition.TaskDefinitionId, cleanUpRequest.ListItemDateThreshold);
                 await CleanOldDataAsync(cleanUpRequest.TaskId, taskDefinition.TaskDefinitionId, cleanUpRequest.GeneralDateThreshold);
+                return true;
             }
+
+            return false;
         }
 
         private async Task CleanListItemsAsync(TaskId taskId, int taskDefinitionId, DateTime listItemDateThreshold)

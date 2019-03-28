@@ -197,7 +197,11 @@ namespace Taskling.SqlServer.TaskExecution
             if (tokenResponse.GrantStatus == GrantStatus.Denied)
             {
                 await SetBlockedOnTaskExecutionAsync(startRequest.TaskId, taskExecutionId.ToString());
-                await RegisterEventAsync(startRequest.TaskId, taskExecutionId.ToString(), EventType.Blocked, null);
+
+                if(tokenResponse.Ex == null)
+                    await RegisterEventAsync(startRequest.TaskId, taskExecutionId.ToString(), EventType.Blocked, null);
+                else
+                    await RegisterEventAsync(startRequest.TaskId, taskExecutionId.ToString(), EventType.Blocked, tokenResponse.Ex.ToString());
             }
 
             return tokenResponse;
@@ -213,15 +217,29 @@ namespace Taskling.SqlServer.TaskExecution
                 ConcurrencyLimit = concurrencyLimit
             };
 
-            var tokenResponse = await _executionTokenRepository.TryAcquireExecutionTokenAsync(tokenRequest);
+            try
+            {
+                var tokenResponse = await _executionTokenRepository.TryAcquireExecutionTokenAsync(tokenRequest);
 
-            var response = new TaskExecutionStartResponse();
-            response.ExecutionTokenId = tokenResponse.ExecutionTokenId;
-            response.GrantStatus = tokenResponse.GrantStatus;
-            response.StartedAt = tokenResponse.StartedAt;
-            response.TaskExecutionId = taskExecutionId.ToString();
+                var response = new TaskExecutionStartResponse();
+                response.ExecutionTokenId = tokenResponse.ExecutionTokenId;
+                response.GrantStatus = tokenResponse.GrantStatus;
+                response.StartedAt = tokenResponse.StartedAt;
+                response.TaskExecutionId = taskExecutionId.ToString();
 
-            return response;
+                return response;
+            }
+            catch(Exception ex)
+            {
+                var response = new TaskExecutionStartResponse();
+                response.StartedAt = DateTime.UtcNow;
+                response.GrantStatus = GrantStatus.Denied;
+                response.ExecutionTokenId = "0";
+                response.TaskExecutionId = taskExecutionId.ToString();
+                response.Ex = ex;
+
+                return response;
+            }
         }
 
         private async Task<int> CreateKeepAliveTaskExecutionAsync(TaskId taskId, int taskDefinitionId, TimeSpan keepAliveInterval, TimeSpan keepAliveDeathThreshold, string referenceValue,

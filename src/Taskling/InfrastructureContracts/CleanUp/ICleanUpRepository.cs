@@ -8,6 +8,6 @@ namespace Taskling.InfrastructureContracts.CleanUp
 {
     public interface ICleanUpRepository
     {
-        Task CleanOldDataAsync(CleanUpRequest cleanUpRequest);
+        Task<bool> CleanOldDataAsync(CleanUpRequest cleanUpRequest);
     }
 }

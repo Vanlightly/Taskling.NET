@@ -567,7 +567,7 @@ namespace Taskling.ExecutionContext
 
         private void CleanUpOldData()
         {
-            _cleanUpService.CleanOldData(_taskExecutionInstance.ApplicationName, _taskExecutionInstance.TaskName);
+            _cleanUpService.CleanOldData(_taskExecutionInstance.ApplicationName, _taskExecutionInstance.TaskName, _taskExecutionInstance.TaskExecutionId);
         }
 
         private TaskExecutionStartRequest CreateStartRequest(string referenceValue)

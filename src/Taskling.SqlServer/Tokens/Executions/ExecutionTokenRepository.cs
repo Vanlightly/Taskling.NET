@@ -57,18 +57,19 @@ namespace Taskling.SqlServer.Tokens.Executions
                         await PersistTokensAsync(tokenRequest.TaskDefinitionId, tokens, command);
 
                     transaction.Commit();
+                    return response;
                 }
                 catch (SqlException sqlEx)
                 {
                     TryRollBack(transaction, sqlEx);
+                    throw;
                 }
                 catch (Exception ex)
                 {
                     TryRollback(transaction, ex);
+                    throw;
                 }
             }
-
-            return response;
         }
 
         public async Task ReturnExecutionTokenAsync(TokenRequest tokenRequest, string executionTokenId)
@@ -120,40 +121,27 @@ namespace Taskling.SqlServer.Tokens.Executions
 
             var tokenList = new ExecutionTokenList();
 
-            try
+            var tokens = tokensString.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var tokenText in tokens)
             {
-                var tokens = tokensString.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
-                foreach (var tokenText in tokens)
+                var token = new ExecutionToken();
+                var tokenParts = tokenText.Split(',');
+                if (tokenParts.Length != 3)
+                    throw new TokenFormatException("Token text not valid. Format is I:<id>,G:<granted TaskExecutionId>,S:<status> Invalid text: " + tokensString);
+
+                foreach (var part in tokenParts)
                 {
-                    var token = new ExecutionToken();
-                    var tokenParts = tokenText.Split(',');
-                    if (tokenParts.Length != 3)
+                    if (part.StartsWith("I:") && part.Length > 2)
+                        token.TokenId = part.Substring(2);
+                    else if (part.StartsWith("G:") && part.Length > 2)
+                        token.GrantedToExecution = part.Substring(2);
+                    else if (part.StartsWith("S:") && part.Length > 2)
+                        token.Status = (ExecutionTokenStatus)int.Parse(part.Substring(2));
+                    else
                         throw new TokenFormatException("Token text not valid. Format is I:<id>,G:<granted TaskExecutionId>,S:<status> Invalid text: " + tokensString);
-
-                    foreach (var part in tokenParts)
-                    {
-                        if (part.StartsWith("I:") && part.Length > 2)
-                            token.TokenId = part.Substring(2);
-                        else if (part.StartsWith("G:") && part.Length > 2)
-                            token.GrantedToExecution = part.Substring(2);
-                        else if (part.StartsWith("S:") && part.Length > 2)
-                            token.Status = (ExecutionTokenStatus)int.Parse(part.Substring(2));
-                        else
-                            throw new TokenFormatException("Token text not valid. Format is I:<id>,G:<granted TaskExecutionId>,S:<status> Invalid text: " + tokensString);
-                    }
-
-                    tokenList.Tokens.Add(token);
                 }
-            }
-            catch (TokenFormatException ex)
-            {
-                Trace.TraceError("Failed reading tokens text: " + tokensString + " " + ex);
-                return ReturnDefaultTokenList();
-            }
-            catch (FormatException ex)
-            {
-                Trace.TraceError("Failed reading tokens text: " + tokensString + " " + ex);
-                return ReturnDefaultTokenList();
+
+                tokenList.Tokens.Add(token);
             }
 
             return tokenList;

@@ -7,6 +7,6 @@ namespace Taskling.CleanUp
 {
     public interface ICleanUpService
     {
-        void CleanOldData(string applicationName, string taskName);
+        void CleanOldData(string applicationName, string taskName, string taskExecutionId);
     }
 }

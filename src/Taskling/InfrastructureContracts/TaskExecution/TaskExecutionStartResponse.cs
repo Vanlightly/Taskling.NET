@@ -23,5 +23,6 @@ namespace Taskling.InfrastructureContracts.TaskExecution
         public string ExecutionTokenId { get; set; }
         public DateTime StartedAt { get; set; }
         public GrantStatus GrantStatus { get; set; }
+        public Exception Ex { get; set; }
     }
 }
