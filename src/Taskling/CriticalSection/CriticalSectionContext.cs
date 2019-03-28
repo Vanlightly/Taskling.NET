@@ -49,7 +49,7 @@ namespace Taskling.CriticalSection
 
         public async Task<bool> TryStartAsync()
         {
-            return await TryStartAsync(new TimeSpan(0, 0, 30), 3);
+            return await TryStartAsync(new TimeSpan(0, 0, 30), 3).ConfigureAwait(false);
         }
 
         public async Task<bool> TryStartAsync(TimeSpan retryInterval, int numberOfAttempts)
@@ -60,9 +60,9 @@ namespace Taskling.CriticalSection
             while (started == false && tryCount <= numberOfAttempts)
             {
                 tryCount++;
-                started = await TryStartCriticalSectionAsync();
+                started = await TryStartCriticalSectionAsync().ConfigureAwait(false);
                 if (!started)
-                    await Task.Delay(retryInterval);
+                    await Task.Delay(retryInterval).ConfigureAwait(false);
             }
 
             return started;
@@ -77,7 +77,7 @@ namespace Taskling.CriticalSection
                 _taskExecutionInstance.TaskExecutionId,
                 _criticalSectionType);
 
-            await _criticalSectionRepository.CompleteAsync(completeRequest);
+            await _criticalSectionRepository.CompleteAsync(completeRequest).ConfigureAwait(false);
 
             _completeCalled = true;
         }
@@ -98,7 +98,7 @@ namespace Taskling.CriticalSection
             { }
 
             if (_started && !_completeCalled)
-                Task.Run(async () => await CompleteAsync());
+                Task.Run(async () => await CompleteAsync().ConfigureAwait(false));
 
             disposed = true;
         }
@@ -121,7 +121,7 @@ namespace Taskling.CriticalSection
             if (_taskExecutionOptions.TaskDeathMode == TaskDeathMode.KeepAlive)
                 startRequest.KeepAliveDeathThreshold = _taskExecutionOptions.KeepAliveDeathThreshold.Value;
 
-            var response = await _criticalSectionRepository.StartAsync(startRequest);
+            var response = await _criticalSectionRepository.StartAsync(startRequest).ConfigureAwait(false);
             if (response.GrantStatus == GrantStatus.Denied)
             {
                 _started = false;

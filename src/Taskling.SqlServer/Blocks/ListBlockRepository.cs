@@ -32,14 +32,14 @@ namespace Taskling.SqlServer.Blocks
         {
             try
             {
-                using (var connection = await CreateNewConnectionAsync(changeStatusRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(changeStatusRequest.TaskId).ConfigureAwait(false))
                 {
                     var command = connection.CreateCommand();
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(changeStatusRequest.TaskId).QueryTimeoutSeconds;
                     command.CommandText = GetListUpdateQuery(changeStatusRequest.BlockExecutionStatus);
                     command.Parameters.Add("@BlockExecutionId", SqlDbType.BigInt).Value = long.Parse(changeStatusRequest.BlockExecutionId);
                     command.Parameters.Add("@BlockExecutionStatus", SqlDbType.TinyInt).Value = (byte)changeStatusRequest.BlockExecutionStatus;
-                    await command.ExecuteNonQueryAsync();
+                    await command.ExecuteNonQueryAsync().ConfigureAwait(false);
                 }
             }
             catch (SqlException sqlEx)
@@ -59,16 +59,16 @@ namespace Taskling.SqlServer.Blocks
 
             try
             {
-                using (var connection = await CreateNewConnectionAsync(taskId))
+                using (var connection = await CreateNewConnectionAsync(taskId).ConfigureAwait(false))
                 {
                     var command = connection.CreateCommand();
                     command.CommandText = ListBlockQueryBuilder.GetListBlockItems;
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(taskId).QueryTimeoutSeconds;
                     command.Parameters.Add("@BlockId", SqlDbType.BigInt).Value = long.Parse(listBlockId);
 
-                    using (var reader = await command.ExecuteReaderAsync())
+                    using (var reader = await command.ExecuteReaderAsync().ConfigureAwait(false))
                     {
-                        while (await reader.ReadAsync())
+                        while (await reader.ReadAsync().ConfigureAwait(false))
                         {
                             var listBlock = new ProtoListBlockItem();
                             listBlock.ListBlockItemId = reader["ListBlockItemId"].ToString();
@@ -110,7 +110,7 @@ namespace Taskling.SqlServer.Blocks
         {
             try
             {
-                using (var connection = await CreateNewConnectionAsync(singeUpdateRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(singeUpdateRequest.TaskId).ConfigureAwait(false))
                 {
                     var command = connection.CreateCommand();
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(singeUpdateRequest.TaskId).QueryTimeoutSeconds;
@@ -129,7 +129,7 @@ namespace Taskling.SqlServer.Blocks
                     else
                         command.Parameters.Add("@Step", SqlDbType.TinyInt).Value = singeUpdateRequest.ListBlockItem.Step;
 
-                    await command.ExecuteNonQueryAsync();
+                    await command.ExecuteNonQueryAsync().ConfigureAwait(false);
                 }
             }
             catch (SqlException sqlEx)
@@ -143,7 +143,7 @@ namespace Taskling.SqlServer.Blocks
 
         public async Task BatchUpdateListBlockItemsAsync(BatchUpdateRequest batchUpdateRequest)
         {
-            using (var connection = await CreateNewConnectionAsync(batchUpdateRequest.TaskId))
+            using (var connection = await CreateNewConnectionAsync(batchUpdateRequest.TaskId).ConfigureAwait(false))
             {
                 var command = connection.CreateCommand();
                 var transaction = connection.BeginTransaction();
@@ -153,10 +153,10 @@ namespace Taskling.SqlServer.Blocks
 
                 try
                 {
-                    var tableName = await CreateTemporaryTableAsync(command);
+                    var tableName = await CreateTemporaryTableAsync(command).ConfigureAwait(false);
                     var dt = GenerateDataTable(batchUpdateRequest.ListBlockId, batchUpdateRequest.ListBlockItems);
-                    await BulkLoadInTransactionOperationAsync(dt, tableName, connection, transaction);
-                    await PerformBulkUpdateAsync(command, tableName);
+                    await BulkLoadInTransactionOperationAsync(dt, tableName, connection, transaction).ConfigureAwait(false);
+                    await PerformBulkUpdateAsync(command, tableName).ConfigureAwait(false);
 
                     transaction.Commit();
                 }
@@ -173,23 +173,23 @@ namespace Taskling.SqlServer.Blocks
 
         public async Task<ProtoListBlock> GetLastListBlockAsync(LastBlockRequest lastRangeBlockRequest)
         {
-            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(lastRangeBlockRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(lastRangeBlockRequest.TaskId).ConfigureAwait(false);
 
             try
             {
-                using (var connection = await CreateNewConnectionAsync(lastRangeBlockRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(lastRangeBlockRequest.TaskId).ConfigureAwait(false))
                 {
                     var command = connection.CreateCommand();
                     command.CommandText = ListBlockQueryBuilder.GetLastListBlock;
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(lastRangeBlockRequest.TaskId).QueryTimeoutSeconds;
                     command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinition.TaskDefinitionId;
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = await command.ExecuteReaderAsync().ConfigureAwait(false))
                     {
-                        while (reader.Read())
+                        while (await reader.ReadAsync().ConfigureAwait(false))
                         {
                             var listBlock = new ProtoListBlock();
                             listBlock.ListBlockId = reader["BlockId"].ToString();
-                            listBlock.Items = await GetListBlockItemsAsync(lastRangeBlockRequest.TaskId, listBlock.ListBlockId);
+                            listBlock.Items = await GetListBlockItemsAsync(lastRangeBlockRequest.TaskId, listBlock.ListBlockId).ConfigureAwait(false);
                             listBlock.Header = SerializedValueReader.ReadValueAsString(reader, "ObjectData", "CompressedObjectData");
 
                             return listBlock;
@@ -222,7 +222,7 @@ namespace Taskling.SqlServer.Blocks
             var tableName = "#TempTable" + Guid.NewGuid().ToString().Replace('-', '0');
             command.Parameters.Clear();
             command.CommandText = ListBlockQueryBuilder.GetCreateTemporaryTableQuery(tableName);
-            await command.ExecuteNonQueryAsync();
+            await command.ExecuteNonQueryAsync().ConfigureAwait(false);
 
             return tableName;
         }
@@ -263,7 +263,7 @@ namespace Taskling.SqlServer.Blocks
         {
             command.Parameters.Clear();
             command.CommandText = ListBlockQueryBuilder.GetBulkUpdateBlockListItemStatus(tableName);
-            await command.ExecuteNonQueryAsync();
+            await command.ExecuteNonQueryAsync().ConfigureAwait(false);
         }
     }
 }

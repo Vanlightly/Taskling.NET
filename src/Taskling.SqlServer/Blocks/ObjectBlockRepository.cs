@@ -28,24 +28,24 @@ namespace Taskling.SqlServer.Blocks
 
         public async Task ChangeStatusAsync(BlockExecutionChangeStatusRequest changeStatusRequest)
         {
-            await ChangeStatusOfExecutionAsync(changeStatusRequest);
+            await ChangeStatusOfExecutionAsync(changeStatusRequest).ConfigureAwait(false);
         }
 
         public async Task<ObjectBlock<T>> GetLastObjectBlockAsync<T>(LastBlockRequest lastRangeBlockRequest)
         {
-            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(lastRangeBlockRequest.TaskId);
+            var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(lastRangeBlockRequest.TaskId).ConfigureAwait(false);
 
             try
             {
-                using (var connection = await CreateNewConnectionAsync(lastRangeBlockRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(lastRangeBlockRequest.TaskId).ConfigureAwait(false))
                 {
                     var command = connection.CreateCommand();
                     command.CommandText = ObjectBlockQueryBuilder.GetLastObjectBlock;
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(lastRangeBlockRequest.TaskId).QueryTimeoutSeconds;
                     command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinition.TaskDefinitionId;
-                    using (var reader = await command.ExecuteReaderAsync())
+                    using (var reader = await command.ExecuteReaderAsync().ConfigureAwait(false))
                     {
-                        while (await reader.ReadAsync())
+                        while (await reader.ReadAsync().ConfigureAwait(false))
                         {
                             var blockId = reader["BlockId"].ToString();
                             var objectDataXml = reader["ObjectData"].ToString();
@@ -76,7 +76,7 @@ namespace Taskling.SqlServer.Blocks
         {
             try
             {
-                using (var connection = await CreateNewConnectionAsync(changeStatusRequest.TaskId))
+                using (var connection = await CreateNewConnectionAsync(changeStatusRequest.TaskId).ConfigureAwait(false))
                 {
                     var command = connection.CreateCommand();
                     command.CommandTimeout = ConnectionStore.Instance.GetConnection(changeStatusRequest.TaskId).QueryTimeoutSeconds;
@@ -85,7 +85,7 @@ namespace Taskling.SqlServer.Blocks
                     command.Parameters.Add("@BlockExecutionStatus", SqlDbType.TinyInt).Value = (byte)changeStatusRequest.BlockExecutionStatus;
                     command.Parameters.Add("@ItemsCount", SqlDbType.Int).Value = changeStatusRequest.ItemsProcessed;
 
-                    await command.ExecuteNonQueryAsync();
+                    await command.ExecuteNonQueryAsync().ConfigureAwait(false);
                 }
             }
             catch (SqlException sqlEx)

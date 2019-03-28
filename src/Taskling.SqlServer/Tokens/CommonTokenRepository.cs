@@ -17,7 +17,7 @@ namespace Taskling.SqlServer.Tokens
             command.CommandText = TokensQueryBuilder.AcquireLockQuery;
             command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
             command.Parameters.Add("@TaskExecutionId", SqlDbType.Int).Value = taskExecutionId;
-            await command.ExecuteNonQueryAsync();
+            await command.ExecuteNonQueryAsync().ConfigureAwait(false);
         }
 
         public async Task<List<TaskExecutionState>> GetTaskExecutionStatesAsync(List<string> taskExecutionIds, SqlCommand command)
@@ -30,9 +30,9 @@ namespace Taskling.SqlServer.Tokens
             for (int i = 0; i < taskExecutionIds.Count; i++)
                 command.Parameters.Add("@InParam" + i, SqlDbType.Int).Value = taskExecutionIds[i];
 
-            using (var reader = await command.ExecuteReaderAsync())
+            using (var reader = await command.ExecuteReaderAsync().ConfigureAwait(false))
             {
-                while (await reader.ReadAsync())
+                while (await reader.ReadAsync().ConfigureAwait(false))
                 {
                     var teState = new TaskExecutionState();
 

@@ -53,12 +53,12 @@ namespace Taskling.Blocks.ObjectBlocks
                 BlockExecutionStatus.Started);
 
             Func<BlockExecutionChangeStatusRequest, Task> actionRequest = _objectBlockRepository.ChangeStatusAsync;
-            await RetryService.InvokeWithRetryAsync(actionRequest, request);
+            await RetryService.InvokeWithRetryAsync(actionRequest, request).ConfigureAwait(false);
         }
 
         public async Task CompleteAsync()
         {
-            await CompleteAsync(-1);
+            await CompleteAsync(-1).ConfigureAwait(false);
         }
 
         public async Task CompleteAsync(int itemsProcessed)
@@ -71,7 +71,7 @@ namespace Taskling.Blocks.ObjectBlocks
             request.ItemsProcessed = itemsProcessed;
 
             Func<BlockExecutionChangeStatusRequest, Task> actionRequest = _objectBlockRepository.ChangeStatusAsync;
-            await RetryService.InvokeWithRetryAsync(actionRequest, request);
+            await RetryService.InvokeWithRetryAsync(actionRequest, request).ConfigureAwait(false);
         }
 
         public async Task FailedAsync()
@@ -83,12 +83,12 @@ namespace Taskling.Blocks.ObjectBlocks
                 BlockExecutionStatus.Failed);
 
             Func<BlockExecutionChangeStatusRequest, Task> actionRequest = _objectBlockRepository.ChangeStatusAsync;
-            await RetryService.InvokeWithRetryAsync(actionRequest, request);
+            await RetryService.InvokeWithRetryAsync(actionRequest, request).ConfigureAwait(false);
         }
 
         public async Task FailedAsync(string message)
         {
-            await FailedAsync();
+            await FailedAsync().ConfigureAwait(false);
 
             string errorMessage = errorMessage = string.Format("BlockId {0} Error: {1}",
                     Block.ObjectBlockId,
@@ -101,7 +101,7 @@ namespace Taskling.Blocks.ObjectBlocks
                 TreatTaskAsFailed = false,
                 Error = errorMessage
             };
-            await _taskExecutionRepository.ErrorAsync(errorRequest);
+            await _taskExecutionRepository.ErrorAsync(errorRequest).ConfigureAwait(false);
         }
     }
 }

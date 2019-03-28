@@ -19,7 +19,7 @@ namespace Taskling.SqlServer.AncilliaryServices
             try
             {
                 var connection = new SqlConnection(ConnectionStore.Instance.GetConnection(taskId).ConnectionString);
-                await connection.OpenAsync();
+                await connection.OpenAsync().ConfigureAwait(false);
 
                 return connection;
             }
@@ -54,7 +54,7 @@ namespace Taskling.SqlServer.AncilliaryServices
                 bulkCopy.BatchSize = 10000;
                 try
                 {
-                    await bulkCopy.WriteToServerAsync(dataTable);
+                    await bulkCopy.WriteToServerAsync(dataTable).ConfigureAwait(false);
                 }
                 catch (SqlException ex)
                 {

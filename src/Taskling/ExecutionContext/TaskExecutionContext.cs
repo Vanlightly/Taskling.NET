@@ -118,7 +118,7 @@ namespace Taskling.ExecutionContext
 
             if (_startedCalled && !_completeCalled)
             {
-                Task.Run(async () => await CompleteAsync());
+                Task.Run(async () => await CompleteAsync().ConfigureAwait(false));
             }
 
             disposed = true;
@@ -142,7 +142,7 @@ namespace Taskling.ExecutionContext
 
         public async Task<bool> TryStartAsync()
         {
-            return await TryStartAsync(null);
+            return await TryStartAsync(null).ConfigureAwait(false);
         }
 
         public async Task<bool> TryStartAsync(string referenceValue)
@@ -162,13 +162,13 @@ namespace Taskling.ExecutionContext
 
             try
             {
-                var response = await _taskExecutionRepository.StartAsync(startRequest);
+                var response = await _taskExecutionRepository.StartAsync(startRequest).ConfigureAwait(false);
                 _taskExecutionInstance.TaskExecutionId = response.TaskExecutionId;
                 _taskExecutionInstance.ExecutionTokenId = response.ExecutionTokenId;
 
                 if (response.GrantStatus == GrantStatus.Denied)
                 {
-                    await CompleteAsync();
+                    await CompleteAsync().ConfigureAwait(false);
                     return false;
                 }
 
@@ -187,13 +187,13 @@ namespace Taskling.ExecutionContext
         public async Task<bool> TryStartAsync<TExecutionHeader>(TExecutionHeader executionHeader)
         {
             _taskExecutionHeader = executionHeader;
-            return await TryStartAsync();
+            return await TryStartAsync().ConfigureAwait(false);
         }
 
         public async Task<bool> TryStartAsync<TExecutionHeader>(TExecutionHeader executionHeader, string referenceValue)
         {
             _taskExecutionHeader = executionHeader;
-            return await TryStartAsync(referenceValue);
+            return await TryStartAsync(referenceValue).ConfigureAwait(false);
         }
 
         public async Task CompleteAsync()
@@ -211,7 +211,7 @@ namespace Taskling.ExecutionContext
                 completeRequest.Failed = _executionHasFailed;
 
 
-                var response = await _taskExecutionRepository.CompleteAsync(completeRequest);
+                var response = await _taskExecutionRepository.CompleteAsync(completeRequest).ConfigureAwait(false);
                 _taskExecutionInstance.CompletedAt = response.CompletedAt;
             }
         }
@@ -227,7 +227,7 @@ namespace Taskling.ExecutionContext
                 TaskExecutionId = _taskExecutionInstance.TaskExecutionId,
                 Message = checkpointMessage
             };
-            await _taskExecutionRepository.CheckpointAsync(request);
+            await _taskExecutionRepository.CheckpointAsync(request).ConfigureAwait(false);
         }
 
         public async Task ErrorAsync(string errorMessage, bool treatTaskAsFailed)
@@ -244,7 +244,7 @@ namespace Taskling.ExecutionContext
                 Error = errorMessage,
                 TreatTaskAsFailed = treatTaskAsFailed
             };
-            await _taskExecutionRepository.ErrorAsync(request);
+            await _taskExecutionRepository.ErrorAsync(request).ConfigureAwait(false);
         }
 
         public TExecutionHeader GetHeader<TExecutionHeader>()
@@ -285,20 +285,20 @@ namespace Taskling.ExecutionContext
                 var csContext = CreateClientCriticalSection();
                 try
                 {
-                    var csStarted = await csContext.TryStartAsync(new TimeSpan(0, 0, 20), 3);
+                    var csStarted = await csContext.TryStartAsync(new TimeSpan(0, 0, 20), 3).ConfigureAwait(false);
                     if (csStarted)
-                        return await _blockFactory.GenerateDateRangeBlocksAsync(request);
+                        return await _blockFactory.GenerateDateRangeBlocksAsync(request).ConfigureAwait(false);
 
                     throw new CriticalSectionException("Could not start a critical section in the alloted time");
                 }
                 finally
                 {
-                    await csContext.CompleteAsync();
+                    await csContext.CompleteAsync().ConfigureAwait(false);
                 }
             }
             else
             {
-                return await _blockFactory.GenerateDateRangeBlocksAsync(request);
+                return await _blockFactory.GenerateDateRangeBlocksAsync(request).ConfigureAwait(false);
             }
         }
 
@@ -316,20 +316,20 @@ namespace Taskling.ExecutionContext
                 var csContext = CreateClientCriticalSection();
                 try
                 {
-                    var csStarted = await csContext.TryStartAsync(new TimeSpan(0, 0, 20), 3);
+                    var csStarted = await csContext.TryStartAsync(new TimeSpan(0, 0, 20), 3).ConfigureAwait(false);
                     if (csStarted)
-                        return await _blockFactory.GenerateNumericRangeBlocksAsync(request);
+                        return await _blockFactory.GenerateNumericRangeBlocksAsync(request).ConfigureAwait(false);
 
                     throw new CriticalSectionException("Could not start a critical section in the alloted time");
                 }
                 finally
                 {
-                    await csContext.CompleteAsync();
+                    await csContext.CompleteAsync().ConfigureAwait(false);
                 }
             }
             else
             {
-                return await _blockFactory.GenerateNumericRangeBlocksAsync(request);
+                return await _blockFactory.GenerateNumericRangeBlocksAsync(request).ConfigureAwait(false);
             }
         }
 
@@ -349,19 +349,19 @@ namespace Taskling.ExecutionContext
                     var csContext = CreateClientCriticalSection();
                     try
                     {
-                        var csStarted = await csContext.TryStartAsync(new TimeSpan(0, 0, 20), 3);
+                        var csStarted = await csContext.TryStartAsync(new TimeSpan(0, 0, 20), 3).ConfigureAwait(false);
                         if (csStarted)
-                            return await _blockFactory.GenerateListBlocksAsync<T>(request);
+                            return await _blockFactory.GenerateListBlocksAsync<T>(request).ConfigureAwait(false);
                         throw new CriticalSectionException("Could not start a critical section in the alloted time");
                     }
                     finally
                     {
-                        await csContext.CompleteAsync();
+                        await csContext.CompleteAsync().ConfigureAwait(false);
                     }
                 }
                 else
                 {
-                    return await _blockFactory.GenerateListBlocksAsync<T>(request);
+                    return await _blockFactory.GenerateListBlocksAsync<T>(request).ConfigureAwait(false);
                 }
             }
 
@@ -384,19 +384,19 @@ namespace Taskling.ExecutionContext
                     var csContext = CreateClientCriticalSection();
                     try
                     {
-                        var csStarted = await csContext.TryStartAsync(new TimeSpan(0, 0, 20), 3);
+                        var csStarted = await csContext.TryStartAsync(new TimeSpan(0, 0, 20), 3).ConfigureAwait(false);
                         if (csStarted)
-                            return await _blockFactory.GenerateListBlocksAsync<TItem, THeader>(request);
+                            return await _blockFactory.GenerateListBlocksAsync<TItem, THeader>(request).ConfigureAwait(false);
                         throw new CriticalSectionException("Could not start a critical section in the alloted time");
                     }
                     finally
                     {
-                        await csContext.CompleteAsync();
+                        await csContext.CompleteAsync().ConfigureAwait(false);
                     }
                 }
                 else
                 {
-                    return await _blockFactory.GenerateListBlocksAsync<TItem, THeader>(request);
+                    return await _blockFactory.GenerateListBlocksAsync<TItem, THeader>(request).ConfigureAwait(false);
                 }
             }
 
@@ -417,19 +417,19 @@ namespace Taskling.ExecutionContext
                 var csContext = CreateClientCriticalSection();
                 try
                 {
-                    var csStarted = await csContext.TryStartAsync(new TimeSpan(0, 0, 20), 3);
+                    var csStarted = await csContext.TryStartAsync(new TimeSpan(0, 0, 20), 3).ConfigureAwait(false);
                     if (csStarted)
-                        return await _blockFactory.GenerateObjectBlocksAsync(request);
+                        return await _blockFactory.GenerateObjectBlocksAsync(request).ConfigureAwait(false);
                     throw new CriticalSectionException("Could not start a critical section in the alloted time");
                 }
                 finally
                 {
-                    await csContext.CompleteAsync();
+                    await csContext.CompleteAsync().ConfigureAwait(false);
                 }
             }
             else
             {
-                return await _blockFactory.GenerateObjectBlocksAsync(request);
+                return await _blockFactory.GenerateObjectBlocksAsync(request).ConfigureAwait(false);
             }
         }
 
@@ -442,7 +442,7 @@ namespace Taskling.ExecutionContext
                 BlockType.DateRange);
             request.LastBlockOrder = lastBlockOrder;
 
-            return await _rangeBlockRepository.GetLastRangeBlockAsync(request);
+            return await _rangeBlockRepository.GetLastRangeBlockAsync(request).ConfigureAwait(false);
         }
 
         public async Task<INumericRangeBlock> GetLastNumericRangeBlockAsync(LastBlockOrder lastBlockOrder)
@@ -454,7 +454,7 @@ namespace Taskling.ExecutionContext
                 BlockType.NumericRange);
             request.LastBlockOrder = lastBlockOrder;
 
-            return await _rangeBlockRepository.GetLastRangeBlockAsync(request);
+            return await _rangeBlockRepository.GetLastRangeBlockAsync(request).ConfigureAwait(false);
         }
 
         public async Task<IListBlock<T>> GetLastListBlockAsync<T>()
@@ -465,7 +465,7 @@ namespace Taskling.ExecutionContext
             var request = new LastBlockRequest(new TaskId(_taskExecutionInstance.ApplicationName, _taskExecutionInstance.TaskName),
                 BlockType.List);
 
-            return await _blockFactory.GetLastListBlockAsync<T>(request);
+            return await _blockFactory.GetLastListBlockAsync<T>(request).ConfigureAwait(false);
         }
 
         public async Task<IListBlock<TItem, THeader>> GetLastListBlockAsync<TItem, THeader>()
@@ -476,7 +476,7 @@ namespace Taskling.ExecutionContext
             var request = new LastBlockRequest(new TaskId(_taskExecutionInstance.ApplicationName, _taskExecutionInstance.TaskName),
                 BlockType.List);
 
-            return await _blockFactory.GetLastListBlockAsync<TItem, THeader>(request);
+            return await _blockFactory.GetLastListBlockAsync<TItem, THeader>(request).ConfigureAwait(false);
         }
 
         public async Task<IObjectBlock<T>> GetLastObjectBlockAsync<T>()
@@ -487,14 +487,14 @@ namespace Taskling.ExecutionContext
             var request = new LastBlockRequest(new TaskId(_taskExecutionInstance.ApplicationName, _taskExecutionInstance.TaskName),
                 BlockType.Object);
 
-            return await _objectBlockRepository.GetLastObjectBlockAsync<T>(request);
+            return await _objectBlockRepository.GetLastObjectBlockAsync<T>(request).ConfigureAwait(false);
         }
 
         public async Task<TaskExecutionMeta> GetLastExecutionMetaAsync()
         {
             var request = CreateTaskExecutionMetaRequest(1);
 
-            var response = await _taskExecutionRepository.GetLastExecutionMetasAsync(request);
+            var response = await _taskExecutionRepository.GetLastExecutionMetasAsync(request).ConfigureAwait(false);
             if (response.Executions != null && response.Executions.Any())
             {
                 var meta = response.Executions.First();
@@ -508,7 +508,7 @@ namespace Taskling.ExecutionContext
         {
             var request = CreateTaskExecutionMetaRequest(numberToRetrieve);
 
-            var response = await _taskExecutionRepository.GetLastExecutionMetasAsync(request);
+            var response = await _taskExecutionRepository.GetLastExecutionMetasAsync(request).ConfigureAwait(false);
             if (response.Executions != null && response.Executions.Any())
             {
                 return response.Executions.Select(x => new TaskExecutionMeta(x.StartedAt, x.CompletedAt, x.Status, x.ReferenceValue)).ToList();
@@ -521,7 +521,7 @@ namespace Taskling.ExecutionContext
         {
             var request = CreateTaskExecutionMetaRequest(1);
 
-            var response = await _taskExecutionRepository.GetLastExecutionMetasAsync(request);
+            var response = await _taskExecutionRepository.GetLastExecutionMetasAsync(request).ConfigureAwait(false);
             if (response.Executions != null && response.Executions.Any())
             {
                 var meta = response.Executions.First();
@@ -539,7 +539,7 @@ namespace Taskling.ExecutionContext
         {
             var request = CreateTaskExecutionMetaRequest(numberToRetrieve);
 
-            var response = await _taskExecutionRepository.GetLastExecutionMetasAsync(request);
+            var response = await _taskExecutionRepository.GetLastExecutionMetasAsync(request).ConfigureAwait(false);
             if (response.Executions != null && response.Executions.Any())
             {
                 return response.Executions.Select(x => new TaskExecutionMeta<TExecutionHeader>(x.StartedAt,

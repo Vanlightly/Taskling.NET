@@ -30,16 +30,16 @@ namespace Taskling.Blocks.ListBlocks
 
         public async Task CompletedAsync()
         {
-            await _itemComplete(this);
+            await _itemComplete(this).ConfigureAwait(false);
         }
         public async Task FailedAsync(string message)
         {
-            await _itemFailed(this, message, null);
+            await _itemFailed(this, message, null).ConfigureAwait(false);
         }
 
         public async Task DiscardedAsync(string message)
         {
-            await _discardItem(this, message, null);
+            await _discardItem(this, message, null).ConfigureAwait(false);
         }
     }
 }

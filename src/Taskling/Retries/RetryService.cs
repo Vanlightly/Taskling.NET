@@ -24,7 +24,7 @@ namespace Taskling.Retries
             {
                 try
                 {
-                    await requestAction(request);
+                    await requestAction(request).ConfigureAwait(false);
                     successFullySent = true;
                 }
                 catch (TransientException ex)
@@ -36,7 +36,7 @@ namespace Taskling.Retries
                 attemptsMade++;
 
                 if (!successFullySent)
-                    await Task.Delay(interval);
+                    await Task.Delay(interval).ConfigureAwait(false);
             }
 
             if (!successFullySent)

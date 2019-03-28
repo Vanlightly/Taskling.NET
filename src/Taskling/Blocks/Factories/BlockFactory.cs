@@ -49,24 +49,24 @@ namespace Taskling.Blocks.Factories
 
             if (!string.IsNullOrEmpty(blockRequest.ReprocessReferenceValue))
             {
-                blocks = await LoadRangeBlocksOfTaskAsync(blockRequest);
+                blocks = await LoadRangeBlocksOfTaskAsync(blockRequest).ConfigureAwait(false);
             }
             else
             {
-                var forceBlocks = await GetForcedBlocksAsync(blockRequest);
+                var forceBlocks = await GetForcedBlocksAsync(blockRequest).ConfigureAwait(false);
                 blocks.AddRange(forceBlocks);
 
                 if (GetBlocksRemaining(blockRequest, blocks) > 0)
-                    await LoadFailedAndDeadBlocksAsync(blockRequest, blocks);
+                    await LoadFailedAndDeadBlocksAsync(blockRequest, blocks).ConfigureAwait(false);
 
                 int blocksRemaining = GetBlocksRemaining(blockRequest, blocks);
                 if (blocksRemaining > 0 && blockRequest.RangeBegin.HasValue)
-                    blocks.AddRange(await GenerateNewDateRangeBlocksAsync(blockRequest, blocksRemaining));
+                    blocks.AddRange(await GenerateNewDateRangeBlocksAsync(blockRequest, blocksRemaining).ConfigureAwait(false));
             }
 
             if (!blocks.Any())
             {
-                await LogEmptyBlockEventAsync(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName);
+                await LogEmptyBlockEventAsync(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName).ConfigureAwait(false);
             }
 
             var dateRangeBlocks = blocks.Select(x => (IDateRangeBlockContext)x);
@@ -79,24 +79,24 @@ namespace Taskling.Blocks.Factories
 
             if (!string.IsNullOrEmpty(blockRequest.ReprocessReferenceValue))
             {
-                blocks = await LoadRangeBlocksOfTaskAsync(blockRequest);
+                blocks = await LoadRangeBlocksOfTaskAsync(blockRequest).ConfigureAwait(false);
             }
             else
             {
-                var forceBlocks = await GetForcedBlocksAsync(blockRequest);
+                var forceBlocks = await GetForcedBlocksAsync(blockRequest).ConfigureAwait(false);
                 blocks.AddRange(forceBlocks);
 
                 if (GetBlocksRemaining(blockRequest, blocks) > 0)
-                    await LoadFailedAndDeadBlocksAsync(blockRequest, blocks);
+                    await LoadFailedAndDeadBlocksAsync(blockRequest, blocks).ConfigureAwait(false);
 
                 int blocksRemaining = GetBlocksRemaining(blockRequest, blocks);
                 if (blocksRemaining > 0 && blockRequest.RangeBegin.HasValue)
-                    blocks.AddRange(await GenerateNewNumericRangeBlocksAsync(blockRequest, blocksRemaining));
+                    blocks.AddRange(await GenerateNewNumericRangeBlocksAsync(blockRequest, blocksRemaining).ConfigureAwait(false));
             }
 
             if (!blocks.Any())
             {
-                await LogEmptyBlockEventAsync(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName);
+                await LogEmptyBlockEventAsync(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName).ConfigureAwait(false);
             }
 
             var numericRangeBlocks = blocks.Select(x => (INumericRangeBlockContext)x);
@@ -105,15 +105,15 @@ namespace Taskling.Blocks.Factories
 
         public async Task<IList<IListBlockContext<T>>> GenerateListBlocksAsync<T>(ListBlockRequest blockRequest)
         {
-            var blocks = await CreateProtoListBlocksAsync(blockRequest);
-            var blockContexts = (await CreateListBlockContextsAsync<T>(blockRequest, blocks)).ToList();
+            var blocks = await CreateProtoListBlocksAsync(blockRequest).ConfigureAwait(false);
+            var blockContexts = (await CreateListBlockContextsAsync<T>(blockRequest, blocks).ConfigureAwait(false)).ToList();
 
             if (blocks.Any(x => x.IsForcedBlock))
-                await DequeueForcedBlocksAsync(blockRequest, blocks.Where(x => x.IsForcedBlock).Select(x => x.ForcedBlockQueueId.ToString()).ToList());
+                await DequeueForcedBlocksAsync(blockRequest, blocks.Where(x => x.IsForcedBlock).Select(x => x.ForcedBlockQueueId.ToString()).ToList()).ConfigureAwait(false);
 
             if (!blocks.Any())
             {
-                await LogEmptyBlockEventAsync(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName);
+                await LogEmptyBlockEventAsync(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName).ConfigureAwait(false);
             }
 
             return blockContexts.OrderBy(x => long.Parse(x.Block.ListBlockId)).ToList();
@@ -121,16 +121,14 @@ namespace Taskling.Blocks.Factories
 
         public async Task<IList<IListBlockContext<TItem, THeader>>> GenerateListBlocksAsync<TItem, THeader>(ListBlockRequest blockRequest)
         {
-            var blocks = await CreateProtoListBlocksAsync(blockRequest);
-            var blockContexts = (await CreateListBlockContextsAsync<TItem, THeader>(blockRequest, blocks)).ToList();
+            var blocks = await CreateProtoListBlocksAsync(blockRequest).ConfigureAwait(false);
+            var blockContexts = (await CreateListBlockContextsAsync<TItem, THeader>(blockRequest, blocks).ConfigureAwait(false)).ToList();
 
             if (blocks.Any(x => x.IsForcedBlock))
-                await DequeueForcedBlocksAsync(blockRequest, blocks.Where(x => x.IsForcedBlock).Select(x => x.ForcedBlockQueueId.ToString()).ToList());
+                await DequeueForcedBlocksAsync(blockRequest, blocks.Where(x => x.IsForcedBlock).Select(x => x.ForcedBlockQueueId.ToString()).ToList()).ConfigureAwait(false);
 
             if (!blocks.Any())
-            {
-                await LogEmptyBlockEventAsync(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName);
-            }
+                await LogEmptyBlockEventAsync(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName).ConfigureAwait(false);
 
             return blockContexts.OrderBy(x => long.Parse(x.Block.ListBlockId)).ToList();
         }
@@ -141,26 +139,26 @@ namespace Taskling.Blocks.Factories
 
             if (!string.IsNullOrEmpty(blockRequest.ReprocessReferenceValue))
             {
-                blocks = await LoadObjectBlocksOfTaskAsync(blockRequest);
+                blocks = await LoadObjectBlocksOfTaskAsync(blockRequest).ConfigureAwait(false);
             }
             else
             {
-                var forceBlocks = await GetForcedObjectBlocksAsync(blockRequest);
+                var forceBlocks = await GetForcedObjectBlocksAsync(blockRequest).ConfigureAwait(false);
                 blocks.AddRange(forceBlocks);
 
                 if (GetBlocksRemaining(blockRequest, blocks) > 0)
-                    await LoadFailedAndDeadObjectBlocksAsync(blockRequest, blocks);
+                    await LoadFailedAndDeadObjectBlocksAsync(blockRequest, blocks).ConfigureAwait(false);
 
                 if (GetBlocksRemaining(blockRequest, blocks) > 0 && blockRequest.Object != null)
                 {
-                    var newBlock = await GenerateNewObjectBlockAsync(blockRequest);
+                    var newBlock = await GenerateNewObjectBlockAsync(blockRequest).ConfigureAwait(false);
                     blocks.Add(newBlock);
                 }
             }
 
             if (!blocks.Any())
             {
-                await LogEmptyBlockEventAsync(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName);
+                await LogEmptyBlockEventAsync(blockRequest.TaskExecutionId, blockRequest.ApplicationName, blockRequest.TaskName).ConfigureAwait(false);
             }
 
             return blocks.OrderBy(x => long.Parse(x.Block.ObjectBlockId)).ToList();
@@ -168,7 +166,7 @@ namespace Taskling.Blocks.Factories
 
         public async Task<IListBlock<T>> GetLastListBlockAsync<T>(LastBlockRequest lastBlockRequest)
         {
-            var lastProtoListBlock = await _listBlockRepository.GetLastListBlockAsync(lastBlockRequest);
+            var lastProtoListBlock = await _listBlockRepository.GetLastListBlockAsync(lastBlockRequest).ConfigureAwait(false);
             if (lastProtoListBlock == null)
                 return null;
 
@@ -177,7 +175,7 @@ namespace Taskling.Blocks.Factories
 
         public async Task<IListBlock<TItem, THeader>> GetLastListBlockAsync<TItem, THeader>(LastBlockRequest lastBlockRequest)
         {
-            var lastProtoListBlock = await _listBlockRepository.GetLastListBlockAsync(lastBlockRequest);
+            var lastProtoListBlock = await _listBlockRepository.GetLastListBlockAsync(lastBlockRequest).ConfigureAwait(false);
 
             return Convert<TItem, THeader>(lastProtoListBlock, true);
         }
@@ -193,7 +191,7 @@ namespace Taskling.Blocks.Factories
                 Message = "No values for generate the block. Emtpy Block context returned.",
                 TaskId = new TaskId(appName, taskName)
             };
-            await _taskExecutionRepository.CheckpointAsync(checkPointRequest);
+            await _taskExecutionRepository.CheckpointAsync(checkPointRequest).ConfigureAwait(false);
         }
 
         private int GetBlocksRemaining(BlockRequest blockRequest, List<RangeBlockContext> blocks)
@@ -207,14 +205,14 @@ namespace Taskling.Blocks.Factories
                     blockRequest.TaskExecutionId,
                     blockRequest.BlockType);
 
-            var queuedForcedBlocks = await _blockRepository.GetQueuedForcedRangeBlocksAsync(forcedBlockRequest);
+            var queuedForcedBlocks = await _blockRepository.GetQueuedForcedRangeBlocksAsync(forcedBlockRequest).ConfigureAwait(false);
 
             var forcedBlocks = new List<RangeBlockContext>();
             foreach (var queuedForcedBlock in queuedForcedBlocks)
-                forcedBlocks.Add(await CreateBlockContextAsync(blockRequest, queuedForcedBlock.RangeBlock, queuedForcedBlock.ForcedBlockQueueId));
+                forcedBlocks.Add(await CreateBlockContextAsync(blockRequest, queuedForcedBlock.RangeBlock, queuedForcedBlock.ForcedBlockQueueId).ConfigureAwait(false));
 
             if (forcedBlocks.Any())
-                await DequeueForcedBlocksAsync(blockRequest, forcedBlocks.Select(x => x.ForcedBlockQueueId).ToList());
+                await DequeueForcedBlocksAsync(blockRequest, forcedBlocks.Select(x => x.ForcedBlockQueueId).ToList()).ConfigureAwait(false);
 
             return forcedBlocks;
         }
@@ -227,7 +225,7 @@ namespace Taskling.Blocks.Factories
                 blockRequest.BlockType,
                 forcedBlockQueueIds);
 
-            await _blockRepository.DequeueForcedBlocksAsync(request);
+            await _blockRepository.DequeueForcedBlocksAsync(request).ConfigureAwait(false);
         }
 
         private async Task<List<RangeBlockContext>> LoadRangeBlocksOfTaskAsync(BlockRequest blockRequest)
@@ -238,11 +236,11 @@ namespace Taskling.Blocks.Factories
                 blockRequest.ReprocessReferenceValue,
                 blockRequest.ReprocessOption);
 
-            var blocksOfTask = (await _blockRepository.FindRangeBlocksOfTaskAsync(failedBlockRequest)).ToList();
+            var blocksOfTask = (await _blockRepository.FindRangeBlocksOfTaskAsync(failedBlockRequest).ConfigureAwait(false)).ToList();
             if (!blocksOfTask.Any())
                 return new List<RangeBlockContext>();
 
-            return await CreateBlockContextsAsync(blockRequest, blocksOfTask);
+            return await CreateBlockContextsAsync(blockRequest, blocksOfTask).ConfigureAwait(false);
         }
 
         private async Task<IList<ProtoListBlock>> LoadListBlocksOfTaskAsync(ListBlockRequest blockRequest)
@@ -253,7 +251,7 @@ namespace Taskling.Blocks.Factories
                 blockRequest.ReprocessReferenceValue,
                 blockRequest.ReprocessOption);
 
-            var blocksOfTask = await _blockRepository.FindListBlocksOfTaskAsync(failedBlockRequest);
+            var blocksOfTask = await _blockRepository.FindListBlocksOfTaskAsync(failedBlockRequest).ConfigureAwait(false);
 
             return blocksOfTask;
         }
@@ -263,20 +261,20 @@ namespace Taskling.Blocks.Factories
             int blocksRemaining = blockRequest.MaxBlocks - blocks.Count;
             if (blockRequest.ReprocessDeadTasks)
             {
-                blocks.AddRange(await GetDeadBlocksAsync(blockRequest, blocksRemaining));
+                blocks.AddRange(await GetDeadBlocksAsync(blockRequest, blocksRemaining).ConfigureAwait(false));
             }
 
             if (GetBlocksRemaining(blockRequest, blocks) > 0 && blockRequest.ReprocessFailedTasks)
             {
-                blocks.AddRange(await GetFailedBlocksAsync(blockRequest, blocksRemaining));
+                blocks.AddRange(await GetFailedBlocksAsync(blockRequest, blocksRemaining).ConfigureAwait(false));
             }
         }
 
         private async Task<List<RangeBlockContext>> GetDeadBlocksAsync(BlockRequest blockRequest, int blockCountLimit)
         {
             var deadBlockRequest = CreateDeadBlocksRequest(blockRequest, blockCountLimit);
-            var deadBlocks = await _blockRepository.FindDeadRangeBlocksAsync(deadBlockRequest);
-            return await CreateBlockContextsAsync(blockRequest, deadBlocks);
+            var deadBlocks = await _blockRepository.FindDeadRangeBlocksAsync(deadBlockRequest).ConfigureAwait(false);
+            return await CreateBlockContextsAsync(blockRequest, deadBlocks).ConfigureAwait(false);
         }
 
         private async Task<List<RangeBlockContext>> GetFailedBlocksAsync(BlockRequest blockRequest, int blockCountLimit)
@@ -290,8 +288,8 @@ namespace Taskling.Blocks.Factories
                 blockRequest.FailedTaskRetryLimit
             );
 
-            var failedBlocks = await _blockRepository.FindFailedRangeBlocksAsync(failedBlockRequest);
-            return await CreateBlockContextsAsync(blockRequest, failedBlocks);
+            var failedBlocks = await _blockRepository.FindFailedRangeBlocksAsync(failedBlockRequest).ConfigureAwait(false);
+            return await CreateBlockContextsAsync(blockRequest, failedBlocks).ConfigureAwait(false);
         }
 
         private async Task<List<RangeBlockContext>> CreateBlockContextsAsync(BlockRequest blockRequest, IList<RangeBlock> rangeBlocks)
@@ -299,7 +297,7 @@ namespace Taskling.Blocks.Factories
             var blocks = new List<RangeBlockContext>();
             foreach (var rangeBlock in rangeBlocks)
             {
-                var blockContext = await CreateBlockContextAsync(blockRequest, rangeBlock);
+                var blockContext = await CreateBlockContextAsync(blockRequest, rangeBlock).ConfigureAwait(false);
                 blocks.Add(blockContext);
             }
 
@@ -317,7 +315,7 @@ namespace Taskling.Blocks.Factories
                     rangeBlock.RangeBlockId,
                     attempt);
 
-            var blockExecutionId = await _blockRepository.AddRangeBlockExecutionAsync(createRequest);
+            var blockExecutionId = await _blockRepository.AddRangeBlockExecutionAsync(createRequest).ConfigureAwait(false);
             var blockContext = new RangeBlockContext(_rangeBlockRepository,
                     _taskExecutionRepository,
                     blockRequest.ApplicationName,
@@ -345,8 +343,8 @@ namespace Taskling.Blocks.Factories
                     stopGeneration = true;
                 }
 
-                var dateRangeBlock = await GenerateDateRangeBlockAsync(blockRequest, blockStart, blockEnd);
-                var blockContext = await CreateBlockContextAsync(blockRequest, dateRangeBlock);
+                var dateRangeBlock = await GenerateDateRangeBlockAsync(blockRequest, blockStart, blockEnd).ConfigureAwait(false);
+                var blockContext = await CreateBlockContextAsync(blockRequest, dateRangeBlock).ConfigureAwait(false);
                 newBlocks.Add(blockContext);
                 blocksAdded++;
 
@@ -365,8 +363,8 @@ namespace Taskling.Blocks.Factories
                 rangeBegin,
                 rangeEnd);
 
-            var rangeBlock = (await _blockRepository.AddRangeBlockAsync(request)).Block;
-            await Task.Delay(10); // guarantee that each block has a unique created date
+            var rangeBlock = (await _blockRepository.AddRangeBlockAsync(request).ConfigureAwait(false)).Block;
+            await Task.Delay(10).ConfigureAwait(false); // guarantee that each block has a unique created date
             return rangeBlock;
         }
 
@@ -386,8 +384,8 @@ namespace Taskling.Blocks.Factories
                     stopGeneration = true;
                 }
 
-                var numericRangeBlock = await GenerateNumericRangeBlockAsync(blockRequest, blockStart, blockEnd);
-                var blockContext = await CreateBlockContextAsync(blockRequest, numericRangeBlock);
+                var numericRangeBlock = await GenerateNumericRangeBlockAsync(blockRequest, blockStart, blockEnd).ConfigureAwait(false);
+                var blockContext = await CreateBlockContextAsync(blockRequest, numericRangeBlock).ConfigureAwait(false);
                 newBlocks.Add(blockContext);
                 blocksAdded++;
 
@@ -405,8 +403,8 @@ namespace Taskling.Blocks.Factories
                 rangeBegin,
                 rangeEnd);
 
-            var rangeBlock = (await _blockRepository.AddRangeBlockAsync(request)).Block;
-            await Task.Delay(10); // guarantee that each block has a unique created date
+            var rangeBlock = (await _blockRepository.AddRangeBlockAsync(request).ConfigureAwait(false)).Block;
+            await Task.Delay(10).ConfigureAwait(false); // guarantee that each block has a unique created date
             return rangeBlock;
         }
 
@@ -422,12 +420,12 @@ namespace Taskling.Blocks.Factories
 
             if (!string.IsNullOrEmpty(blockRequest.ReprocessReferenceValue))
             {
-                blocks = (await LoadListBlocksOfTaskAsync(blockRequest)).ToList();
+                blocks = (await LoadListBlocksOfTaskAsync(blockRequest).ConfigureAwait(false)).ToList();
             }
             else
             {
                 // Forced blocks
-                var forceBlockQueueItems = await GetForcedListBlocksAsync(blockRequest);
+                var forceBlockQueueItems = await GetForcedListBlocksAsync(blockRequest).ConfigureAwait(false);
                 var forceBlocks = new List<ProtoListBlock>();
                 foreach (var forceBlockQueueItem in forceBlockQueueItems)
                 {
@@ -441,13 +439,13 @@ namespace Taskling.Blocks.Factories
 
                 // Failed and Dead blocks
                 if (GetBlocksRemaining(blockRequest, blocks) > 0)
-                    await LoadFailedAndDeadListBlocksAsync(blockRequest, blocks);
+                    await LoadFailedAndDeadListBlocksAsync(blockRequest, blocks).ConfigureAwait(false);
 
                 // New blocks
                 int blocksRemaining = GetBlocksRemaining(blockRequest, blocks);
                 if (blocksRemaining > 0 && blockRequest.SerializedValues != null && blockRequest.SerializedValues.Any())
                 {
-                    blocks.AddRange(await GenerateNewListBlocksAsync(blockRequest, blocksRemaining));
+                    blocks.AddRange(await GenerateNewListBlocksAsync(blockRequest, blocksRemaining).ConfigureAwait(false));
                 }
             }
 
@@ -465,7 +463,7 @@ namespace Taskling.Blocks.Factories
                     blockRequest.TaskExecutionId,
                     blockRequest.BlockType);
 
-            var queuedForcedBlocks = await _blockRepository.GetQueuedForcedListBlocksAsync(forcedBlockRequest);
+            var queuedForcedBlocks = await _blockRepository.GetQueuedForcedListBlocksAsync(forcedBlockRequest).ConfigureAwait(false);
 
             return queuedForcedBlocks;
         }
@@ -475,20 +473,20 @@ namespace Taskling.Blocks.Factories
             int blocksRemaining = GetBlocksRemaining(blockRequest, blocks);
             if (blockRequest.ReprocessDeadTasks)
             {
-                blocks.AddRange(await GetDeadListBlocksAsync(blockRequest, blocksRemaining));
+                blocks.AddRange(await GetDeadListBlocksAsync(blockRequest, blocksRemaining).ConfigureAwait(false));
                 blocksRemaining = blockRequest.MaxBlocks - blocks.Count;
             }
 
             if (GetBlocksRemaining(blockRequest, blocks) > 0 && blockRequest.ReprocessFailedTasks)
             {
-                blocks.AddRange(await GetFailedListBlocksAsync(blockRequest, blocksRemaining));
+                blocks.AddRange(await GetFailedListBlocksAsync(blockRequest, blocksRemaining).ConfigureAwait(false));
             }
         }
 
         private async Task<IList<ProtoListBlock>> GetDeadListBlocksAsync(ListBlockRequest blockRequest, int blockCountLimit)
         {
             var deadBlockRequest = CreateDeadBlocksRequest(blockRequest, blockCountLimit);
-            var deadBlocks = await _blockRepository.FindDeadListBlocksAsync(deadBlockRequest);
+            var deadBlocks = await _blockRepository.FindDeadListBlocksAsync(deadBlockRequest).ConfigureAwait(false);
 
             return deadBlocks;
         }
@@ -504,7 +502,7 @@ namespace Taskling.Blocks.Factories
                 blockRequest.FailedTaskRetryLimit
             );
 
-            var failedBlocks = await _blockRepository.FindFailedListBlocksAsync(failedBlockRequest);
+            var failedBlocks = await _blockRepository.FindFailedListBlocksAsync(failedBlockRequest).ConfigureAwait(false);
             return failedBlocks;
         }
 
@@ -523,7 +521,7 @@ namespace Taskling.Blocks.Factories
 
                 if (values.Count == blockRequest.MaxBlockSize || listIndex == listLength - 1)
                 {
-                    var newListBlock = await GenerateListBlockAsync(blockRequest, values);
+                    var newListBlock = await GenerateListBlockAsync(blockRequest, values).ConfigureAwait(false);
                     newBlocks.Add(newListBlock);
                     values = new List<string>();
                     blocksAdded++;
@@ -543,8 +541,8 @@ namespace Taskling.Blocks.Factories
                 blockRequest.SerializedHeader,
                 blockRequest.CompressionThreshold);
 
-            var listBlock = (await _blockRepository.AddListBlockAsync(request)).Block;
-            await Task.Delay(10); // guarantee that each block has a unique created date
+            var listBlock = (await _blockRepository.AddListBlockAsync(request).ConfigureAwait(false)).Block;
+            await Task.Delay(10).ConfigureAwait(false); // guarantee that each block has a unique created date
             return listBlock;
         }
 
@@ -557,7 +555,7 @@ namespace Taskling.Blocks.Factories
             var blocks = new List<IListBlockContext<T>>();
             foreach (var listBlock in listBlocks)
             {
-                var blockContext = await CreateListBlockContextAsync<T>(blockRequest, listBlock);
+                var blockContext = await CreateListBlockContextAsync<T>(blockRequest, listBlock).ConfigureAwait(false);
                 blocks.Add(blockContext);
             }
 
@@ -573,7 +571,7 @@ namespace Taskling.Blocks.Factories
                     listBlock.ListBlockId,
                     attempt);
 
-            var blockExecutionId = await _blockRepository.AddListBlockExecutionAsync(createRequest);
+            var blockExecutionId = await _blockRepository.AddListBlockExecutionAsync(createRequest).ConfigureAwait(false);
 
             var listBlockOfT = Convert<T>(listBlock);
             var blockContext = new ListBlockContext<T>(_listBlockRepository,
@@ -596,7 +594,7 @@ namespace Taskling.Blocks.Factories
             var blocks = new List<IListBlockContext<TItem, THeader>>();
             foreach (var listBlock in listBlocks)
             {
-                var blockContext = await CreateListBlockContextAsync<TItem, THeader>(blockRequest, listBlock);
+                var blockContext = await CreateListBlockContextAsync<TItem, THeader>(blockRequest, listBlock).ConfigureAwait(false);
                 blocks.Add(blockContext);
             }
 
@@ -612,7 +610,7 @@ namespace Taskling.Blocks.Factories
                     listBlock.ListBlockId,
                     attempt);
 
-            var blockExecutionId = await _blockRepository.AddListBlockExecutionAsync(createRequest);
+            var blockExecutionId = await _blockRepository.AddListBlockExecutionAsync(createRequest).ConfigureAwait(false);
 
             var listBlockOfT = Convert<TItem, THeader>(listBlock);
             var blockContext = new ListBlockContext<TItem, THeader>(_listBlockRepository,
@@ -700,11 +698,11 @@ namespace Taskling.Blocks.Factories
                 blockRequest.ReprocessReferenceValue,
                 blockRequest.ReprocessOption);
 
-            var blocksOfTask = await _blockRepository.FindObjectBlocksOfTaskAsync<T>(failedBlockRequest);
+            var blocksOfTask = await _blockRepository.FindObjectBlocksOfTaskAsync<T>(failedBlockRequest).ConfigureAwait(false);
             if (!blocksOfTask.Any())
                 return new List<IObjectBlockContext<T>>();
 
-            return await CreateObjectBlockContextsAsync(blockRequest, blocksOfTask);
+            return await CreateObjectBlockContextsAsync(blockRequest, blocksOfTask).ConfigureAwait(false);
         }
 
         private async Task<List<IObjectBlockContext<T>>> GetForcedObjectBlocksAsync<T>(ObjectBlockRequest<T> blockRequest)
@@ -713,14 +711,14 @@ namespace Taskling.Blocks.Factories
                     blockRequest.TaskExecutionId,
                     blockRequest.BlockType);
 
-            var queuedForcedBlocks = await _blockRepository.GetQueuedForcedObjectBlocksAsync<T>(forcedBlockRequest);
+            var queuedForcedBlocks = await _blockRepository.GetQueuedForcedObjectBlocksAsync<T>(forcedBlockRequest).ConfigureAwait(false);
 
             var forcedBlocks = new List<IObjectBlockContext<T>>();
             foreach (var queuedForcedBlock in queuedForcedBlocks)
-                forcedBlocks.Add(await CreateObjectBlockContextAsync(blockRequest, queuedForcedBlock.ObjectBlock, queuedForcedBlock.ForcedBlockQueueId));
+                forcedBlocks.Add(await CreateObjectBlockContextAsync(blockRequest, queuedForcedBlock.ObjectBlock, queuedForcedBlock.ForcedBlockQueueId).ConfigureAwait(false));
 
             if (forcedBlocks.Any())
-                await DequeueForcedBlocksAsync(blockRequest, forcedBlocks.Select(x => x.ForcedBlockQueueId).ToList());
+                await DequeueForcedBlocksAsync(blockRequest, forcedBlocks.Select(x => x.ForcedBlockQueueId).ToList()).ConfigureAwait(false);
 
             return forcedBlocks;
         }
@@ -730,21 +728,21 @@ namespace Taskling.Blocks.Factories
             int blocksRemaining = GetBlocksRemaining(blockRequest, blocks);
             if (blockRequest.ReprocessDeadTasks)
             {
-                blocks.AddRange(await GetDeadObjectBlocksAsync(blockRequest, blocksRemaining));
+                blocks.AddRange(await GetDeadObjectBlocksAsync(blockRequest, blocksRemaining).ConfigureAwait(false));
                 blocksRemaining = blockRequest.MaxBlocks - blocks.Count;
             }
 
             if (GetBlocksRemaining(blockRequest, blocks) > 0 && blockRequest.ReprocessFailedTasks)
             {
-                blocks.AddRange(await GetFailedObjectBlocksAsync(blockRequest, blocksRemaining));
+                blocks.AddRange(await GetFailedObjectBlocksAsync(blockRequest, blocksRemaining).ConfigureAwait(false));
             }
         }
 
         private async Task<List<IObjectBlockContext<T>>> GetDeadObjectBlocksAsync<T>(ObjectBlockRequest<T> blockRequest, int blockCountLimit)
         {
             var deadBlockRequest = CreateDeadBlocksRequest(blockRequest, blockCountLimit);
-            var deadBlocks = await _blockRepository.FindDeadObjectBlocksAsync<T>(deadBlockRequest);
-            return await CreateObjectBlockContextsAsync(blockRequest, deadBlocks);
+            var deadBlocks = await _blockRepository.FindDeadObjectBlocksAsync<T>(deadBlockRequest).ConfigureAwait(false);
+            return await CreateObjectBlockContextsAsync(blockRequest, deadBlocks).ConfigureAwait(false);
         }
 
         private async Task<List<IObjectBlockContext<T>>> GetFailedObjectBlocksAsync<T>(ObjectBlockRequest<T> blockRequest, int blockCountLimit)
@@ -758,8 +756,8 @@ namespace Taskling.Blocks.Factories
                 blockRequest.FailedTaskRetryLimit
             );
 
-            var failedBlocks = await _blockRepository.FindFailedObjectBlocksAsync<T>(failedBlockRequest);
-            return await CreateObjectBlockContextsAsync<T>(blockRequest, failedBlocks);
+            var failedBlocks = await _blockRepository.FindFailedObjectBlocksAsync<T>(failedBlockRequest).ConfigureAwait(false);
+            return await CreateObjectBlockContextsAsync<T>(blockRequest, failedBlocks).ConfigureAwait(false);
         }
 
         private async Task<List<IObjectBlockContext<T>>> CreateObjectBlockContextsAsync<T>(ObjectBlockRequest<T> blockRequest, IList<ObjectBlock<T>> objectBlocks)
@@ -767,7 +765,7 @@ namespace Taskling.Blocks.Factories
             var blocks = new List<IObjectBlockContext<T>>();
             foreach (var objectBlock in objectBlocks)
             {
-                var blockContext = await CreateObjectBlockContextAsync(blockRequest, objectBlock);
+                var blockContext = await CreateObjectBlockContextAsync(blockRequest, objectBlock).ConfigureAwait(false);
                 blocks.Add(blockContext);
             }
 
@@ -783,7 +781,7 @@ namespace Taskling.Blocks.Factories
                     objectBlock.ObjectBlockId,
                     attempt);
 
-            var blockExecutionId = await _blockRepository.AddObjectBlockExecutionAsync(createRequest);
+            var blockExecutionId = await _blockRepository.AddObjectBlockExecutionAsync(createRequest).ConfigureAwait(false);
             var blockContext = new ObjectBlockContext<T>(_objectBlockRepository,
                     _taskExecutionRepository,
                     blockRequest.ApplicationName,
@@ -798,8 +796,8 @@ namespace Taskling.Blocks.Factories
 
         private async Task<IObjectBlockContext<T>> GenerateNewObjectBlockAsync<T>(ObjectBlockRequest<T> blockRequest)
         {
-            var newObjectBlock = await GenerateObjectBlockAsync(blockRequest);
-            return await CreateObjectBlockContextAsync(blockRequest, newObjectBlock);
+            var newObjectBlock = await GenerateObjectBlockAsync(blockRequest).ConfigureAwait(false);
+            return await CreateObjectBlockContextAsync(blockRequest, newObjectBlock).ConfigureAwait(false);
         }
 
         private async Task<ObjectBlock<T>> GenerateObjectBlockAsync<T>(ObjectBlockRequest<T> blockRequest)
@@ -809,8 +807,8 @@ namespace Taskling.Blocks.Factories
                 blockRequest.Object,
                 blockRequest.CompressionThreshold);
 
-            var objectBlock = (await _blockRepository.AddObjectBlockAsync(request)).Block;
-            await Task.Delay(10); // guarantee that each block has a unique created date
+            var objectBlock = (await _blockRepository.AddObjectBlockAsync(request).ConfigureAwait(false)).Block;
+            await Task.Delay(10).ConfigureAwait(false); // guarantee that each block has a unique created date
             return objectBlock;
         }
 

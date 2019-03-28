@@ -26,7 +26,7 @@ namespace Taskling.SqlServer.Tokens.Executions
             var response = new TokenResponse();
             response.StartedAt = DateTime.UtcNow;
 
-            using (var connection = await CreateNewConnectionAsync(tokenRequest.TaskId))
+            using (var connection = await CreateNewConnectionAsync(tokenRequest.TaskId).ConfigureAwait(false))
             {
                 SqlTransaction transaction = connection.BeginTransaction(IsolationLevel.Serializable);
 
@@ -36,10 +36,10 @@ namespace Taskling.SqlServer.Tokens.Executions
 
                 try
                 {
-                    await AcquireRowLockAsync(tokenRequest.TaskDefinitionId, tokenRequest.TaskExecutionId, command);
-                    var tokens = await GetTokensAsync(tokenRequest.TaskDefinitionId, command);
+                    await AcquireRowLockAsync(tokenRequest.TaskDefinitionId, tokenRequest.TaskExecutionId, command).ConfigureAwait(false);
+                    var tokens = await GetTokensAsync(tokenRequest.TaskDefinitionId, command).ConfigureAwait(false);
                     var adjusted = AdjustTokenCount(tokens, tokenRequest.ConcurrencyLimit);
-                    var assignableToken = await GetAssignableTokenAsync(tokens, command);
+                    var assignableToken = await GetAssignableTokenAsync(tokens, command).ConfigureAwait(false);
                     if (assignableToken == null)
                     {
                         response.GrantStatus = GrantStatus.Denied;
@@ -54,7 +54,7 @@ namespace Taskling.SqlServer.Tokens.Executions
                     }
 
                     if (adjusted)
-                        await PersistTokensAsync(tokenRequest.TaskDefinitionId, tokens, command);
+                        await PersistTokensAsync(tokenRequest.TaskDefinitionId, tokens, command).ConfigureAwait(false);
 
                     transaction.Commit();
                     return response;
@@ -74,7 +74,7 @@ namespace Taskling.SqlServer.Tokens.Executions
 
         public async Task ReturnExecutionTokenAsync(TokenRequest tokenRequest, string executionTokenId)
         {
-            using (var connection = await CreateNewConnectionAsync(tokenRequest.TaskId))
+            using (var connection = await CreateNewConnectionAsync(tokenRequest.TaskId).ConfigureAwait(false))
             {
                 SqlTransaction transaction = connection.BeginTransaction(IsolationLevel.Serializable);
 
@@ -84,10 +84,10 @@ namespace Taskling.SqlServer.Tokens.Executions
 
                 try
                 {
-                    await AcquireRowLockAsync(tokenRequest.TaskDefinitionId, tokenRequest.TaskExecutionId, command);
-                    var tokens = await GetTokensAsync(tokenRequest.TaskDefinitionId, command);
+                    await AcquireRowLockAsync(tokenRequest.TaskDefinitionId, tokenRequest.TaskExecutionId, command).ConfigureAwait(false);
+                    var tokens = await GetTokensAsync(tokenRequest.TaskDefinitionId, command).ConfigureAwait(false);
                     SetTokenAsAvailable(tokens, executionTokenId);
-                    await PersistTokensAsync(tokenRequest.TaskDefinitionId, tokens, command);
+                    await PersistTokensAsync(tokenRequest.TaskDefinitionId, tokens, command).ConfigureAwait(false);
 
                     transaction.Commit();
                 }
@@ -105,12 +105,12 @@ namespace Taskling.SqlServer.Tokens.Executions
 
         private async Task AcquireRowLockAsync(int taskDefinitionId, string taskExecutionId, SqlCommand command)
         {
-            await _commonTokenRepository.AcquireRowLockAsync(taskDefinitionId, taskExecutionId, command);
+            await _commonTokenRepository.AcquireRowLockAsync(taskDefinitionId, taskExecutionId, command).ConfigureAwait(false);
         }
 
         private async Task<ExecutionTokenList> GetTokensAsync(int taskDefinitionId, SqlCommand command)
         {
-            var tokensString = await GetTokensStringAsync(taskDefinitionId, command);
+            var tokensString = await GetTokensStringAsync(taskDefinitionId, command).ConfigureAwait(false);
             return ParseTokensString(tokensString);
         }
 
@@ -232,9 +232,9 @@ namespace Taskling.SqlServer.Tokens.Executions
             command.CommandText = TokensQueryBuilder.GetExecutionTokensQuery;
             command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
 
-            using (var reader = await command.ExecuteReaderAsync())
+            using (var reader = await command.ExecuteReaderAsync().ConfigureAwait(false))
             {
-                if (await reader.ReadAsync())
+                if (await reader.ReadAsync().ConfigureAwait(false))
                     return reader[0].ToString();
             }
 
@@ -256,7 +256,7 @@ namespace Taskling.SqlServer.Tokens.Executions
                 if (!executionIds.Any())
                     return null;
 
-                var executionStates = await GetTaskExecutionStatesAsync(executionIds, command);
+                var executionStates = await GetTaskExecutionStatesAsync(executionIds, command).ConfigureAwait(false);
                 var expiredExecution = FindExpiredExecution(executionStates);
                 if (expiredExecution == null)
                     return null;
@@ -279,7 +279,7 @@ namespace Taskling.SqlServer.Tokens.Executions
 
         private async Task<List<TaskExecutionState>> GetTaskExecutionStatesAsync(List<string> taskExecutionIds, SqlCommand command)
         {
-            return await _commonTokenRepository.GetTaskExecutionStatesAsync(taskExecutionIds, command);
+            return await _commonTokenRepository.GetTaskExecutionStatesAsync(taskExecutionIds, command).ConfigureAwait(false);
         }
 
         private TaskExecutionState FindExpiredExecution(List<TaskExecutionState> executionStates)
@@ -314,7 +314,7 @@ namespace Taskling.SqlServer.Tokens.Executions
             command.CommandText = TokensQueryBuilder.UpdateExecutionTokensQuery;
             command.Parameters.Add("@TaskDefinitionId", SqlDbType.Int).Value = taskDefinitionId;
             command.Parameters.Add("@ExecutionTokens", SqlDbType.VarChar, 8000).Value = tokenString;
-            await command.ExecuteNonQueryAsync();
+            await command.ExecuteNonQueryAsync().ConfigureAwait(false);
         }
 
         private string GenerateTokenString(ExecutionTokenList executionTokenList)

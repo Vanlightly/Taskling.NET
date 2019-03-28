@@ -28,7 +28,7 @@ namespace Taskling.CleanUp
 
         public void CleanOldData(string applicationName, string taskName, string taskExecutionId)
         {
-            Task.Run(async () => await StartCleanOldDataAsync(applicationName, taskName, taskExecutionId));
+            Task.Run(async () => await StartCleanOldDataAsync(applicationName, taskName, taskExecutionId).ConfigureAwait(false));
         }
 
         private async Task StartCleanOldDataAsync(string applicationName, string taskName, string taskExecutionId)
@@ -49,7 +49,7 @@ namespace Taskling.CleanUp
                     ListItemDateThreshold = DateTime.UtcNow.AddDays(-1 * configuration.KeepListItemsForDays),
                     TimeSinceLastCleaningThreashold = new TimeSpan(configuration.MinimumCleanUpIntervalHours, 0, 0)
                 };
-                var cleaned = await _cleanUpRepository.CleanOldDataAsync(request);
+                var cleaned = await _cleanUpRepository.CleanOldDataAsync(request).ConfigureAwait(false);
 
                 if (cleaned)
                     checkpoint.Message = "Data clean up performed";
@@ -61,14 +61,14 @@ namespace Taskling.CleanUp
                 checkpoint.Message = "Failed to clean old data. " + ex;
             }
 
-            await LogCleanupAsync(checkpoint);
+            await LogCleanupAsync(checkpoint).ConfigureAwait(false);
         }
 
         private async Task LogCleanupAsync(TaskExecutionCheckpointRequest checkpoint)
         {
             try
             {
-                await _taskExecutionRepository.CheckpointAsync(checkpoint);
+                await _taskExecutionRepository.CheckpointAsync(checkpoint).ConfigureAwait(false);
             }
             catch (Exception) { }
         }

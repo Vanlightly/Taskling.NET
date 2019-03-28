@@ -24,15 +24,15 @@ namespace Taskling.SqlServer.TaskExecution
 
         public async Task<bool> CleanOldDataAsync(CleanUpRequest cleanUpRequest)
         {
-            var lastCleaned = await _taskRepository.GetLastTaskCleanUpTimeAsync(cleanUpRequest.TaskId);
+            var lastCleaned = await _taskRepository.GetLastTaskCleanUpTimeAsync(cleanUpRequest.TaskId).ConfigureAwait(false);
             var periodSinceLastClean = DateTime.UtcNow - lastCleaned;
 
             if (periodSinceLastClean > cleanUpRequest.TimeSinceLastCleaningThreashold)
             {
-                await _taskRepository.SetLastCleanedAsync(cleanUpRequest.TaskId);
-                var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(cleanUpRequest.TaskId);
-                await CleanListItemsAsync(cleanUpRequest.TaskId, taskDefinition.TaskDefinitionId, cleanUpRequest.ListItemDateThreshold);
-                await CleanOldDataAsync(cleanUpRequest.TaskId, taskDefinition.TaskDefinitionId, cleanUpRequest.GeneralDateThreshold);
+                await _taskRepository.SetLastCleanedAsync(cleanUpRequest.TaskId).ConfigureAwait(false);
+                var taskDefinition = await _taskRepository.EnsureTaskDefinitionAsync(cleanUpRequest.TaskId).ConfigureAwait(false);
+                await CleanListItemsAsync(cleanUpRequest.TaskId, taskDefinition.TaskDefinitionId, cleanUpRequest.ListItemDateThreshold).ConfigureAwait(false);
+                await CleanOldDataAsync(cleanUpRequest.TaskId, taskDefinition.TaskDefinitionId, cleanUpRequest.GeneralDateThreshold).ConfigureAwait(false);
                 return true;
             }
 
@@ -41,11 +41,11 @@ namespace Taskling.SqlServer.TaskExecution
 
         private async Task CleanListItemsAsync(TaskId taskId, int taskDefinitionId, DateTime listItemDateThreshold)
         {
-            using (var connection = await CreateNewConnectionAsync(taskId))
+            using (var connection = await CreateNewConnectionAsync(taskId).ConfigureAwait(false))
             {
-                var blockIds = await IdentifyOldBlocksAsync(taskId, connection, taskDefinitionId, listItemDateThreshold);
+                var blockIds = await IdentifyOldBlocksAsync(taskId, connection, taskDefinitionId, listItemDateThreshold).ConfigureAwait(false);
                 foreach (var blockId in blockIds)
-                    await DeleteListItemsOfBlockAsync(connection, blockId);
+                    await DeleteListItemsOfBlockAsync(connection, blockId).ConfigureAwait(false);
             }
         }
 
@@ -58,9 +58,9 @@ namespace Taskling.SqlServer.TaskExecution
                 command.Parameters.Add(new SqlParameter("@TaskDefinitionId", SqlDbType.Int)).Value = taskDefinitionId;
                 command.Parameters.Add(new SqlParameter("@OlderThanDate", SqlDbType.DateTime)).Value = listItemDateThreshold;
 
-                using (var reader = await command.ExecuteReaderAsync())
+                using (var reader = await command.ExecuteReaderAsync().ConfigureAwait(false))
                 {
-                    while (await reader.ReadAsync())
+                    while (await reader.ReadAsync().ConfigureAwait(false))
                     {
                         blockIds.Add(long.Parse(reader["BlockId"].ToString()));
                     }
@@ -76,20 +76,20 @@ namespace Taskling.SqlServer.TaskExecution
             {
                 command.CommandTimeout = 120;
                 command.Parameters.Add(new SqlParameter("@BlockId", SqlDbType.BigInt)).Value = blockId;
-                await command.ExecuteNonQueryAsync();
+                await command.ExecuteNonQueryAsync().ConfigureAwait(false);
             }
         }
 
         private async Task CleanOldDataAsync(TaskId taskId, int taskDefinitionId, DateTime generalDateThreshold)
         {
-            using (var connection = await CreateNewConnectionAsync(taskId))
+            using (var connection = await CreateNewConnectionAsync(taskId).ConfigureAwait(false))
             {
                 using (var command = new SqlCommand(CleanUpQueryBuilder.DeleteOldDataQuery, connection))
                 {
                     command.CommandTimeout = 120;
                     command.Parameters.Add(new SqlParameter("@TaskDefinitionId", SqlDbType.Int)).Value = taskDefinitionId;
                     command.Parameters.Add(new SqlParameter("@OlderThanDate", SqlDbType.DateTime)).Value = generalDateThreshold;
-                    await command.ExecuteNonQueryAsync();
+                    await command.ExecuteNonQueryAsync().ConfigureAwait(false);
                 }
             }
         }

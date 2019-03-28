@@ -164,7 +164,7 @@ namespace Taskling.Blocks.ListBlocks
                     BlockExecutionStatus.Failed);
 
             Func<BlockExecutionChangeStatusRequest, Task> actionRequest = _listBlockRepository.ChangeStatusAsync;
-            await RetryService.InvokeWithRetryAsync(actionRequest, request);
+            await RetryService.InvokeWithRetryAsync(actionRequest, request).ConfigureAwait(false);
         }
 
         protected async Task UpdateItemStatusAsync(IListBlockItem<TItem> item)
@@ -172,13 +172,13 @@ namespace Taskling.Blocks.ListBlocks
             switch (ListUpdateMode)
             {
                 case ListUpdateMode.SingleItemCommit:
-                    await CommitAsync(ListBlockId, item);
+                    await CommitAsync(ListBlockId, item).ConfigureAwait(false);
                     break;
                 case ListUpdateMode.BatchCommitAtEnd:
                     AddToUncommittedItems(item);
                     break;
                 case ListUpdateMode.PeriodicBatchCommit:
-                    await AddAndCommitIfUncommittedCountReachedAsync(item);
+                    await AddAndCommitIfUncommittedCountReachedAsync(item).ConfigureAwait(false);
                     break;
             }
         }
@@ -193,7 +193,7 @@ namespace Taskling.Blocks.ListBlocks
             };
 
             Func<SingleUpdateRequest, Task> actionRequest = _listBlockRepository.UpdateListBlockItemAsync;
-            await RetryService.InvokeWithRetryAsync(actionRequest, singleUpdateRequest);
+            await RetryService.InvokeWithRetryAsync(actionRequest, singleUpdateRequest).ConfigureAwait(false);
         }
 
         protected void AddToUncommittedItems(IListBlockItem<TItem> item)
@@ -212,12 +212,12 @@ namespace Taskling.Blocks.ListBlocks
 
         protected async Task AddAndCommitIfUncommittedCountReachedAsync(IListBlockItem<TItem> item)
         {
-            await _uncommittedListSemaphore.WaitAsync();
+            await _uncommittedListSemaphore.WaitAsync().ConfigureAwait(false);
             try
             {
                 _uncommittedItems.Add(item);
                 if (_uncommittedItems.Count == UncommittedThreshold)
-                    await CommitUncommittedItemsAsync();
+                    await CommitUncommittedItemsAsync().ConfigureAwait(false);
             }
             finally
             {
@@ -244,7 +244,7 @@ namespace Taskling.Blocks.ListBlocks
                 };
 
                 Func<BatchUpdateRequest, Task> actionRequest = _listBlockRepository.BatchUpdateListBlockItemsAsync;
-                await RetryService.InvokeWithRetryAsync(actionRequest, batchUpdateRequest);
+                await RetryService.InvokeWithRetryAsync(actionRequest, batchUpdateRequest).ConfigureAwait(false);
             }
         }
 
@@ -320,12 +320,12 @@ namespace Taskling.Blocks.ListBlocks
             if (statuses.Length == 0)
                 statuses = new[] { ItemStatus.All };
 
-            await _getItemsSemaphore.WaitAsync();
+            await _getItemsSemaphore.WaitAsync().ConfigureAwait(false);
             try
             {
                 if (_headerlessBlock.Items == null || !_headerlessBlock.Items.Any())
                 {
-                    var protoListBlockItems = await _listBlockRepository.GetListBlockItemsAsync(new TaskId(_applicationName, _taskName), ListBlockId);
+                    var protoListBlockItems = await _listBlockRepository.GetListBlockItemsAsync(new TaskId(_applicationName, _taskName), ListBlockId).ConfigureAwait(false);
                     _headerlessBlock.Items = Convert(protoListBlockItems);
 
                     foreach (var item in _headerlessBlock.Items)
@@ -350,12 +350,12 @@ namespace Taskling.Blocks.ListBlocks
             if (statuses.Length == 0)
                 statuses = new[] { ItemStatus.All };
 
-            await _getItemsSemaphore.WaitAsync();
+            await _getItemsSemaphore.WaitAsync().ConfigureAwait(false);
             try
             {
                 if (_blockWithHeader.Items == null || !_blockWithHeader.Items.Any())
                 {
-                    var protoListBlockItems = await _listBlockRepository.GetListBlockItemsAsync(new TaskId(_applicationName, _taskName), ListBlockId);
+                    var protoListBlockItems = await _listBlockRepository.GetListBlockItemsAsync(new TaskId(_applicationName, _taskName), ListBlockId).ConfigureAwait(false);
                     _blockWithHeader.Items = Convert(protoListBlockItems);
 
                     foreach (var item in _blockWithHeader.Items)
@@ -382,10 +382,10 @@ namespace Taskling.Blocks.ListBlocks
 
         public async Task FillItemsAsync()
         {
-            await _getItemsSemaphore.WaitAsync();
+            await _getItemsSemaphore.WaitAsync().ConfigureAwait(false);
             try
             {
-                var protoListBlockItems = await _listBlockRepository.GetListBlockItemsAsync(new TaskId(_applicationName, _taskName), ListBlockId);
+                var protoListBlockItems = await _listBlockRepository.GetListBlockItemsAsync(new TaskId(_applicationName, _taskName), ListBlockId).ConfigureAwait(false);
                 var listBlockItems = Convert(protoListBlockItems);
                 SetItems(listBlockItems);
 
@@ -403,16 +403,16 @@ namespace Taskling.Blocks.ListBlocks
         public async Task<IEnumerable<IListBlockItem<TItem>>> GetItemsAsync(params ItemStatus[] statuses)
         {
             if (_hasHeader)
-                return await GetItemsFromBlockWithHeaderAsync(statuses);
+                return await GetItemsFromBlockWithHeaderAsync(statuses).ConfigureAwait(false);
 
-            return await GetItemsFromHeaderlessBlockAsync(statuses);
+            return await GetItemsFromHeaderlessBlockAsync(statuses).ConfigureAwait(false);
         }
 
         public async Task ItemCompleteAsync(IListBlockItem<TItem> item)
         {
             ValidateBlockIsActive();
             item.Status = ItemStatus.Completed;
-            await UpdateItemStatusAsync(item);
+            await UpdateItemStatusAsync(item).ConfigureAwait(false);
         }
 
         public async Task ItemFailedAsync(IListBlockItem<TItem> item, string reason, byte? step = null)
@@ -424,7 +424,7 @@ namespace Taskling.Blocks.ListBlocks
 
             ValidateBlockIsActive();
             item.Status = ItemStatus.Failed;
-            await UpdateItemStatusAsync(item);
+            await UpdateItemStatusAsync(item).ConfigureAwait(false);
         }
 
         public async Task DiscardItemAsync(IListBlockItem<TItem> item, string reason, byte? step = null)
@@ -435,7 +435,7 @@ namespace Taskling.Blocks.ListBlocks
 
             ValidateBlockIsActive();
             item.Status = ItemStatus.Discarded;
-            await UpdateItemStatusAsync(item);
+            await UpdateItemStatusAsync(item).ConfigureAwait(false);
         }
 
         public async Task StartAsync()
@@ -448,16 +448,16 @@ namespace Taskling.Blocks.ListBlocks
                BlockExecutionStatus.Started);
 
             Func<BlockExecutionChangeStatusRequest, Task> actionRequest = _listBlockRepository.ChangeStatusAsync;
-            await RetryService.InvokeWithRetryAsync(actionRequest, request);
+            await RetryService.InvokeWithRetryAsync(actionRequest, request).ConfigureAwait(false);
         }
 
         public async Task CompleteAsync()
         {
             ValidateBlockIsActive();
-            await _uncommittedListSemaphore.WaitAsync();
+            await _uncommittedListSemaphore.WaitAsync().ConfigureAwait(false);
             try
             {
-                await CommitUncommittedItemsAsync();
+                await CommitUncommittedItemsAsync().ConfigureAwait(false);
             }
             finally
             {
@@ -465,7 +465,7 @@ namespace Taskling.Blocks.ListBlocks
             }
 
             var status = BlockExecutionStatus.Completed;
-            if ((await GetItemsAsync(ItemStatus.Failed, ItemStatus.Pending)).Any())
+            if ((await GetItemsAsync(ItemStatus.Failed, ItemStatus.Pending).ConfigureAwait(false)).Any())
                 status = BlockExecutionStatus.Failed;
 
             var request = new BlockExecutionChangeStatusRequest(new TaskId(_applicationName, _taskName),
@@ -475,28 +475,28 @@ namespace Taskling.Blocks.ListBlocks
                status);
 
             Func<BlockExecutionChangeStatusRequest, Task> actionRequest = _listBlockRepository.ChangeStatusAsync;
-            await RetryService.InvokeWithRetryAsync(actionRequest, request);
+            await RetryService.InvokeWithRetryAsync(actionRequest, request).ConfigureAwait(false);
         }
 
         public async Task FailedAsync()
         {
             ValidateBlockIsActive();
 
-            await _uncommittedListSemaphore.WaitAsync();
+            await _uncommittedListSemaphore.WaitAsync().ConfigureAwait(false);
             try
             {
-                await CommitUncommittedItemsAsync();
+                await CommitUncommittedItemsAsync().ConfigureAwait(false);
             }
             finally
             {
                 _uncommittedListSemaphore.Release();
             }
-            await SetStatusAsFailedAsync();
+            await SetStatusAsFailedAsync().ConfigureAwait(false);
         }
 
         public async Task FailedAsync(string message)
         {
-            await FailedAsync();
+            await FailedAsync().ConfigureAwait(false);
 
             string errorMessage = string.Format("BlockId {0} Error: {1}", ListBlockId, message);
             var errorRequest = new TaskExecutionErrorRequest()
@@ -506,7 +506,7 @@ namespace Taskling.Blocks.ListBlocks
                 TreatTaskAsFailed = false,
                 Error = errorMessage
             };
-            await _taskExecutionRepository.ErrorAsync(errorRequest);
+            await _taskExecutionRepository.ErrorAsync(errorRequest).ConfigureAwait(false);
         }
 
         public async Task<IEnumerable<TItem>> GetItemValuesAsync(params ItemStatus[] statuses)
@@ -514,15 +514,15 @@ namespace Taskling.Blocks.ListBlocks
             if (statuses.Length == 0)
                 statuses = new[] { ItemStatus.All };
 
-            return (await GetItemsAsync(statuses)).Select(x => x.Value);
+            return (await GetItemsAsync(statuses).ConfigureAwait(false)).Select(x => x.Value);
         }
 
         public async Task FlushAsync()
         {
-            await _uncommittedListSemaphore.WaitAsync();
+            await _uncommittedListSemaphore.WaitAsync().ConfigureAwait(false);
             try
             {
-                await CommitUncommittedItemsAsync();
+                await CommitUncommittedItemsAsync().ConfigureAwait(false);
             }
             finally
             {

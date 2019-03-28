@@ -73,12 +73,12 @@ namespace Taskling.Blocks.RangeBlocks
                 BlockExecutionStatus.Started);
 
             Func<BlockExecutionChangeStatusRequest, Task> actionRequest = _rangeBlockRepository.ChangeStatusAsync;
-            await RetryService.InvokeWithRetryAsync(actionRequest, request);
+            await RetryService.InvokeWithRetryAsync(actionRequest, request).ConfigureAwait(false);
         }
 
         public async Task CompleteAsync()
         {
-            await CompleteAsync(-1);
+            await CompleteAsync(-1).ConfigureAwait(false);
         }
 
         public async Task CompleteAsync(int itemsProcessed)
@@ -91,7 +91,7 @@ namespace Taskling.Blocks.RangeBlocks
             request.ItemsProcessed = itemsProcessed;
 
             Func<BlockExecutionChangeStatusRequest, Task> actionRequest = _rangeBlockRepository.ChangeStatusAsync;
-            await RetryService.InvokeWithRetryAsync(actionRequest, request);
+            await RetryService.InvokeWithRetryAsync(actionRequest, request).ConfigureAwait(false);
         }
 
         public async Task FailedAsync()
@@ -103,12 +103,12 @@ namespace Taskling.Blocks.RangeBlocks
                 BlockExecutionStatus.Failed);
 
             Func<BlockExecutionChangeStatusRequest, Task> actionRequest = _rangeBlockRepository.ChangeStatusAsync;
-            await RetryService.InvokeWithRetryAsync(actionRequest, request);
+            await RetryService.InvokeWithRetryAsync(actionRequest, request).ConfigureAwait(false);
         }
 
         public async Task FailedAsync(string message)
         {
-            await FailedAsync();
+            await FailedAsync().ConfigureAwait(false);
 
             string errorMessage = string.Empty;
             if (_block.RangeType == BlockType.DateRange)
@@ -136,7 +136,7 @@ namespace Taskling.Blocks.RangeBlocks
                 TreatTaskAsFailed = false,
                 Error = errorMessage
             };
-            await _taskExecutionRepository.ErrorAsync(errorRequest);
+            await _taskExecutionRepository.ErrorAsync(errorRequest).ConfigureAwait(false);
         }
     }
 }

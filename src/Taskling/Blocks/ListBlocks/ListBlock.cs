@@ -36,7 +36,7 @@ namespace Taskling.Blocks.ListBlocks
             if (_items == null || !_items.Any())
             {
                 if (_parentContext != null)
-                   await _parentContext.FillItemsAsync();
+                   await _parentContext.FillItemsAsync().ConfigureAwait(false);
             }
 
             return _items;
@@ -72,7 +72,7 @@ namespace Taskling.Blocks.ListBlocks
         {
             if (_items == null)
             {
-                await _parentContext.FillItemsAsync();
+                await _parentContext.FillItemsAsync().ConfigureAwait(false);
             }
 
             return _items;

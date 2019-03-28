@@ -16,7 +16,7 @@ namespace Taskling.SqlServer.Events
     {
         public async Task LogEventAsync(TaskId taskId, string taskExecutionId, EventType eventType, string message)
         {
-            using (var connection = await CreateNewConnectionAsync(taskId))
+            using (var connection = await CreateNewConnectionAsync(taskId).ConfigureAwait(false))
             {
                 using (var command = new SqlCommand(EventsQueryBuilder.InsertTaskExecutionEventQuery, connection))
                 {
@@ -34,7 +34,7 @@ namespace Taskling.SqlServer.Events
                     }
 
                     command.Parameters.Add(new SqlParameter("@EventDateTime", SqlDbType.DateTime)).Value = DateTime.UtcNow;
-                    await command.ExecuteNonQueryAsync();
+                    await command.ExecuteNonQueryAsync().ConfigureAwait(false);
                 }
             }
         }
