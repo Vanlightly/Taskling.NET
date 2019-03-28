@@ -178,8 +178,7 @@ namespace Taskling.Blocks.ListBlocks
                     AddToUncommittedItems(item);
                     break;
                 case ListUpdateMode.PeriodicBatchCommit:
-                    AddToUncommittedItems(item);
-                    await CommitIfUncommittedCountReachedAsync();
+                    await AddAndCommitIfUncommittedCountReachedAsync(item);
                     break;
             }
         }
@@ -211,41 +210,30 @@ namespace Taskling.Blocks.ListBlocks
 
         }
 
-        protected async Task CommitIfUncommittedCountReachedAsync()
+        protected async Task AddAndCommitIfUncommittedCountReachedAsync(IListBlockItem<TItem> item)
         {
-            bool shouldCommit = false;
             await _uncommittedListSemaphore.WaitAsync();
             try
             {
+                _uncommittedItems.Add(item);
                 if (_uncommittedItems.Count == UncommittedThreshold)
-                    shouldCommit = true;
+                    await CommitUncommittedItemsAsync();
             }
             finally
             {
                 _uncommittedListSemaphore.Release();
             }
-
-            if (shouldCommit)
-                await CommitUncommittedItemsAsync();
         }
 
         protected async Task CommitUncommittedItemsAsync()
         {
             List<IListBlockItem<TItem>> listToCommit = null;
-            await _uncommittedListSemaphore.WaitAsync();
-            try
+            if (_uncommittedItems != null && _uncommittedItems.Any())
             {
-                if (_uncommittedItems != null && _uncommittedItems.Any())
-                {
-                    listToCommit = new List<IListBlockItem<TItem>>(_uncommittedItems);
-                    _uncommittedItems.Clear();
-                }
+                listToCommit = new List<IListBlockItem<TItem>>(_uncommittedItems);
+                _uncommittedItems.Clear();
             }
-            finally
-            {
-                _uncommittedListSemaphore.Release();
-            }
-
+            
             if (listToCommit != null && listToCommit.Any())
             {
                 var batchUpdateRequest = new BatchUpdateRequest()
@@ -466,7 +454,15 @@ namespace Taskling.Blocks.ListBlocks
         public async Task CompleteAsync()
         {
             ValidateBlockIsActive();
-            await CommitUncommittedItemsAsync();
+            await _uncommittedListSemaphore.WaitAsync();
+            try
+            {
+                await CommitUncommittedItemsAsync();
+            }
+            finally
+            {
+                _uncommittedListSemaphore.Release();
+            }
 
             var status = BlockExecutionStatus.Completed;
             if ((await GetItemsAsync(ItemStatus.Failed, ItemStatus.Pending)).Any())
@@ -485,7 +481,16 @@ namespace Taskling.Blocks.ListBlocks
         public async Task FailedAsync()
         {
             ValidateBlockIsActive();
-            await CommitUncommittedItemsAsync();
+
+            await _uncommittedListSemaphore.WaitAsync();
+            try
+            {
+                await CommitUncommittedItemsAsync();
+            }
+            finally
+            {
+                _uncommittedListSemaphore.Release();
+            }
             await SetStatusAsFailedAsync();
         }
 
@@ -514,7 +519,15 @@ namespace Taskling.Blocks.ListBlocks
 
         public async Task FlushAsync()
         {
-            await CommitUncommittedItemsAsync();
+            await _uncommittedListSemaphore.WaitAsync();
+            try
+            {
+                await CommitUncommittedItemsAsync();
+            }
+            finally
+            {
+                _uncommittedListSemaphore.Release();
+            }
         }
 
         public void Dispose()

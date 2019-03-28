@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Taskling.Blocks.ListBlocks;
 using Taskling.SqlServer.Tests.Helpers;
 using System.Threading;
+using System.Collections.Async;
 
 namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
 {
@@ -44,7 +45,8 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
                     foreach (var listBlock in listBlocks)
                     {
                         await listBlock.StartAsync();
-                        Parallel.ForEach(await listBlock.GetItemsAsync(ItemStatus.Failed, ItemStatus.Pending), async (currentItem) =>
+                        var items = await listBlock.GetItemsAsync(ItemStatus.Failed, ItemStatus.Pending);
+                        await items.ParallelForEachAsync(async currentItem =>
                         {
                             await listBlock.ItemCompleteAsync(currentItem);
                         });
@@ -76,7 +78,8 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
                     foreach (var listBlock in listBlocks)
                     {
                         await listBlock.StartAsync();
-                        Parallel.ForEach(await listBlock.GetItemsAsync(ItemStatus.Failed, ItemStatus.Pending), async (currentItem) =>
+                        var items = await listBlock.GetItemsAsync(ItemStatus.Failed, ItemStatus.Pending);
+                        await items.ParallelForEachAsync(async currentItem =>
                         {
                             await listBlock.ItemCompleteAsync(currentItem);
                         });
@@ -108,7 +111,9 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
                     foreach (var listBlock in listBlocks)
                     {
                         await listBlock.StartAsync();
-                        Parallel.ForEach(await listBlock.GetItemsAsync(ItemStatus.Failed, ItemStatus.Pending), async (currentItem) =>
+                        var items = await listBlock.GetItemsAsync(ItemStatus.Failed, ItemStatus.Pending);
+
+                        await items.ParallelForEachAsync(async currentItem =>
                         {
                             await listBlock.ItemCompleteAsync(currentItem);
                         });
@@ -116,7 +121,10 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
                         await listBlock.CompleteAsync();
 
                         // All items should be completed now
-                        Assert.Equal((await listBlock.GetItemsAsync(ItemStatus.Completed)).Count(), _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ItemStatus.Completed));
+                        int expectedCount = (await listBlock.GetItemsAsync(ItemStatus.Completed)).Count();
+                        int actualCount = _blocksHelper.GetListBlockItemCountByStatus(listBlock.ListBlockId, ItemStatus.Completed);
+
+                        Assert.Equal(expectedCount, actualCount);
                     }
                 }
             }
@@ -138,7 +146,7 @@ namespace Taskling.SqlServer.Tests.Contexts.Given_ListBlockContext
                     short maxBlockSize = 1000;
                     var listBlocks = await executionContext.GetListBlocksAsync<PersonDto>(x => x.WithSingleUnitCommit(values, maxBlockSize));
 
-                    Parallel.ForEach(listBlocks, async (currentBlock) =>
+                    await listBlocks.ParallelForEachAsync(async currentBlock =>
                     {
                         await currentBlock.StartAsync();
 
