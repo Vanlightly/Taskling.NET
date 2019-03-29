@@ -6,6 +6,11 @@ API for batch and micro-batch tasks:
 - Critical sections across servers
 - Standardised activity logging and alerting.
 
+## Versions
+Note that:
+- version 1.X is a synchronous API in .NET 3.5
+- version 2.X is .NET Standard 2.0/.NET 4.5 that uses async/await on all calls
+
 ## Taskling is a host agnostic library
 Taskling helps you manage your data processing tasks whether they be hosted in web applications, console applications, Windows Services or Cloud (worker roles, Azure Functions etc).
 It is not a framework or platform like Spark or Hadoop, it is just a nuget package you can add to any project.
